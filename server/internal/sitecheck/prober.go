@@ -212,7 +212,9 @@ func (p *Prober) Probe(ctx context.Context, t Target) Result {
 		// isso chega como RecordHeaderError (o cliente lê o lixo antes do fim); no
 		// Windows o servidor que fecha com o ClientHello não lido manda RST e o erro é
 		// só "conexão encerrada" — o mesmo fato, que tem de dar o mesmo diagnóstico.
-		if noHandshake && !r.TLSOK && r.Diagnosis == DiagConnError {
+		// (Inclui o "não classificado": a mensagem do Windows varia com a versão e o
+		// momento do RST, mas a fase em que a conexão morreu não varia.)
+		if noHandshake && !r.TLSOK && (r.Diagnosis == DiagConnError || r.Diagnosis == DiagNaoClassificado) {
 			r.Diagnosis = DiagTLS
 		}
 		if conectouSemResponder(r, t.URL) {
