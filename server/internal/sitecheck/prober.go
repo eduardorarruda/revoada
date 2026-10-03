@@ -175,10 +175,17 @@ func (p *Prober) Probe(ctx context.Context, t Target) Result {
 		return r
 	}
 	trace := &httptrace.ClientTrace{
-		DNSStart:          func(httptrace.DNSStartInfo) { grava(func() { dnsStart = time.Now() }) },
-		DNSDone:           func(httptrace.DNSDoneInfo) { grava(func() { r.DNSMs = msSince(dnsStart) }) },
-		ConnectStart:      func(string, string) { grava(func() { connStart = time.Now() }) },
-		ConnectDone:       func(string, string, error) { grava(func() { r.ConnectMs = msSince(connStart) }) },
+		DNSStart:     func(httptrace.DNSStartInfo) { grava(func() { dnsStart = time.Now() }) },
+		DNSDone:      func(httptrace.DNSDoneInfo) { grava(func() { r.DNSMs = msSince(dnsStart) }) },
+		ConnectStart: func(string, string) { grava(func() { connStart = time.Now() }) },
+		ConnectDone: func(_, _ string, err error) {
+			grava(func() {
+				r.ConnectMs = msSince(connStart)
+				if err == nil {
+					r.ConnectMs = aconteceu(r.ConnectMs)
+				}
+			})
+		},
 		TLSHandshakeStart: func() { grava(func() { tlsStart, handshakeIniciado = time.Now(), true }) },
 		TLSHandshakeDone: func(_ tls.ConnectionState, err error) {
 			grava(func() {
@@ -186,7 +193,7 @@ func (p *Prober) Probe(ctx context.Context, t Target) Result {
 				r.TLSOK = err == nil
 			})
 		},
-		GotFirstResponseByte: func() { grava(func() { r.TTFBMs = msSince(start) }) },
+		GotFirstResponseByte: func() { grava(func() { r.TTFBMs = aconteceu(msSince(start)) }) },
 	}
 
 	req, err := http.NewRequestWithContext(httptrace.WithClientTrace(ctx, trace), http.MethodGet, t.URL, nil)
@@ -340,6 +347,14 @@ func msSince(t time.Time) float64 {
 // estouro (TTFB >= prazo): o client.Do já voltou com erro de prazo, mas o gancho do
 // trace gravou o TTFB antes do congelamento. Visto na CI: ttfb=501 ms com prazo de
 // 500 saía connect_timeout, acusando a conexão de um site que conectou.
+// aconteceu garante que uma fase que DE FATO ocorreu não fique com 0 ms: no
+// Windows conectar no localhost cabe dentro da resolução do relógio e media 0,
+// e "ConnectMs > 0" é como o resto do código sabe que a conexão abriu (sem isto,
+// "conectou e ficou mudo" virava "não conectou").
+func aconteceu(ms float64) float64 {
+	return max(ms, 0.001)
+}
+
 func conectouSemResponder(r Result, url string) bool {
 	if r.Diagnosis != DiagConnTimeout || r.ConnectMs <= 0 {
 		return false
