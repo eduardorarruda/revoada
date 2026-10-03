@@ -160,6 +160,7 @@ func (p *Prober) Probe(ctx context.Context, t Target) Result {
 	// não pertence a esta medição.
 	var mu sync.Mutex
 	congelado := false
+	handshakeIniciado := false // lido só depois de congelar
 	grava := func(f func()) {
 		mu.Lock()
 		defer mu.Unlock()
@@ -178,7 +179,7 @@ func (p *Prober) Probe(ctx context.Context, t Target) Result {
 		DNSDone:           func(httptrace.DNSDoneInfo) { grava(func() { r.DNSMs = msSince(dnsStart) }) },
 		ConnectStart:      func(string, string) { grava(func() { connStart = time.Now() }) },
 		ConnectDone:       func(string, string, error) { grava(func() { r.ConnectMs = msSince(connStart) }) },
-		TLSHandshakeStart: func() { grava(func() { tlsStart = time.Now() }) },
+		TLSHandshakeStart: func() { grava(func() { tlsStart, handshakeIniciado = time.Now(), true }) },
 		TLSHandshakeDone: func(_ tls.ConnectionState, err error) {
 			grava(func() {
 				r.TLSMs = msSince(tlsStart)
@@ -204,6 +205,16 @@ func (p *Prober) Probe(ctx context.Context, t Target) Result {
 	if err != nil {
 		r.TotalMs = msSince(start)
 		r.Diagnosis = classifyErr(err)
+		mu.Lock()
+		noHandshake := handshakeIniciado
+		mu.Unlock()
+		// A conexão caiu NO MEIO do handshake TLS: o endereço não fala TLS. No Linux
+		// isso chega como RecordHeaderError (o cliente lê o lixo antes do fim); no
+		// Windows o servidor que fecha com o ClientHello não lido manda RST e o erro é
+		// só "conexão encerrada" — o mesmo fato, que tem de dar o mesmo diagnóstico.
+		if noHandshake && !r.TLSOK && r.Diagnosis == DiagConnError {
+			r.Diagnosis = DiagTLS
+		}
 		if conectouSemResponder(r, t.URL) {
 			r.Diagnosis = DiagSemResposta
 		}
@@ -429,12 +440,16 @@ func classifyErr(err error) string {
 		return DiagDNSError
 	case strings.Contains(e, "x509"), strings.Contains(e, "certificate"), strings.Contains(e, "tls:"):
 		return DiagTLS
-	case strings.Contains(e, "connection refused"):
+	// No Windows o dial recusado é WSAECONNREFUSED (10061) e o reset é
+	// WSAECONNRESET (10054), que não casam com os errno do syscall: o texto do
+	// sistema é o sinal comum.
+	case strings.Contains(e, "connection refused"), strings.Contains(e, "actively refused"):
 		return DiagConnRefused
 	case strings.Contains(e, "timeout"), strings.Contains(e, "deadline exceeded"):
 		return DiagConnTimeout
 	case strings.Contains(e, "no route to host"), strings.Contains(e, "connection reset"),
-		strings.Contains(e, "network is unreachable"):
+		strings.Contains(e, "network is unreachable"), strings.Contains(e, "forcibly closed"),
+		strings.Contains(e, "unreachable network"), strings.Contains(e, "unreachable host"):
 		return DiagConnError
 	case strings.Contains(e, "stopped after"), strings.Contains(e, "redirect"):
 		// Rede de segurança para laços de redirect que cheguem sem o erro tipado

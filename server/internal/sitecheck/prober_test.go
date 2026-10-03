@@ -3,6 +3,7 @@ package sitecheck
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -425,3 +426,18 @@ func TestSemRespostaNoLimiteDoPrazo(t *testing.T) {
 }
 
 func comTTFB(r Result, ms float64) Result { r.TTFBMs = ms; return r }
+
+// As mensagens do Windows (WSAECONNREFUSED, WSAECONNRESET) não casam com os errno
+// do syscall: sem o texto, porta fechada e conexão derrubada viravam "unclassified"
+// num painel rodando no Windows.
+func TestClassificaMensagensDoWindows(t *testing.T) {
+	casos := map[string]string{
+		"dial tcp 127.0.0.1:9: connectex: No connection could be made because the target machine actively refused it.":     DiagConnRefused,
+		"read tcp 127.0.0.1:50000->127.0.0.1:443: wsarecv: An existing connection was forcibly closed by the remote host.": DiagConnError,
+	}
+	for msg, quer := range casos {
+		if got := classifyErr(errors.New(msg)); got != quer {
+			t.Errorf("%q: queria %q, veio %q", msg, quer, got)
+		}
+	}
+}
