@@ -351,12 +351,15 @@ func classifyErr(err error) string {
 		return DiagDNSError
 	case strings.Contains(s, "x509"), strings.Contains(s, "certificate"), strings.Contains(s, "tls:"):
 		return DiagTLS
-	case strings.Contains(s, "connection refused"):
+	// No Windows o dial recusado é WSAECONNREFUSED (10061), que não casa com
+	// syscall.ECONNREFUSED: o texto do sistema é o sinal comum aos dois.
+	case strings.Contains(s, "connection refused"), strings.Contains(s, "actively refused"):
 		return DiagConnRefused
 	case strings.Contains(s, "timeout"), strings.Contains(s, "deadline exceeded"):
 		return DiagConnTimeout
 	case strings.Contains(s, "no route to host"), strings.Contains(s, "connection reset"),
-		strings.Contains(s, "network is unreachable"):
+		strings.Contains(s, "network is unreachable"), strings.Contains(s, "forcibly closed"),
+		strings.Contains(s, "unreachable network"), strings.Contains(s, "unreachable host"):
 		return DiagConnError
 	}
 	return DiagNaoClassif

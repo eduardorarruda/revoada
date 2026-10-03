@@ -309,15 +309,16 @@ func restoDoRotacionado(path string, st fileState) []string {
 // digital do arquivo (fileState.Rabo).
 const tamanhoRabo = 64
 
-// reescrito diz se o arquivo foi truncado e reescrito com MAIS bytes do que o
-// offset antigo entre duas varreduras (copytruncate com a aplicação escrevendo
-// rápido). Inode igual e tamanho maior: o único sinal é o conteúdo. Os bytes logo
+// reescrito diz se o arquivo foi truncado e reescrito com pelo menos tantos bytes
+// quanto o offset antigo entre duas varreduras (copytruncate com a aplicação
+// escrevendo rápido, ou log apagado e recriado — no ext4 o inode é reaproveitado na
+// hora). Inode igual e tamanho igual ou maior: o único sinal é o conteúdo. Os bytes logo
 // antes do offset têm de ser os mesmos que lemos da última vez; se mudaram, o
 // offset aponta para o meio de outro conteúdo e continuar dali entregaria a
 // primeira linha cortada e perderia todas as anteriores.
 func reescrito(path string, st fileState, size int64) bool {
 	n := int64(len(st.Rabo))
-	if n == 0 || size <= st.Off || st.Off < n {
+	if n == 0 || size < st.Off || st.Off < n {
 		return false
 	}
 	fh, err := os.Open(path)

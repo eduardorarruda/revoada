@@ -2,6 +2,7 @@ package probe
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -223,6 +224,12 @@ func TestClassifyErrDaSondaNaoInventaTimeout(t *testing.T) {
 	r := NewReporter("http://gateway.invalido", "chave", "teste", nil)
 	if res := r.probe(context.Background(), alvo("http://"+addr+"/")); res.Diagnostic != DiagConnRefused {
 		t.Fatalf("porta fechada deveria virar %q, veio %q", DiagConnRefused, res.Diagnostic)
+	}
+
+	// mensagem do Windows para porta fechada (WSAECONNREFUSED), em qualquer SO
+	win := errors.New("dial tcp 127.0.0.1:9: connectex: No connection could be made because the target machine actively refused it.")
+	if got := classifyErr(win); got != DiagConnRefused {
+		t.Fatalf("recusa do Windows deveria virar %q, veio %q", DiagConnRefused, got)
 	}
 
 	if got := classifyErr(&net.OpError{Op: "dial", Err: errEstranho{}}); got != DiagNaoClassif {

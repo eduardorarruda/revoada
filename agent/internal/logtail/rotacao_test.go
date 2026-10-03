@@ -144,3 +144,26 @@ func first(s []string) string {
 	}
 	return s[0]
 }
+
+// PROVA: arquivo reescrito com EXATAMENTE o mesmo tamanho do offset. Acontece de
+// verdade no ext4: apagar e recriar o log reaproveita o inode na hora, e se a linha
+// nova tem o tamanho da antiga o coletor via "mesmo inode, nada novo" e a perdia
+// (o CI no Ubuntu pegou isto; no btrfs o inode não se repete e passava).
+func TestReescritoComMesmoTamanhoNaoPerdeALinha(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "app.log")
+	acrescentar(t, path, "a1\n")
+	tl := New("http://x", "k", "h", []string{path})
+	if got := tl.readNew(path); strings.Join(got, ",") != "a1" {
+		t.Fatalf("primeira leitura: %v", got)
+	}
+	if err := os.WriteFile(path, []byte("c1\n"), 0o644); err != nil { // trunca e reescreve
+		t.Fatal(err)
+	}
+	if got := tl.readNew(path); strings.Join(got, ",") != "c1" {
+		t.Fatalf("esperava [c1], veio %v", got)
+	}
+	if got := tl.readNew(path); len(got) != 0 {
+		t.Fatalf("releu: %v", got)
+	}
+}

@@ -3,6 +3,7 @@ package collect
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -320,6 +321,9 @@ func TestCicloSemStatsNaoApagaOEstadoAnterior(t *testing.T) {
 // O conteúdo não é "só números": as chaves do mapa são os IDs dos containers, ou seja,
 // um inventário do que roda ali.
 func TestEstadoDeContainerNaoELegivelPorTodos(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("o Windows não tem permissão Unix: a proteção ali é a ACL da pasta do serviço")
+	}
 	caminho := filepath.Join(t.TempDir(), "containers.state")
 	reiniciarEstadoDeContainer(caminho)
 	trocarCPUState("abc", containerSnapshot{Total: 1, System: 2, Online: 1, At: time.Now().UnixNano()})

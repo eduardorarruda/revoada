@@ -281,8 +281,13 @@ func TestEstadoCorrompidoNaoDerrubaAColeta(t *testing.T) {
 		t.Error("estado ausente deveria ser descartado")
 	}
 	// Caminho impossível: o erro tem de VOLTAR, não ser engolido — é ele que
-	// dispara o aviso ao operador.
-	if err := saveCPUState("/proc/1/nao-da-para-gravar/cpu.state", snap(1, 2, time.Now())); err == nil {
+	// dispara o aviso ao operador. Um ARQUIVO no lugar do diretório é impossível em
+	// qualquer SO (o /proc/1/… de antes não existe no Windows, que criava as pastas).
+	arquivo := filepath.Join(dir, "sou-um-arquivo")
+	if err := os.WriteFile(arquivo, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := saveCPUState(filepath.Join(arquivo, "cpu.state"), snap(1, 2, time.Now())); err == nil {
 		t.Error("gravação impossível deveria devolver erro, não silêncio")
 	}
 }
