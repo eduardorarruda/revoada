@@ -1,5 +1,5 @@
 # Build multi-stage: binário estático + imagem final distroless (sem shell, superfície mínima).
-FROM golang:1.26-bookworm AS build
+FROM golang:1.27-bookworm AS build
 WORKDIR /src
 
 # O gateway é um módulo dentro do monorepo; copiamos só o que ele precisa.

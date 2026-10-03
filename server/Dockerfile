@@ -1,5 +1,5 @@
 # Build multi-stage: binário estático + imagem distroless.
-FROM golang:1.26-bookworm AS build
+FROM golang:1.27-bookworm AS build
 WORKDIR /src
 # O painel depende dos módulos `core` e `proto` via replace ../core e ../proto —
 # os dois precisam estar no contexto da build.
