@@ -1,0 +1,130 @@
+/* Segurança da conta — só tokens (nenhuma cor fixa). */
+.seguranca__grade {
+  display: grid;
+  gap: var(--sp-5);
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  align-items: start;
+}
+.seguranca__grade > :first-child {
+  grid-row: span 2;
+}
+@media (max-width: 960px) {
+  .seguranca__grade {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .seguranca__grade > :first-child {
+    grid-row: auto;
+  }
+}
+.seguranca__titulo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+.seguranca__bloco {
+  display: grid;
+  gap: var(--sp-4);
+  justify-items: start;
+}
+.seguranca__bloco > :not(button),
+.seguranca__bloco .field {
+  width: 100%;
+}
+.seguranca__texto {
+  color: var(--text-2);
+  line-height: var(--lh-body);
+  margin: 0;
+}
+.seguranca__texto--fraco {
+  color: var(--text-3);
+  font-size: var(--fs-13);
+}
+.seguranca__aviso {
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--warn-line);
+  background: var(--warn-bg);
+  color: var(--text-1);
+}
+.seguranca__erro {
+  margin: 0;
+  color: var(--crit);
+}
+.seguranca__passos {
+  margin: 0;
+  padding-left: var(--sp-5);
+  color: var(--text-2);
+  display: grid;
+  gap: var(--sp-2);
+}
+.seguranca__qr {
+  display: flex;
+  gap: var(--sp-5);
+  align-items: center;
+  flex-wrap: wrap;
+}
+.seguranca__qr img {
+  border-radius: var(--radius);
+  background: var(--p-paper-0); /* o QR precisa de fundo claro para a câmera ler */
+  padding: var(--sp-2);
+  box-shadow: var(--shadow);
+}
+.seguranca__rotulo {
+  display: block;
+  color: var(--text-3);
+  font-size: var(--fs-12);
+  margin-bottom: var(--sp-1);
+}
+.seguranca__chave {
+  font-family: var(--font-mono);
+  font-size: var(--fs-14);
+  color: var(--text-1);
+  word-break: break-all;
+}
+.seguranca__codigo,
+.login__codigo {
+  font-family: var(--font-mono);
+  font-size: var(--fs-20);
+  letter-spacing: 0.3em;
+  text-align: center;
+  max-width: 14ch;
+}
+.seguranca__lista-codigos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-2);
+  width: 100%;
+}
+.seguranca__lista-codigos code {
+  display: block;
+  font-family: var(--font-mono);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-xs);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  text-align: center;
+  letter-spacing: 0.08em;
+}
+.seguranca__acoes {
+  display: flex;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+.seguranca__check {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+  color: var(--text-2);
+}
+.seguranca__permissoes {
+  margin: var(--sp-2) 0 var(--sp-4);
+  padding-left: var(--sp-5);
+  color: var(--text-1);
+  display: grid;
+  gap: var(--sp-1);
+}

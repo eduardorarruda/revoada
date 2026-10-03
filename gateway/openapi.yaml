@@ -1,0 +1,69 @@
+openapi: 3.0.3
+info:
+  title: Revoada — Gateway API
+  version: 0.1.0
+  description: |
+    Serviço de ingestão: OTLP (métricas, logs e traces), scrape Prometheus,
+    health/readiness e métricas internas do pipeline.
+
+    Nota de porta: o OTLP/gRPC roda em :4317 (padrão). O OTLP/HTTP é servido NESTE
+    listener em POST /v1/metrics (não numa porta :4318 dedicada) — configure o exporter
+    com o endpoint http://<gateway>:8090. Mover para :4318 é trivial se necessário.
+servers:
+  - url: http://localhost:8090
+paths:
+  /healthz:
+    get:
+      summary: Liveness — o processo está de pé.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { status: { type: string } } }
+  /readyz:
+    get:
+      summary: Readiness — checa ClickHouse, PostgreSQL e NATS.
+      responses:
+        "200": { description: Todas as dependências prontas }
+        "503":
+          description: Ao menos uma dependência indisponível
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ready: { type: boolean }
+                  checks:
+                    type: object
+                    additionalProperties: { type: string }
+  /metrics:
+    get:
+      summary: Métricas internas do writer no formato de exposição Prometheus.
+      responses:
+        "200":
+          description: Texto Prometheus
+          content:
+            text/plain: {}
+  /v1/metrics:
+    post:
+      summary: Ingestão OTLP de métricas (OTLP/HTTP).
+      description: |
+        Aceita application/x-protobuf (padrão) ou application/json (ExportMetricsServiceRequest).
+        Autentica pelo header X-Revoada-Key (mesma tabela agents). Gauge e Sum são suportados.
+      parameters:
+        - in: header
+          name: X-Revoada-Key
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/x-protobuf: {}
+          application/json: {}
+      responses:
+        "200": { description: ExportMetricsServiceResponse (vazio) }
+        "401": { description: Chave ausente/desconhecida }
+        "403": { description: Chave revogada }
+        "400": { description: Payload OTLP inválido }
+        "503": { description: Falha ao publicar no NATS }

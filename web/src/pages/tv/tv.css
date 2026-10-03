@@ -1,0 +1,651 @@
+/*
+ * Modo TV — a parede do NOC, lida de 3 a 10 m.
+ *
+ * Toda medida sai da ALTURA da tela (vh), com piso e teto: a mesma TV fica certa em
+ * 720p, 1080p e 4K (o teto vale o dobro do tamanho em 1080p, para TV que reporta
+ * 4K real ao navegador), e o preview num notebook continua legível. Só tokens. Sem
+ * :has(), backdrop-filter nem color-mix: navegador de TV costuma ser antigo, e o
+ * que ele não entende tem de degradar para "menos bonito", nunca para "ilegível".
+ */
+
+.tv {
+  --tv-pad: clamp(16px, 3.2vh, 112px);
+  --tv-gap: clamp(12px, 2.2vh, 80px);
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--tv-pad) var(--tv-pad);
+  background: var(--aura), var(--bg-0);
+  color: var(--text-1);
+  overflow: hidden;
+  transition: opacity 0.4s ease;
+}
+.tv--trocando {
+  opacity: 0;
+}
+
+/* ---- Cabeçalho: quem sou, como estamos, que horas são ---- */
+.tv-topo {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--tv-gap);
+  min-height: clamp(64px, 11vh, 300px);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--tv-gap);
+}
+.tv-topo__quem {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3vh;
+}
+.tv-topo__nome {
+  margin: 0;
+  font-size: clamp(20px, 3.6vh, 104px);
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tv-topo__sub {
+  display: flex;
+  align-items: center;
+  gap: 1.2vh;
+  font-size: clamp(13px, 2.1vh, 60px);
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+}
+/* Pontos da playlist: qual tela é esta e quantas faltam. */
+.tv-pontos {
+  display: inline-flex;
+  gap: 0.7vh;
+}
+.tv-pontos > span {
+  width: clamp(6px, 1vh, 28px);
+  height: clamp(6px, 1vh, 28px);
+  border-radius: 50%;
+  background: var(--border-strong);
+  transition: background-color 0.3s ease, transform 0.3s ease;
+}
+.tv-pontos > .tv-pontos__atual {
+  background: var(--accent);
+  transform: scale(1.35);
+}
+
+/* Estado geral: a resposta de "está tudo bem?" em uma pílula legível a 10 m. */
+.tv-estado {
+  --tom: var(--text-3);
+  --tom-bg: var(--bg-3);
+  --tom-line: var(--border-strong);
+  display: inline-flex;
+  align-items: center;
+  gap: 1.2vh;
+  padding: 1vh 2.2vh;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--tom-line);
+  background: var(--tom-bg);
+  color: var(--tom);
+  font-size: clamp(14px, 2.6vh, 72px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.tv-estado--ok { --tom: var(--ok); --tom-bg: var(--ok-bg); --tom-line: var(--ok-line); }
+.tv-estado--warn { --tom: var(--warn); --tom-bg: var(--warn-bg); --tom-line: var(--warn-line); }
+.tv-estado--crit { --tom: var(--crit); --tom-bg: var(--crit-bg); --tom-line: var(--crit-line); }
+.tv-estado__ponto {
+  width: 1.4vh;
+  height: 1.4vh;
+  min-width: 8px;
+  min-height: 8px;
+  border-radius: 50%;
+  background: var(--tom);
+}
+.tv-estado--warn .tv-estado__ponto,
+.tv-estado--crit .tv-estado__ponto {
+  animation: tv-onda 2s ease-out infinite;
+}
+@keyframes tv-onda {
+  0% { box-shadow: 0 0 0 0 var(--tom-line); }
+  70% { box-shadow: 0 0 0 1.4vh transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+.tv-relogio {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1;
+}
+.tv-relogio__hora {
+  font-size: clamp(26px, 6vh, 168px);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.tv-relogio__hora small {
+  font-size: 0.42em;
+  color: var(--text-3);
+  margin-left: 0.4vh;
+  letter-spacing: 0;
+}
+.tv-relogio__data {
+  margin-top: 0.6vh;
+  font-size: clamp(12px, 1.9vh, 52px);
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  gap: 0.8vh;
+}
+.tv-relogio__vivo {
+  width: 1vh;
+  height: 1vh;
+  min-width: 6px;
+  min-height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: live-ring 2.4s var(--ease-out) infinite;
+}
+.tv-relogio__data--atrasado {
+  color: var(--warn);
+}
+.tv-relogio__data--atrasado .tv-relogio__vivo {
+  background: var(--warn);
+}
+
+/* Barra de rotação: enche até a próxima tela. Quem olha sabe se dá tempo de ler. */
+.tv-progresso {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 3px;
+}
+.tv-progresso > span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+  box-shadow: 0 0 12px var(--accent-glow);
+  animation: tv-encher linear both;
+}
+@keyframes tv-encher {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* ---- Blocos de número (TV de painéis) ---- */
+.tv-grade {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: var(--tv-gap);
+}
+.tv-bloco {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 2.8vh 3vh 0;
+  border: 1px solid var(--border);
+  border-radius: clamp(12px, 2vh, 56px);
+  background: var(--sheen), var(--bg-2);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  animation: tv-bloco-entra 0.6s var(--ease-out) backwards;
+}
+.tv-bloco:nth-child(2) { animation-delay: 60ms; }
+.tv-bloco:nth-child(3) { animation-delay: 120ms; }
+.tv-bloco:nth-child(4) { animation-delay: 180ms; }
+.tv-bloco:nth-child(5) { animation-delay: 240ms; }
+.tv-bloco:nth-child(6) { animation-delay: 300ms; }
+@keyframes tv-bloco-entra {
+  from { opacity: 0; transform: translateY(2vh) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+/* Até duas linhas: cortar "CPU roubada pelo hipervi…" escondia justamente a
+   palavra que diz o que o número é. */
+.tv-bloco__titulo {
+  font-size: clamp(14px, 2.9vh, 80px);
+  font-weight: 550;
+  color: var(--text-2);
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.tv-bloco__valor {
+  margin-top: auto;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6vh;
+  white-space: nowrap;
+  line-height: 0.95;
+  font-variant-numeric: tabular-nums;
+}
+.tv-bloco__numero {
+  font-size: clamp(40px, 13vh, 380px);
+  font-weight: 650;
+  letter-spacing: -0.05em;
+  color: var(--text-1);
+}
+.tv-bloco__unidade {
+  font-size: clamp(18px, 5vh, 144px);
+  font-weight: 550;
+  color: var(--text-3);
+  letter-spacing: -0.02em;
+}
+.tv-bloco--sem-dado .tv-bloco__numero {
+  color: var(--text-3);
+}
+.tv-bloco__aviso {
+  margin-top: 1vh;
+  font-size: clamp(12px, 2.1vh, 60px);
+  font-weight: 600;
+  color: var(--warn);
+}
+.tv-bloco__tendencia {
+  margin-left: auto;
+  align-self: center;
+  white-space: nowrap;
+  font-size: clamp(12px, 2.2vh, 60px);
+  font-weight: 650;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.tv-faisca {
+  display: block;
+  width: calc(100% + 6vh);
+  height: 8vh;
+  min-height: 36px;
+  margin: 1.6vh -3vh 0;
+  color: var(--accent);
+}
+.tv-faisca__linha {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.tv-bloco--incompleto {
+  justify-content: center;
+  gap: 1vh;
+  padding-bottom: 2.8vh;
+}
+.tv-bloco--incompleto .tv-bloco__aviso {
+  font-size: clamp(14px, 2.8vh, 76px);
+}
+.tv-ocultos {
+  margin-top: 1vh;
+  text-align: right;
+  font-size: clamp(12px, 2vh, 56px);
+  color: var(--text-3);
+}
+
+/* ---- Estados de espera ---- */
+.tv-espera {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 2vh;
+}
+.tv-espera__titulo {
+  font-size: clamp(22px, 4.4vh, 120px);
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+.tv-espera__sub {
+  font-size: clamp(14px, 2.4vh, 68px);
+  color: var(--text-3);
+}
+
+/* ---- Crítico ativo: a tela inteira vira o incidente ---- */
+.tv--alarme {
+  background:
+    radial-gradient(90vh 70vh at 50% 45%, var(--crit-bg), transparent 70%),
+    radial-gradient(120vh 40vh at 50% 110%, var(--crit-bg), transparent 70%),
+    var(--bg-0);
+}
+.tv-alarme {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 2.2vh;
+}
+.tv-alarme__orbe {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 12vh;
+  height: 12vh;
+  min-width: 60px;
+  min-height: 60px;
+  border-radius: 50%;
+  color: var(--crit);
+  background: radial-gradient(circle at 35% 30%, var(--crit-bg), transparent 70%), var(--bg-2);
+  border: 2px solid var(--crit-line);
+  box-shadow: 0 0 8vh -1vh var(--crit);
+}
+.tv-alarme__orbe svg {
+  width: 52%;
+  height: 52%;
+}
+.tv-alarme__anel {
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 2px solid var(--crit);
+  opacity: 0;
+  animation: tv-alarme-onda 2.4s ease-out infinite;
+}
+.tv-alarme__anel--2 {
+  animation-delay: 1.2s;
+}
+@keyframes tv-alarme-onda {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+.tv-alarme__chip {
+  padding: 0.8vh 2vh;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--crit-line);
+  background: var(--crit-bg);
+  color: var(--crit);
+  font-size: clamp(14px, 2.6vh, 72px);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.tv-alarme__regra {
+  margin: 0;
+  max-width: 90vw;
+  font-size: clamp(32px, 9vh, 256px);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.02;
+  text-wrap: balance;
+}
+.tv-alarme__onde {
+  font-size: clamp(20px, 5vh, 140px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.tv-alarme__onde small {
+  display: block;
+  font-size: 0.4em;
+  font-weight: 700;
+  color: var(--text-3);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 0.6vh;
+}
+.tv-fatos {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.6vh;
+  margin-top: 1vh;
+}
+.tv-fato {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4vh;
+  min-width: 18vh;
+  padding: 1.6vh 3vh;
+  border: 1px solid var(--border-strong);
+  border-radius: clamp(10px, 1.6vh, 44px);
+  background: var(--bg-2);
+}
+.tv-fato__rotulo {
+  font-size: clamp(11px, 1.8vh, 48px);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.tv-fato__valor {
+  font-size: clamp(18px, 4vh, 112px);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.tv-alarme__passos {
+  display: flex;
+  gap: 1vh;
+  margin-top: 1vh;
+}
+.tv-alarme__passos > span {
+  width: 5vh;
+  height: 0.7vh;
+  min-height: 4px;
+  border-radius: 999px;
+  background: var(--border-strong);
+  overflow: hidden;
+}
+.tv-alarme__passos > .tv-alarme__passo--atual::after {
+  content: "";
+  display: block;
+  height: 100%;
+  background: var(--crit);
+  transform-origin: left;
+  animation: tv-encher 8s linear both;
+}
+
+/* ---- Alerta novo: chega por cima, fica 30 s e sai ---- */
+.tv-novo {
+  --tom: var(--warn);
+  --tom-bg: var(--warn-bg);
+  --tom-line: var(--warn-line);
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6vh;
+  background: var(--scrim);
+  animation: acender 0.4s ease backwards;
+}
+.tv-novo--crit { --tom: var(--crit); --tom-bg: var(--crit-bg); --tom-line: var(--crit-line); }
+.tv-novo--info { --tom: var(--info); --tom-bg: var(--info-bg); --tom-line: var(--info-line); }
+.tv-novo__cartao {
+  position: relative;
+  width: min(92vw, 150vh);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2vh;
+  padding: 6vh 6vh 5vh;
+  text-align: center;
+  border: 3px solid var(--tom);
+  border-radius: clamp(16px, 3vh, 80px);
+  background: radial-gradient(80vh 30vh at 50% 0%, var(--tom-bg), transparent 70%), var(--bg-2);
+  box-shadow: var(--shadow-lg), 0 0 12vh -2vh var(--tom);
+  overflow: hidden;
+  animation: tv-novo-chega 0.7s var(--ease-spring) backwards;
+}
+@keyframes tv-novo-chega {
+  from { opacity: 0; transform: translateY(-6vh) scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+.tv-novo__chip {
+  color: var(--tom);
+  font-size: clamp(14px, 2.8vh, 80px);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.tv-novo__regra {
+  margin: 0;
+  font-size: clamp(28px, 8vh, 232px);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.02;
+  text-wrap: balance;
+}
+.tv-novo__resto {
+  font-size: clamp(14px, 2.4vh, 68px);
+  color: var(--text-3);
+}
+/* Contagem regressiva dos 30 s na base do cartão. */
+.tv-novo__tempo {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0.8vh;
+  min-height: 4px;
+  background: var(--tom);
+  transform-origin: left;
+  animation: tv-esvaziar 30s linear both;
+}
+@keyframes tv-esvaziar {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+/* ---- Rodapé rolante: avisos e deploys ---- */
+.tv-letreiro {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: stretch;
+  height: clamp(36px, 5.4vh, 152px);
+  border-top: 1px solid var(--border-strong);
+  background: var(--bg-1);
+  font-size: clamp(14px, 2.4vh, 68px);
+  z-index: 5;
+}
+.tv-letreiro__rotulo {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 1vh;
+  padding: 0 2.4vh;
+  background: var(--warn-bg);
+  border-right: 1px solid var(--warn-line);
+  color: var(--warn);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.8em;
+}
+/* Sem avisos, com eventos extras: rótulo em dourado — âmbar é estado de atenção, e
+   evento informativo não é atenção. */
+.tv-letreiro__rotulo--equipe {
+  background: var(--accent-soft);
+  border-right-color: var(--accent-line);
+  color: var(--accent);
+}
+.tv-letreiro__trilho {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 4%, black 96%, transparent);
+  mask-image: linear-gradient(90deg, transparent, black 4%, black 96%, transparent);
+}
+/* A 2ª cópia (só existe para o laço sem emenda) entra no mesmo fluxo da 1ª. */
+.tv-letreiro__copia {
+  display: contents;
+}
+.tv-letreiro__fita {
+  display: inline-flex;
+  align-items: center;
+  gap: 5vh;
+  padding-left: 5vh;
+  animation: tvticker 40s linear infinite;
+}
+.tv-letreiro__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 1vh;
+  color: var(--text-2);
+}
+.tv-letreiro__item--aviso {
+  color: var(--warn);
+  font-weight: 650;
+}
+@keyframes tvticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+/* Com o letreiro na tela, o conteúdo sobe para não ficar atrás dele. */
+.tv--com-letreiro {
+  padding-bottom: calc(var(--tv-pad) + clamp(36px, 5.4vh, 152px));
+}
+
+/* ---- Mural de saúde (TV) ---- */
+.tv-mural {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+.tv-mural__janela {
+  overflow: hidden;
+  transition: opacity 0.4s ease;
+}
+.tv-aviso-conexao {
+  margin-bottom: var(--tv-gap);
+  padding: 1.6vh 2.4vh;
+  border: 2px solid var(--warn);
+  border-radius: clamp(10px, 1.6vh, 44px);
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-size: clamp(16px, 2.8vh, 76px);
+  font-weight: 650;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tv *,
+  .tv-novo,
+  .tv-novo * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Com menos movimento o letreiro não anda — e o que não cabe na primeira tela
+   sumiria. Parado, ele quebra em linhas e mostra tudo (uma cópia só). */
+@media (prefers-reduced-motion: reduce) {
+  .tv-letreiro__fita {
+    animation: none !important;
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+  .tv-letreiro__trilho {
+    overflow: visible;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+  .tv-letreiro__copia {
+    display: none;
+  }
+}

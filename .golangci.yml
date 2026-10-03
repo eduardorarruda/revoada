@@ -1,0 +1,37 @@
+# Configuração compartilhada do golangci-lint (v2) para todos os módulos Go
+# (gateway, server, agent). Cada módulo é lintado com `golangci-lint run` a
+# partir da sua pasta; a descoberta de config sobe a árvore e encontra este arquivo.
+#
+# misspell NÃO é usado de propósito: o código tem comentários em português e o
+# dicionário (inglês) gera só falsos positivos ("problemas"->"problems" etc.).
+version: "2"
+linters:
+  enable:
+    - govet
+    - errcheck
+    - staticcheck
+    - ineffassign
+    - unused
+  settings:
+    errcheck:
+      # Funções de limpeza/escrita cujo erro é idiomático ignorar (fecho de
+      # Body/conn/tx em defer, escrita em ResponseWriter de métricas etc.).
+      exclude-functions:
+        - (io.Closer).Close
+        - (github.com/jackc/pgx/v5.Tx).Rollback
+        - (*github.com/coder/websocket.Conn).CloseNow
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+  exclusions:
+    rules:
+      # Em testes, ignorar erros de setup (WriteFile/WriteString/Write) é aceitável.
+      - path: _test\.go
+        linters:
+          - errcheck
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofmt

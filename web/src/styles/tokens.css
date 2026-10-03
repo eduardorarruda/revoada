@@ -1,0 +1,417 @@
+/*
+ * Design tokens do Revoada — três camadas.
+ *
+ *   1. PRIMITIVOS  (--p-*)   valores crus: escalas de neutro, marca e estados.
+ *   2. SEMÂNTICOS  (--bg-*, --text-*, --ok, --accent…) o PAPEL de cada cor. É esta
+ *      camada que muda entre tema escuro e claro — nada acima dela precisa saber.
+ *   3. COMPONENTES (--card-*, --btn-*, --sidebar-*…) o ajuste fino de cada peça,
+ *      sempre apontando para a camada semântica.
+ *
+ * Identidade Revoada: azul-petróleo (#45C6CC) sobre marinho profundo — as cores do
+ * pássaro da logo. O azul-petróleo é o ÚNICO
+ * sinal de marca (ativo, foco, ação principal, "ao vivo"); verde/âmbar/vermelho são
+ * reservados para ESTADO — quando algo fica vermelho, tem de querer dizer algo.
+ *
+ * Os nomes antigos (--bg-0…3, --text-1…3, --sp-*, --fs-*) continuam valendo: são a
+ * camada semântica, e as 30 telas do painel dependem deles.
+ * Regra: NENHUMA cor hardcoded fora deste arquivo (lint garante no TS).
+ */
+
+/* ------------------------------------------------------------------------ */
+/* 1. PRIMITIVOS — iguais nos dois temas                                      */
+/* ------------------------------------------------------------------------ */
+:root {
+  /* marinho: neutros com um fio de azul no matiz (nunca cinza puro) */
+  --p-ink-0: #04080f;
+  --p-ink-50: #070d18;
+  --p-ink-100: #0b1322;
+  --p-ink-150: #0f192b;
+  --p-ink-200: #142034;
+  --p-ink-300: #1c2a42;
+  --p-ink-400: #283955;
+  --p-ink-500: #3c4f6e;
+  --p-ink-600: #5e7090;
+  --p-ink-700: #97a5bd;
+  --p-ink-800: #bfc9d9;
+  --p-ink-900: #e3e8f0;
+  --p-ink-950: #f4f7fb;
+
+  /* papel: o claro, também frio */
+  --p-paper-0: #ffffff;
+  --p-paper-50: #f8fafc;
+  --p-paper-100: #f2f5f9;
+  --p-paper-200: #e6ebf2;
+  --p-paper-300: #d4dbe6;
+
+  /* azul-petróleo Revoada — tirado do pássaro da logo */
+  --p-brand-200: #bdf0ef;
+  --p-brand-300: #86e1e0;
+  --p-brand-400: #45c6cc; /* a cor da marca */
+  --p-brand-500: #2aa3ae;
+  --p-brand-600: #1f8593;
+  --p-brand-700: #17687a;
+  --p-brand-800: #0f4a5c;
+
+  /* dourado: só decorativo (confete da TV, pódio) — nunca marca */
+  --p-gold-200: #f2e0bb;
+  --p-gold-300: #ebcd94;
+  --p-gold-400: #e2b772;
+  --p-gold-500: #cfa15a;
+  --p-gold-600: #b08744;
+  --p-gold-700: #86652e;
+  --p-gold-800: #5c451f;
+
+  /* estados — matizes separados para leitura por quem não distingue verde/vermelho */
+  --p-green-400: #4ade94;
+  --p-green-500: #2fb872;
+  --p-green-700: #177a48;
+  --p-amber-400: #fbbf4a;
+  --p-amber-500: #e8a317;
+  --p-amber-700: #946200;
+  --p-red-400: #ff6b61;
+  --p-red-500: #f04438;
+  --p-red-700: #c0261c;
+  --p-blue-400: #6cb4ff;
+  --p-blue-700: #1a66c9;
+  --p-violet-400: #b39cff;
+  --p-violet-700: #6d4fd1;
+
+  /* tipografia: Geist (sans + mono), servida pelo próprio painel — nada de CDN */
+  --font-sans: "Geist Variable", "Geist", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Geist Mono Variable", "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --fs-11: 0.6875rem;
+  --fs-12: 0.75rem;
+  --fs-13: 0.8125rem;
+  --fs-14: 0.875rem;
+  --fs-16: 1rem;
+  --fs-18: 1.125rem;
+  --fs-20: 1.25rem;
+  --fs-24: 1.5rem;
+  --fs-28: 1.75rem;
+  --fs-32: 2rem;
+  --fs-40: 2.5rem;
+  --fs-64: 4rem;
+  --fs-120: 7.5rem;
+  --lh-tight: 1.15;
+  --lh-snug: 1.35;
+  --lh-body: 1.55;
+  --tracking-tight: -0.022em;
+  --tracking-label: 0.06em;
+
+  /* espaçamento — grid de 4/8px */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 64px;
+
+  /* raios: não é o mesmo em tudo — peça pequena, raio pequeno */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-pill: 999px;
+
+  /* movimento — espelhado em src/motion/tokens.ts para as animações em JS */
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 320ms;
+  --dur-4: 520ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+
+  /* camadas */
+  --z-sticky: 30;
+  --z-sidebar: 40;
+  --z-overlay: 60;
+  --z-modal: 70;
+  --z-paleta: 130; /* acima de modal (100), gaveta (90) e avisos (120) */
+  --z-toast: 80;
+}
+
+/* ------------------------------------------------------------------------ */
+/* 2. SEMÂNTICOS — tema escuro (padrão: o painel nasce escuro)               */
+/* ------------------------------------------------------------------------ */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* superfícies por luminância: cada degrau é um andar acima */
+  --bg-0: var(--p-ink-50); /* fundo da app */
+  --bg-1: var(--p-ink-100); /* superfície (menu, barra) */
+  --bg-2: var(--p-ink-150); /* cartão */
+  --bg-3: var(--p-ink-200); /* elevado / hover */
+  --bg-4: var(--p-ink-300); /* pressionado / trilho */
+  --bg-sunken: var(--p-ink-0); /* poço: campos, código */
+  --border: rgba(220, 232, 255, 0.075);
+  --border-strong: rgba(220, 232, 255, 0.14);
+  --border-focus: rgba(69, 198, 204, 0.55);
+
+  /* texto */
+  --text-1: var(--p-ink-950);
+  --text-2: #aab5c8;
+  --text-3: var(--p-ink-700); /* AA (≥4.5:1) em fs-11/12 inclusive sob o brilho do cursor (4.65:1) */
+  --text-inverse: var(--p-ink-50);
+
+  /* estado — tinta forte + fundo translúcido + contorno */
+  --ok: var(--p-green-400);
+  --ok-bg: rgba(74, 222, 148, 0.1);
+  --ok-line: rgba(74, 222, 148, 0.28);
+  --warn: var(--p-amber-400);
+  --warn-bg: rgba(251, 191, 74, 0.1);
+  --warn-line: rgba(251, 191, 74, 0.3);
+  --crit: var(--p-red-400);
+  --crit-bg: rgba(255, 107, 97, 0.1);
+  --crit-line: rgba(255, 107, 97, 0.32);
+  --info: var(--p-blue-400);
+  --info-bg: rgba(108, 180, 255, 0.1);
+  --info-line: rgba(108, 180, 255, 0.3);
+  --violet: var(--p-violet-400);
+
+  /* marca */
+  --accent: var(--p-brand-400);
+  --accent-dim: var(--p-brand-500);
+  --accent-hover: var(--p-brand-300);
+  --accent-strong: var(--p-brand-300);
+  --accent-soft: rgba(69, 198, 204, 0.1);
+  --accent-line: rgba(69, 198, 204, 0.32);
+  --accent-glow: rgba(69, 198, 204, 0.22);
+  --on-accent: var(--p-ink-50); /* tinta sobre o azul-petróleo — fixa nos dois temas */
+
+  /* profundidade: sombra + fio de luz no topo (a "borda de vidro") */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.5), 0 24px 64px -16px rgba(0, 0, 0, 0.85);
+  --highlight: inset 0 1px 0 rgba(235, 242, 255, 0.045);
+  --sheen: linear-gradient(180deg, rgba(235, 242, 255, 0.028), rgba(235, 242, 255, 0) 60%);
+  --scrim: rgba(2, 5, 10, 0.66);
+
+  /* atmosfera: aura azul-petróleo muito leve no alto da página + grão */
+  --aura: radial-gradient(1100px 520px at 12% -12%, rgba(69, 198, 204, 0.075), transparent 62%),
+    radial-gradient(900px 480px at 110% 0%, rgba(108, 180, 255, 0.035), transparent 60%);
+  --grain-opacity: 0.035;
+
+  /* barra do topo em vidro: fundo da app translúcido (sem color-mix — TV antiga) */
+  --topbar-bg: rgba(7, 13, 24, 0.72);
+  --zebra: rgba(235, 242, 255, 0.014);
+  /* Contorno de campo: é o ÚNICO sinal de onde o campo começa (o fundo quase não
+     se distingue do cartão), então precisa de ≥3:1 (WCAG 1.4.11). */
+  --input-border: rgba(220, 232, 255, 0.4);
+
+  /* rolagem */
+  --scroll-thumb: rgba(220, 232, 255, 0.12);
+  --scroll-thumb-hover: rgba(220, 232, 255, 0.22);
+}
+
+/* ------------------------------------------------------------------------ */
+/* 2b. SEMÂNTICOS — tema claro (papel frio, azul-petróleo escurecido para AA) */
+/* ------------------------------------------------------------------------ */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-0: var(--p-paper-100);
+  --bg-1: var(--p-paper-50);
+  --bg-2: var(--p-paper-0);
+  --bg-3: var(--p-paper-100);
+  --bg-4: var(--p-paper-200);
+  --bg-sunken: var(--p-paper-50);
+  --border: rgba(15, 30, 55, 0.1);
+  --border-strong: rgba(15, 30, 55, 0.18);
+  --border-focus: rgba(23, 104, 122, 0.6);
+
+  --text-1: #0f1a2b;
+  --text-2: #45526a;
+  --text-3: #5b6980;
+  --text-inverse: var(--p-paper-0);
+
+  /* Tintas de estado escurecidas: o selo de 11px precisa de ≥4.5:1 também sobre
+     bg-0/bg-3 e sob a aura do topo da página. */
+  --ok: #11663b;
+  --ok-bg: rgba(23, 122, 72, 0.09);
+  --ok-line: rgba(23, 122, 72, 0.28);
+  --warn: #7d5300;
+  --warn-bg: rgba(232, 163, 23, 0.13);
+  --warn-line: rgba(148, 98, 0, 0.3);
+  --crit: var(--p-red-700);
+  --crit-bg: rgba(192, 38, 28, 0.08);
+  --crit-line: rgba(192, 38, 28, 0.28);
+  --info: #1659b0;
+  --info-bg: rgba(26, 102, 201, 0.08);
+  --info-line: rgba(26, 102, 201, 0.26);
+  --violet: var(--p-violet-700);
+
+  --accent: var(--p-brand-700);
+  --accent-dim: var(--p-brand-500);
+  --accent-hover: var(--p-brand-600);
+  --accent-strong: var(--p-brand-800);
+  --accent-soft: rgba(42, 163, 174, 0.14);
+  --accent-line: rgba(31, 133, 147, 0.4);
+  --accent-glow: rgba(42, 163, 174, 0.25);
+
+  --shadow-sm: 0 1px 2px rgba(15, 30, 55, 0.06);
+  --shadow: 0 1px 2px rgba(15, 30, 55, 0.06), 0 8px 24px -14px rgba(15, 30, 55, 0.18);
+  --shadow-lg: 0 2px 6px rgba(15, 30, 55, 0.08), 0 24px 60px -18px rgba(15, 30, 55, 0.28);
+  --highlight: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 60%);
+  --scrim: rgba(10, 18, 32, 0.4);
+
+  --aura: radial-gradient(1100px 520px at 12% -12%, rgba(42, 163, 174, 0.12), transparent 62%),
+    radial-gradient(900px 480px at 110% 0%, rgba(26, 102, 201, 0.04), transparent 60%);
+  --grain-opacity: 0.025;
+
+  --topbar-bg: rgba(242, 245, 249, 0.78);
+  --zebra: rgba(15, 30, 55, 0.018);
+  --input-border: rgba(15, 30, 55, 0.5);
+
+  --scroll-thumb: rgba(15, 30, 55, 0.16);
+  --scroll-thumb-hover: rgba(15, 30, 55, 0.28);
+}
+
+/* ------------------------------------------------------------------------ */
+/* 3. COMPONENTES — sempre sobre a camada semântica                           */
+/* ------------------------------------------------------------------------ */
+:root {
+  --card-bg: var(--bg-2);
+  --card-border: var(--border);
+  --card-radius: var(--radius-lg);
+  --card-pad: var(--sp-5);
+  --card-shadow: var(--shadow), var(--highlight);
+
+  --btn-h: 36px;
+  --btn-radius: var(--radius-sm);
+  --btn-bg: var(--bg-3);
+  --btn-bg-hover: var(--bg-4);
+  --btn-border: var(--border-strong);
+  --btn-primary-bg: linear-gradient(180deg, var(--p-brand-300), var(--p-brand-500));
+  --btn-primary-bg-hover: linear-gradient(180deg, var(--p-brand-200), var(--p-brand-400));
+  --btn-primary-shine: inset 0 1px 0 rgba(255, 255, 255, 0.38);
+
+  --input-h: 36px;
+  --input-bg: var(--bg-sunken);
+  --input-radius: var(--radius-sm);
+
+  --sidebar-w: 248px;
+  --sidebar-w-collapsed: 64px;
+  --sidebar-bg: var(--bg-1);
+  --topbar-h: 60px;
+
+  --table-head-bg: var(--bg-1);
+  --table-row-hover: var(--bg-3);
+
+  --kpi-value: var(--fs-32);
+  --page-max: 1600px;
+  --page-pad: var(--sp-6);
+}
+
+/* ------------------------------------------------------------------------ */
+/* Base                                                                       */
+/* ------------------------------------------------------------------------ */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+
+/* A barra do topo é fixa e translúcida: sem isto, o elemento focado ao voltar com
+   Shift+Tab podia ficar escondido atrás dela. */
+html {
+  scroll-padding-top: var(--topbar-h);
+}
+
+/* Texto só para leitor de tela. */
+.so-leitor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+body {
+  background: var(--bg-0);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  font-size: var(--fs-14);
+  line-height: var(--lh-body);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+  letter-spacing: var(--tracking-tight);
+}
+
+::selection {
+  background: var(--accent-glow);
+  color: var(--text-1);
+}
+
+/* números dinâmicos: tabular figures (colunas alinhadas) */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* foco visível e consistente com o acento — anel duplo, legível em qualquer fundo */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* barras de rolagem discretas, da cor do tema (a branca no menu escuro destoava) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: var(--radius-pill);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scroll-thumb-hover);
+  background-clip: padding-box;
+  border: 3px solid transparent;
+}
+
+/* Quem pede menos movimento no sistema recebe o painel parado: nenhuma transição
+   passa de um piscar. As animações em JS consultam a mesma preferência. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,42 @@
+# --- Go ---
+/bin/
+/dist/
+*.exe
+*.test
+*.out
+vendor/
+# --- Node / web ---
+node_modules/
+web/dist/
+web/.vite/
+*.local
+# --- Ambiente / segredos ---
+.env
+.env.*
+!.env.example
+# --- Dados locais (volumes, dumps, backups) ---
+/data/
+*.sqlite
+*.db
+deploy/data/
+# --- Editores / SO ---
+.DS_Store
+.idea/
+.vscode/
+*.swp
+# --- Cobertura / logs ---
+coverage.*
+*.log
+
+# Revoada QA pipeline local state
+.qa/
+
+# binários de teste local
+.tmp-bin/
+
+# interface embutida no painel (copiada de web/dist no build; o index.html de aviso fica no git)
+server/internal/webui/dist/*
+!server/internal/webui/dist/index.html
+
+# configuração local do Claude Code (de cada desenvolvedor)
+.claude/

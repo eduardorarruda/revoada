@@ -1,0 +1,202 @@
+// Contrato do canal painel ↔ agente (ARQUITETURA §7).
+//
+// Quem abre a conexão é SEMPRE o agente (só saída): Inscrever uma vez, com um token
+// de uso único, para receber a identidade; depois Conectar num stream bidirecional
+// sobre mTLS, por onde passam batimentos, tarefas, eventos e controles.
+//
+// Regras de entrega: pelo menos uma vez + idempotência. Toda tarefa tem `id`; todo
+// evento tem `seq` crescente por tarefa; quem recebe ignora repetidos e confirma com
+// `Confirmacao`. O agente guarda o que ainda não foi confirmado e reenvia ao voltar.
+syntax = "proto3";
+
+package revoada.agente.v1;
+
+option go_package = "github.com/eduardorarruda/revoada/proto/revoada/agente/v1;agentev1";
+
+service Canal {
+  // Inscrever troca o token de uso único por um certificado de cliente (mTLS), a CA
+  // do painel e a chave pública que assina as tarefas. Só TLS (sem certificado de
+  // cliente — o agente ainda não tem um); o agente confere a CA pela impressão
+  // digital que vem dentro do token.
+  rpc Inscrever(PedidoInscricao) returns (RespostaInscricao);
+
+  // Conectar é o canal de trabalho. Exige o certificado emitido na inscrição.
+  rpc Conectar(stream MsgAgente) returns (stream MsgPainel);
+}
+
+message PedidoInscricao {
+  string token = 1;
+  bytes csr_der = 2;     // pedido de certificado (chave ECDSA P-256 gerada no agente)
+  bytes chave_selo = 3;  // chave pública X25519: o painel sela credenciais para ela
+  string hostname = 4;
+  string so = 5;         // linux | windows | darwin
+  string arch = 6;       // amd64 | arm64
+  string versao = 7;
+}
+
+message RespostaInscricao {
+  string agente_id = 1;
+  bytes certificado_der = 2;
+  bytes ca_der = 3;
+  bytes chave_assinatura_painel = 4; // Ed25519: o agente só executa tarefa assinada por ela
+  int64 valido_ate = 5;              // unix
+}
+
+// ---------------------------------------------------------------- agente → painel
+
+message MsgAgente {
+  oneof corpo {
+    Ola ola = 1;
+    Batimento batimento = 2;
+    EventoTarefa evento = 3;
+    Checkpoint checkpoint = 4;
+    ResultadoTarefa resultado = 5;
+    RespostaEsquema esquema = 6;
+    Confirmacao ack = 7;
+    PedidoRenovacao renovacao = 8;
+  }
+}
+
+// Ola abre cada conexão: quem é, o que sabe fazer e o que já está em andamento.
+message Ola {
+  string agente_id = 1;
+  string versao = 2;
+  string so = 3;
+  string arch = 4;
+  string hostname = 5;
+  repeated string capacidades = 6;          // tipos de tarefa liberados na config local
+  repeated EstadoTarefa em_andamento = 7;   // para o painel reconciliar depois de uma queda
+}
+
+message EstadoTarefa {
+  string tarefa_id = 1;
+  string estado = 2;   // executando | pausada | concluida
+  int64 ultimo_seq = 3;
+}
+
+message Batimento {
+  int64 seq = 1;
+  int64 em = 2;           // unix ms
+  double cpu_pct = 3;
+  double mem_pct = 4;
+  int32 tarefas_ativas = 5;
+}
+
+message EventoTarefa {
+  enum Nivel {
+    INFO = 0;
+    AVISO = 1;
+    ERRO = 2;
+  }
+  string tarefa_id = 1;
+  int64 seq = 2;
+  int64 em = 3;           // unix ms
+  string etapa = 4;
+  Nivel nivel = 5;
+  string mensagem = 6;
+  double progresso = 7;   // 0..100
+  map<string, double> metricas = 8;
+}
+
+message Checkpoint {
+  string tarefa_id = 1;
+  int64 seq = 2;
+  string tabela = 3;
+  string ultima_chave = 4;
+  int64 linhas = 5;
+}
+
+message ResultadoTarefa {
+  enum Estado {
+    ESTADO_NENHUM = 0;
+    SUCESSO = 1;
+    FALHA = 2;
+    CANCELADA = 3;
+    RECUSADA = 4; // assinatura inválida, tipo não liberado ou tarefa vencida
+  }
+  string tarefa_id = 1;
+  int64 seq = 2;
+  Estado estado = 3;
+  string erro = 4;
+  bytes resumo = 5;       // JSON livre do tipo de tarefa
+}
+
+message RespostaEsquema {
+  string pedido_id = 1;
+  bytes esquema = 2;      // JSON do schema neutro (core/migracao/esquema) — nunca dados
+  string erro = 3;
+}
+
+message PedidoRenovacao {
+  bytes csr_der = 1;
+}
+
+// ---------------------------------------------------------------- painel → agente
+
+message MsgPainel {
+  oneof corpo {
+    Tarefa tarefa = 1;
+    Controle controle = 2;
+    PedidoEsquema pedido_esquema = 3;
+    Confirmacao ack = 4;
+    RespostaRenovacao renovacao = 5;
+  }
+}
+
+message Tarefa {
+  string id = 1;
+  string tipo = 2;                           // diagnostico.eco, migracao.simular, firebird.upgrade…
+  bytes especificacao = 3;                   // JSON do tipo
+  repeated CredencialSelada credenciais = 4; // seladas para a chave X25519 DESTE agente
+  int64 expira_em = 5;                       // unix: depois disso o agente recusa
+  Limites limites = 6;
+  string correlacao_id = 7;
+  bytes assinatura = 8;                      // Ed25519 do painel sobre a tarefa com este campo vazio
+}
+
+message CredencialSelada {
+  string nome = 1;        // ex.: "origem", "destino"
+  bytes efemera = 2;
+  bytes nonce = 3;
+  bytes cifrado = 4;
+  int64 expira_em = 5;
+}
+
+message Limites {
+  int32 workers = 1;
+  double cpu_max_pct = 2;
+  string janela_inicio = 3; // "22:00"
+  string janela_fim = 4;    // "06:00"
+}
+
+message Controle {
+  enum Acao {
+    ACAO_NENHUMA = 0;
+    PAUSAR = 1;
+    RETOMAR = 2;
+    CANCELAR = 3;
+  }
+  string tarefa_id = 1;
+  Acao acao = 2;
+}
+
+message PedidoEsquema {
+  string pedido_id = 1;
+  string motor = 2;                     // firebird | postgres
+  string endereco = 3;
+  string banco = 4;
+  string usuario = 5;
+  CredencialSelada credencial = 6;
+  map<string, string> opcoes = 7;
+  bytes assinatura = 8;                 // Ed25519 do painel
+}
+
+message Confirmacao {
+  string tarefa_id = 1;
+  int64 seq = 2; // tudo até este seq foi gravado
+}
+
+message RespostaRenovacao {
+  bytes certificado_der = 1;
+  int64 valido_ate = 2;
+}

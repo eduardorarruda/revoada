@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Revoada</title>
+<style>
+  :root { color-scheme: dark; --fundo: #0a1626; --cartao: #10233a; --borda: #1f3a5a; --texto: #e6eef7; --suave: #9fb3c8; --marca: #2fc4b2; --erro: #ff7a7a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: radial-gradient(1200px 600px at 20% -10%, #123456 0%, var(--fundo) 60%); color: var(--texto); font: 15px/1.5 system-ui, sans-serif; }
+  main { width: min(440px, 92vw); padding: 32px; background: var(--cartao); border: 1px solid var(--borda); border-radius: 16px; box-shadow: 0 20px 60px #0008; }
+  h1 { margin: 0 0 4px; font-size: 22px; } p { margin: 0 0 20px; color: var(--suave); }
+  label { display: block; font-size: 13px; color: var(--suave); margin-bottom: 6px; }
+  input { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--borda); background: #0b1b2e; color: var(--texto); font: inherit; }
+  input:focus { outline: 2px solid var(--marca); outline-offset: 1px; }
+  button { margin-top: 16px; width: 100%; padding: 12px; border: 0; border-radius: 10px; background: var(--marca); color: #04211d; font-weight: 700; font: inherit; cursor: pointer; }
+  .erro { color: var(--erro); margin: 12px 0 0; }
+  .rodape { margin-top: 18px; font-size: 12px; color: var(--suave); }
+  @media (prefers-reduced-motion: no-preference) { main { animation: sobe .5s cubic-bezier(.22,1,.36,1); } @keyframes sobe { from { opacity: 0; transform: translateY(12px); } } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Revoada</h1>
+  <p>Endereço do painel da sua empresa. Fica guardado neste computador; troque depois em Revoada → Trocar de painel.</p>
+  <form method="post" action="/conectar">
+    <input type="hidden" name="nonce" value="{{.Nonce}}">
+    <label for="painel">Painel</label>
+    <input id="painel" name="painel" type="url" required autofocus placeholder="https://painel.suaempresa.com.br" value="{{.Painel}}">
+    <button type="submit">Conectar</button>
+    {{if .Erro}}<p class="erro" role="alert">{{.Erro}}</p>{{end}}
+  </form>
+  <p class="rodape">O login, o 2FA e as permissões são os do painel — o aplicativo não guarda senha.</p>
+</main>
+</body>
+</html>

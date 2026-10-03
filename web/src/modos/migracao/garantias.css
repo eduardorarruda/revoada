@@ -1,0 +1,50 @@
+/* Garantias da migração: seis passos em linha (quebram em grade no estreito). */
+.mm-garantias {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--sp-3);
+}
+.mm-garantias__passo {
+  position: relative;
+  padding: var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 10px);
+  background: var(--bg-1);
+}
+.mm-garantias__topo {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+  color: var(--accent);
+}
+.mm-garantias__topo strong {
+  color: var(--text-1);
+  font-size: var(--fs-14);
+}
+.mm-garantias__num {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: var(--fs-12);
+  font-weight: 700;
+  color: var(--bg-0);
+  background: var(--accent);
+}
+.mm-garantias__passo ul {
+  margin: 0;
+  padding-left: var(--sp-4);
+  display: grid;
+  gap: var(--sp-1);
+  color: var(--text-2);
+  font-size: var(--fs-13);
+  line-height: 1.45;
+}
+.mm-garantias-bloco {
+  margin-bottom: var(--sp-5);
+}

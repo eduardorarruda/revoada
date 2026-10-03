@@ -1,0 +1,81 @@
+name: Release
+
+# Em tag v*: compila painel e agente para linux/windows/darwin × amd64/arm64,
+# gera checksums SHA-256 e publica tudo como release do GitHub.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  # A interface é compilada uma vez e embutida no painel de cada plataforma
+  # (server/internal/webui, go:embed) — sem isto o binário sobe só com a página de aviso.
+  interface:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci && npm run build
+        working-directory: web
+      - uses: actions/upload-artifact@v4
+        with:
+          name: interface
+          path: web/dist
+
+  binarios:
+    needs: interface
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: '**/go.sum'
+      - uses: actions/download-artifact@v4
+        with:
+          name: interface
+          path: server/internal/webui/dist
+      - name: build
+        env:
+          CGO_ENABLED: '0'
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          VERSAO: ${{ github.ref_name }}
+        run: |
+          ext=""; [ "$GOOS" = windows ] && ext=".exe"
+          mkdir -p dist
+          flags="-s -w -X main.version=${VERSAO}"
+          (cd agent && go build -trimpath -ldflags "$flags" -o "../dist/revoada-agent-${GOOS}-${GOARCH}${ext}" ./cmd/revoada-agent)
+          (cd server && go build -trimpath -ldflags "$flags" -o "../dist/revoada-painel-${GOOS}-${GOARCH}${ext}" ./cmd/server)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bin-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/*
+
+  publicar:
+    needs: binarios
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: bin-*
+          path: dist
+          merge-multiple: true
+      - name: checksums
+        working-directory: dist
+        run: sha256sum * > SHA256SUMS
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

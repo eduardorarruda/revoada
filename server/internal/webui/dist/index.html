@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Aplica o tema ANTES do CSS/render para evitar flash de tema errado no boot
+         (UX-19). Replica a mesma decisão de src/theme.ts: valor salvo, senão a
+         preferência do sistema. Mantenha em sincronia com theme.ts. -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("revoada-theme");
+          var theme =
+            stored === "light" || stored === "dark"
+              ? stored
+              : window.matchMedia &&
+                  window.matchMedia("(prefers-color-scheme: light)").matches
+                ? "light"
+                : "dark";
+          document.documentElement.dataset.theme = theme;
+        } catch (e) {
+          document.documentElement.dataset.theme = "dark";
+        }
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#070d18" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f2f5f9" />
+    <meta name="description" content="Revoada — monitoramento e observabilidade" />
+    <link rel="stylesheet" href="/fonts/fonts.css" />
+    <title>Revoada</title>
+    <script type="module" crossorigin src="/assets/index-BGJTZgsx.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CXbS6EZF.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

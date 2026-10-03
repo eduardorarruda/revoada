@@ -1,0 +1,43 @@
+/* Seletor de papel (Usuários & Acessos): três cartões, um por papel. */
+.seletor-papel {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+}
+.seletor-papel legend {
+  font-size: var(--fs-13);
+  color: var(--text-2);
+  margin-bottom: var(--sp-2);
+}
+.seletor-papel__opcao {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: flex-start;
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color var(--dur-2) var(--ease-out), background var(--dur-2) var(--ease-out);
+}
+.seletor-papel__opcao:hover {
+  border-color: var(--border-strong);
+}
+.seletor-papel__opcao.is-ativo {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+.seletor-papel__opcao input {
+  margin-top: 3px;
+  accent-color: var(--accent);
+}
+.seletor-papel__opcao span {
+  display: grid;
+  gap: 2px;
+}
+.seletor-papel__opcao small {
+  color: var(--text-3);
+  font-size: var(--fs-12);
+  line-height: var(--lh-snug);
+}

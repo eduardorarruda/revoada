@@ -1,0 +1,31 @@
+name: Defeito
+description: Algo não funciona como deveria
+labels: [defeito]
+body:
+  - type: textarea
+    id: oque
+    attributes:
+      label: O que aconteceu
+      description: E o que você esperava que acontecesse.
+    validations: { required: true }
+  - type: textarea
+    id: passos
+    attributes:
+      label: Como reproduzir
+      placeholder: "1. ...\n2. ...\n3. ..."
+    validations: { required: true }
+  - type: input
+    id: versao
+    attributes:
+      label: Versão / commit
+  - type: dropdown
+    id: parte
+    attributes:
+      label: Parte do sistema
+      options: [Painel / interface, Agente, Gateway, Migração de bancos, Upgrade Firebird, MCP, Deploy, Outro]
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs relevantes
+      description: Sem senhas, tokens ou dados de clientes.
+      render: text

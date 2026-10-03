@@ -1,0 +1,88 @@
+[Unit]
+Description=Revoada agent (coleta de métricas do host)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=revoada
+Group=revoada
+
+# Promoção do binário auto-atualizado (ver deploy/agent/promote-update.sh).
+#
+# O agente roda como revoada e o binário é de root dentro de ProtectSystem=strict:
+# ele NÃO consegue trocar o próprio binário — e não deve, senão comprometer o
+# agente passa a valer virar root. Então o agente só baixa e VERIFICA em
+# /var/lib/revoada-agent/update, e esta linha promove.
+#
+# Os dois prefixos são obrigatórios e cada um evita um defeito diferente:
+#   `+`  roda como root, ignorando User= e ProtectSystem=strict. Sem ele /usr é
+#        somente-leitura e a promoção falha em silêncio. EXIGE systemd >= 231; o
+#        install.sh detecta e omite esta linha em systemd mais antigo (CentOS 7),
+#        onde a auto-atualização fica em modo "só estagia".
+#   `-`  ignora a falha desta linha. Sem ele, um script ausente ou com defeito
+#        impediria o serviço de subir — a atualização derrubaria a coleta, que é
+#        exatamente o que ela não pode fazer.
+ExecStartPre=-+/usr/local/lib/revoada/promote-update.sh
+
+ExecStart=/usr/local/bin/revoada-agent -config /etc/revoada/agent.yaml
+Restart=always
+RestartSec=5
+
+# Cerca dura de recurso (defesa em profundidade). O install.sh gera estes valores
+# a partir dos defaults ou das flags (--mem-max/--cpu-quota/--nice/--tasks-max);
+# aqui ficam os defaults de referência. Editáveis: altere e rode daemon-reload.
+MemoryMax=256M
+MemoryHigh=200M
+CPUQuota=40%
+TasksMax=128
+Nice=10
+
+# Não-root, capabilities mínimas e sandbox de filesystem.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+# Diretório de estado gravável (WAL do buffer): /var/lib/revoada-agent
+StateDirectory=revoada-agent
+ReadWritePaths=/var/lib/revoada-agent
+
+# ─── Coleta de logs do servidor inteiro (Fase D) — OPT-IN ────────────────────
+# Os defaults de sandbox acima NÃO permitem os coletores de servidor (journald,
+# docker, syslog, dmesg): eles estão desligados por padrão no agent.yaml
+# (collect_journald/collect_docker_logs/collect_syslog/collect_dmesg = false).
+# Para HABILITAR uma fonte, ligue o toggle no agent.yaml E descomente APENAS a(s)
+# diretiva(s) correspondente(s) abaixo. Cada uma amplia a superfície de exposição
+# do agente não-root — habilite só o necessário.
+#
+# journald (source=journald): ler o journal exige pertencer ao grupo do systemd.
+#   SupplementaryGroups=systemd-journal
+#
+# docker logs (source=docker): falar com o socket exige o grupo docker. ATENÇÃO:
+#   o grupo docker é equivalente a root na prática (quem fala com o socket pode
+#   subir containers privilegiados) — trade-off de segurança relevante.
+#   SupplementaryGroups=docker
+#
+# syslog (source=syslog): ler /var/log/syslog e /var/log/messages. ProtectSystem
+#   e ProtectHome não bloqueiam /var/log, mas o usuário revoada precisa de permissão
+#   de leitura (normalmente grupo adm no Debian/Ubuntu):
+#   SupplementaryGroups=adm
+#
+# dmesg/kernel (source=kernel): ler /dev/kmsg exige CAP_SYSLOG (ou o sysctl
+#   kernel.dmesg_restrict=0). Conceder a capability reintroduz um privilégio que o
+#   default zera — trade-off de segurança relevante:
+#   AmbientCapabilities=CAP_SYSLOG
+#   CapabilityBoundingSet=CAP_SYSLOG
+#
+# Vários toggles ao mesmo tempo: liste os grupos numa única linha, ex.:
+#   SupplementaryGroups=systemd-journal docker adm
+# ─────────────────────────────────────────────────────────────────────────────
+
+[Install]
+WantedBy=multi-user.target

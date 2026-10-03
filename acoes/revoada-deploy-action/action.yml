@@ -1,0 +1,56 @@
+name: Revoada Deploy
+description: Implanta uma aplicação num servidor pelo agente do Revoada (sem runner self-hosted), com health check e rollback automático.
+author: Eduardo Arruda
+branding:
+  icon: upload-cloud
+  color: green
+inputs:
+  painel:
+    description: Endereço do painel (ex.: https://painel.suaempresa.com.br)
+    required: true
+  token:
+    description: Token de deploy do painel (REVOADA_DEPLOY_TOKEN) — guarde num secret
+    required: true
+  agente:
+    description: Servidor de destino (hostname ou id do agente)
+    required: true
+  aplicacao:
+    description: Nome da aplicação como está em canal.deploy no agent.yaml do servidor
+    required: true
+  versao:
+    description: Versão a implantar (tag da imagem ou do release)
+    required: true
+  ambiente:
+    description: Ambiente (rótulo na anotação dos gráficos)
+    required: false
+    default: ""
+  aguardar:
+    description: Esperar o fim e falhar o job se o deploy falhar (true/false)
+    required: false
+    default: "true"
+  timeout-minutos:
+    description: Quanto esperar o deploy terminar
+    required: false
+    default: "15"
+outputs:
+  deploy-id:
+    description: Id do deploy no painel
+    value: ${{ steps.deploy.outputs.deploy-id }}
+  estado:
+    description: sucesso | falha | cancelada | recusada (vazio com aguardar=false)
+    value: ${{ steps.deploy.outputs.estado }}
+runs:
+  using: composite
+  steps:
+    - id: deploy
+      shell: bash
+      env:
+        REVOADA_PAINEL: ${{ inputs.painel }}
+        REVOADA_TOKEN: ${{ inputs.token }}
+        REVOADA_AGENTE: ${{ inputs.agente }}
+        REVOADA_APLICACAO: ${{ inputs.aplicacao }}
+        REVOADA_VERSAO: ${{ inputs.versao }}
+        REVOADA_AMBIENTE: ${{ inputs.ambiente }}
+        REVOADA_AGUARDAR: ${{ inputs.aguardar }}
+        REVOADA_TIMEOUT_MIN: ${{ inputs.timeout-minutos }}
+      run: bash "${{ github.action_path }}/deploy.sh"

@@ -1,0 +1,10 @@
+.git
+.claude
+.tmp-bin
+**/node_modules
+web/dist
+dist
+desktop/build
+**/*.log
+.env
+.env.*

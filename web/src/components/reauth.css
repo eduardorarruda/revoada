@@ -1,0 +1,18 @@
+.reauth {
+  display: grid;
+  gap: var(--sp-4);
+}
+.reauth__texto {
+  margin: 0;
+  color: var(--text-2);
+  line-height: var(--lh-body);
+}
+.reauth__erro {
+  margin: 0;
+  color: var(--crit);
+}
+.reauth__acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+}

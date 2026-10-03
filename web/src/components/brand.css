@@ -1,0 +1,32 @@
+/* Logotipo Revoada — pássaro (imagem) + nome (texto nos tokens do tema).
+   O tamanho vem de duas variáveis, para o pássaro e o nome crescerem juntos. */
+
+.brand-logo {
+  --logo-mark: 40px;
+  --logo-name: var(--fs-20);
+}
+.brand-logo--lg {
+  --logo-mark: 56px;
+  --logo-name: var(--fs-28);
+}
+
+.brand-logo--full {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--logo-mark) * 0.22);
+}
+.brand-logo__mark,
+.brand-logo--mark {
+  display: block;
+  height: var(--logo-mark);
+  width: var(--logo-mark);
+  object-fit: contain;
+  flex: none;
+}
+.brand-logo__name {
+  font-weight: 700;
+  font-size: var(--logo-name);
+  letter-spacing: var(--tracking-tight);
+  line-height: 1;
+  color: var(--text-1);
+}

@@ -1,0 +1,42 @@
+/* Bando — só tokens. A asa bate (escala vertical) e o pássaro deriva um pouco. */
+.bando {
+  display: inline-flex;
+  color: var(--accent);
+}
+.bando__asa {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: bando-bate 0.9s ease-in-out infinite;
+}
+.bando__ave {
+  animation: bando-deriva 2.4s ease-in-out infinite;
+}
+@keyframes bando-bate {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(-0.6);
+  }
+}
+@keyframes bando-deriva {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -2px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bando__asa,
+  .bando__ave {
+    animation: none;
+  }
+}

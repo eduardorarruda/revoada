@@ -1,0 +1,2 @@
+DROP VIEW IF EXISTS metrics_1h_mv;
+DROP TABLE IF EXISTS metrics_1h

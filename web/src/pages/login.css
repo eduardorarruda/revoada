@@ -1,0 +1,171 @@
+/* Login — vitrine viva à esquerda (desktop), formulário à direita. Só tokens. */
+.login {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(380px, 1fr);
+  background: var(--aura), var(--bg-0);
+}
+
+.login__vitrine {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  padding: var(--sp-8) var(--sp-7);
+  border-right: 1px solid var(--border);
+  background:
+    radial-gradient(800px 500px at 20% 110%, var(--accent-soft), transparent 70%),
+    linear-gradient(180deg, var(--bg-1), var(--bg-0));
+}
+.telemetria {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.9;
+  /* As linhas somem para cima e para a esquerda: o texto nunca disputa com elas. */
+  mask-image: linear-gradient(180deg, transparent 0%, black 25%, black 60%, transparent 100%);
+}
+.telemetria__pausa {
+  position: absolute;
+  top: var(--sp-5);
+  left: var(--sp-5);
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--bg-1);
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-12);
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity var(--dur-1) ease, color var(--dur-1) ease;
+}
+.telemetria__pausa:hover,
+.telemetria__pausa:focus-visible {
+  opacity: 1;
+  color: var(--text-1);
+}
+.login__vitrine-texto {
+  position: relative;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  animation: surgir var(--dur-4) var(--ease-out) 120ms backwards;
+}
+.login__selo {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 4px 12px 4px 10px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--fs-12);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.login__selo-ponto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: live-ring 2.4s var(--ease-out) infinite;
+}
+.login__manchete {
+  margin: 0;
+  font-size: clamp(2rem, 1.2rem + 2.2vw, 3.25rem);
+  font-weight: 650;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+  color: var(--text-1);
+}
+.login__apoio {
+  margin: 0;
+  max-width: 44ch;
+  color: var(--text-2);
+  font-size: var(--fs-16);
+}
+
+.login__lado {
+  display: grid;
+  place-items: center;
+  padding: var(--sp-6) var(--sp-5);
+}
+.login__caixa {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  animation: surgir var(--dur-4) var(--ease-out) backwards;
+}
+.login__marca {
+  margin-bottom: var(--sp-7);
+}
+.login__titulo {
+  margin: 0;
+  font-size: var(--fs-28);
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  color: var(--text-1);
+}
+.login__sub {
+  margin: var(--sp-2) 0 var(--sp-6);
+  color: var(--text-2);
+}
+.login__form {
+  display: grid;
+  gap: var(--sp-1);
+}
+.login__form .field {
+  min-height: 42px;
+}
+.login__form .btn {
+  margin-top: var(--sp-3);
+  min-height: 44px;
+  font-size: var(--fs-14);
+}
+.login__erro {
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--crit-line);
+  border-radius: var(--radius-sm);
+  background: var(--crit-bg);
+  color: var(--crit);
+  font-size: var(--fs-13);
+  animation: tremer 360ms var(--ease-out);
+}
+/* O erro "chacoalha" uma vez: o olho vai até ele sem precisar procurar. */
+@keyframes tremer {
+  0%, 100% { transform: none; }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(4px); }
+  75% { transform: translateX(-2px); }
+}
+.login__rodape {
+  margin: var(--sp-5) 0 0;
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+
+/* Celular e tablet: só o formulário; a vitrine sai de cena. */
+@media (max-width: 900px) {
+  .login {
+    grid-template-columns: 1fr;
+  }
+  .login__vitrine {
+    display: none;
+  }
+  .login__lado {
+    align-items: start;
+    padding-top: 12vh;
+  }
+}

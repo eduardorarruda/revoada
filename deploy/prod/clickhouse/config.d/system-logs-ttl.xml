@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<!--
+  Retenção dos LOGS INTERNOS do ClickHouse (system.*_log). Sem isto, essas tabelas de
+  depuração do próprio CH crescem sem teto e ficam MUITO maiores que os dados do
+  painel (auditoria: system.text_log ~306 MB, trace_log ~96 MB, vs metrics ~14 MB).
+  Aqui damos TTL curto às que valem manter para diagnóstico e desligamos as mais
+  volumosas/puramente internas. Aplica no restart do container (via config.d montado).
+-->
+<clickhouse>
+    <!--
+      Fuso do servidor, FIXADO de propósito. As colunas `ts` de metrics/metrics_1m/
+      metrics_1h são DateTime sem fuso, o gateway grava strings em UTC e várias
+      consultas comparam com now() do servidor. Enquanto isso ficar implícito, um
+      dia alguém define TZ no container (ou a imagem muda de default) e TODA a base
+      se desloca de uma vez: os baldes de toStartOfInterval mudam de fronteira e os
+      hosts aparecem como "sem sinal". Hoje o valor efetivo já é UTC (conferido em
+      produção com SELECT timezone()); escrever isso aqui só impede que mude por
+      acidente.
+    -->
+    <timezone>UTC</timezone>
+
+    <!-- TTL de 3 dias nas tabelas de auditoria/operação que ainda ajudam a depurar. -->
+    <query_log>
+        <ttl>event_date + INTERVAL 3 DAY DELETE</ttl>
+    </query_log>
+    <query_views_log>
+        <ttl>event_date + INTERVAL 3 DAY DELETE</ttl>
+    </query_views_log>
+    <part_log>
+        <ttl>event_date + INTERVAL 3 DAY DELETE</ttl>
+    </part_log>
+    <metric_log>
+        <ttl>event_date + INTERVAL 3 DAY DELETE</ttl>
+    </metric_log>
+    <error_log>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+    </error_log>
+
+    <!-- Tabelas de depuração pesadas e puramente internas: desligadas (a remoção da
+         seção com <remove> desabilita a coleta). Reative pontualmente se precisar
+         investigar algo no próprio ClickHouse. -->
+    <text_log remove="1"/>
+    <trace_log remove="1"/>
+    <processors_profile_log remove="1"/>
+    <asynchronous_metric_log remove="1"/>
+</clickhouse>

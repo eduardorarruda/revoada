@@ -1,0 +1,227 @@
+.panel {
+  background: var(--sheen), var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  padding: var(--sp-4) var(--sp-5) var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  min-height: 120px;
+  transition: border-color var(--dur-2) ease;
+}
+.panel:hover {
+  border-color: var(--border-strong);
+}
+.panel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+.panel__titlewrap {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.panel__title {
+  margin: 0;
+  font-size: var(--fs-14);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-1);
+}
+.panel__info {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  color: var(--text-3);
+  font-size: var(--fs-12);
+  cursor: help;
+}
+.panel__body {
+  flex: 1;
+  min-height: 0;
+}
+.panel__stack {
+  display: grid;
+  gap: var(--sp-2);
+}
+.panel__msg {
+  color: var(--text-3);
+  font-size: var(--fs-14);
+  margin: var(--sp-4) 0;
+  text-align: center;
+}
+.panel__msg--err {
+  color: var(--crit);
+}
+/* Nota de rodapé: agregação + resolução efetiva. Discreta de propósito — informa
+   sem competir com o dado. */
+.panel__note {
+  margin: var(--sp-2) 0 0;
+  padding-top: var(--sp-2);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-12);
+  color: var(--text-3);
+  line-height: 1.5;
+  /* Sem isto, "suavizados" não quebra num painel estreito (span 6 em 375px dá 46px
+     de caixa) e o texto vaza POR CIMA do painel vizinho. */
+  overflow-wrap: anywhere;
+}
+/* Num painel estreito a nota chegava a 15 linhas e virava o maior elemento da caixa
+   — deixava de informar e passava a competir com o dado. Aqui ela encolhe para duas
+   linhas com reticências; a frase inteira continua no `title`. */
+@media (max-width: 768px) {
+  .panel__note {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+}
+/* Estado "sem dado" / "dado velho" dos painéis de número: linha curta abaixo do
+   valor, para o vazio nunca ser confundido com um zero legítimo. */
+.panel__stale {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-12);
+  color: var(--text-3);
+}
+.panel__value--nodata {
+  color: var(--text-3);
+}
+
+/* stat / big number */
+.stat__value {
+  font-size: var(--fs-40);
+  font-weight: 650;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+}
+.stat__row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+}
+.stat__trend--up { color: var(--ok); }
+.stat__trend--down { color: var(--crit); }
+.stat__unit { color: var(--text-2); font-size: var(--fs-16); }
+
+/* bar gauge */
+.bargauge__row {
+  display: grid;
+  grid-template-columns: 1fr 2fr auto;
+  gap: var(--sp-3);
+  align-items: center;
+  margin-bottom: var(--sp-2);
+  font-size: var(--fs-14);
+}
+.bargauge__track {
+  height: 10px;
+  background: var(--bg-3);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.bargauge__fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width var(--dur-4) var(--ease-out);
+}
+
+/* table */
+.ptable-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+.ptable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-14);
+}
+.ptable th, .ptable td {
+  text-align: left;
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+}
+.ptable th {
+  color: var(--text-2);
+  cursor: pointer;
+  user-select: none;
+  font-weight: 500;
+}
+.ptable td.num { text-align: right; }
+
+/* state timeline */
+.timeline {
+  display: flex;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.timeline__seg { height: 100%; }
+.timeline__legend {
+  display: flex;
+  gap: var(--sp-4);
+  margin-top: var(--sp-2);
+  font-size: var(--fs-12);
+  color: var(--text-2);
+}
+
+.uplot-wrap, .echart-wrap { width: 100%; }
+
+/* Primeira aparição do gráfico: a série se desenha da esquerda para a direita.
+   Só a primeira — o gráfico é recriado a cada atualização (ver TimeSeries.tsx). */
+.uplot-wrap--entrada .u-over,
+.uplot-wrap--entrada canvas {
+  animation: traco 900ms var(--ease-out) backwards;
+}
+@keyframes traco {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
+/* Legenda do uPlot no padrão do painel (a padrão vem com fonte e cores do tema
+   claro do próprio uPlot). */
+.uplot {
+  font-family: var(--font-sans);
+}
+.uplot .u-legend {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-12);
+  color: var(--text-2);
+  text-align: left;
+}
+.uplot .u-legend .u-series > * {
+  padding: 4px 6px;
+}
+.uplot .u-legend .u-label {
+  color: var(--text-3);
+  font-weight: 500;
+}
+.uplot .u-legend .u-value {
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.uplot .u-legend .u-marker {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  border-width: 0 !important;
+}
+.uplot .u-legend .u-off > * {
+  opacity: 0.35;
+}
+/* Linha e ponto do cursor na cor da marca. */
+.uplot .u-cursor-x,
+.uplot .u-cursor-y {
+  border-color: var(--border-strong) !important;
+}
+.uplot .u-select {
+  background: var(--accent-soft);
+}

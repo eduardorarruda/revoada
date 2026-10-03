@@ -1,0 +1,80 @@
+# Exemplo de pipeline Vector (https://vector.dev) para enviar logs ao Revoada.
+#
+# Lê journald + logs de containers Docker + um arquivo de aplicação, normaliza e
+# envia como NDJSON para o endpoint /ingest/logs do gateway (autenticado pela
+# chave de ingestão do agente, mesma tabela `agents`).
+#
+# Uso:
+#   REVOADA_KEY=<chave> vector --config docs/vector-example.toml
+#
+# Para volumes altos prefira o OTLP nativo (/v1/logs) com um coletor OpenTelemetry;
+# este exemplo usa o sink HTTP genérico por ser o caminho mais simples de operar.
+
+# ---------------------------------------------------------------------------
+# Fontes
+# ---------------------------------------------------------------------------
+
+[sources.journald]
+type = "journald"
+current_boot_only = true
+
+[sources.docker]
+type = "docker_logs"
+
+[sources.app_file]
+type = "file"
+include = ["/var/log/revoada/*.log"]
+read_from = "end"
+
+# ---------------------------------------------------------------------------
+# Transformação: mapeia cada evento para o esquema esperado por /ingest/logs
+# (service, severity, body, labels, ts, trace_id, span_id).
+# ---------------------------------------------------------------------------
+
+[transforms.normalize]
+type = "remap"
+inputs = ["journald", "docker", "app_file"]
+source = '''
+# body: prioriza a mensagem estruturada; cai para a linha crua.
+.body = to_string(.message) ?? to_string(.) ?? ""
+
+# service: unit do journald, nome do container, ou o arquivo de origem.
+.service = to_string(._SYSTEMD_UNIT) ?? to_string(.container_name) ?? to_string(.source_type) ?? "desconhecido"
+
+# severity: usa PRIORITY do journald quando existir, senão heurística no texto.
+if exists(.PRIORITY) {
+  prio = to_int(.PRIORITY) ?? 6
+  .severity = if prio <= 2 { "FATAL" } else if prio == 3 { "ERROR" } else if prio == 4 { "WARN" } else if prio == 5 { "NOTICE" } else { "INFO" }
+} else if match(.body, r'(?i)\b(error|erro|exception|fatal|panic)\b') {
+  .severity = "ERROR"
+} else if match(.body, r'(?i)\b(warn|warning)\b') {
+  .severity = "WARN"
+} else {
+  .severity = "INFO"
+}
+
+# labels: host + qualquer campo útil.
+.labels = {}
+.labels.host = to_string(.host) ?? to_string(.hostname) ?? ""
+
+# ts em RFC3339 (Vector já traz .timestamp).
+.ts = format_timestamp!(.timestamp, format: "%+")
+
+# mantém só os campos do contrato.
+. = { "ts": .ts, "service": .service, "severity": .severity, "body": .body, "labels": .labels }
+'''
+
+# ---------------------------------------------------------------------------
+# Sink: NDJSON para o gateway.
+# ---------------------------------------------------------------------------
+
+[sinks.revoada]
+type = "http"
+inputs = ["normalize"]
+uri = "http://gateway:8090/ingest/logs"
+method = "post"
+encoding.codec = "json"
+framing.method = "newline_delimited"
+request.headers.X-Revoada-Key = "${REVOADA_KEY}"
+batch.max_events = 500
+batch.timeout_secs = 2

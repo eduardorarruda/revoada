@@ -1,0 +1,251 @@
+/* Agentes — só tokens. */
+.agentes__erro,
+.tarefa__erro {
+  color: var(--crit);
+}
+.agentes__grade {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+}
+.agente {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  padding: var(--sp-5);
+  box-shadow: var(--card-shadow);
+  display: grid;
+  gap: var(--sp-4);
+  position: relative;
+  overflow: hidden;
+}
+.agente--offline {
+  border-color: var(--crit-line);
+}
+.agente__topo {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.agente__nome {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.agente__nome strong {
+  font-size: var(--fs-16);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agente__nome span {
+  color: var(--text-3);
+  font-size: var(--fs-12);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* o "pássaro respirando": pulso suave no online, parado no offline */
+.agente__pulso {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--text-3);
+}
+.agente__pulso--online {
+  background: var(--ok);
+  box-shadow: 0 0 0 0 var(--ok-line);
+  animation: agente-pulso 2s var(--ease-out) infinite;
+}
+.agente__pulso--instavel {
+  background: var(--warn);
+}
+.agente__pulso--offline {
+  background: var(--crit);
+}
+@keyframes agente-pulso {
+  0% {
+    box-shadow: 0 0 0 0 var(--ok-line);
+  }
+  70% {
+    box-shadow: 0 0 0 10px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agente__pulso--online {
+    animation: none;
+  }
+}
+.agente__dados {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-3);
+  margin: 0;
+}
+.agente__dados dt {
+  color: var(--text-3);
+  font-size: var(--fs-11);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+}
+.agente__dados dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.agente__caps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.agente__cap {
+  font-size: var(--fs-12);
+  padding: 2px var(--sp-2);
+  border-radius: var(--radius-xs);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  color: var(--accent-strong);
+}
+.agente__caps-vazio {
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+.agente__acoes,
+.tarefa__acoes {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.agentes__vazio {
+  display: grid;
+  gap: var(--sp-3);
+  justify-items: start;
+  color: var(--text-2);
+}
+.agentes__vazio-titulo {
+  font-size: var(--fs-18);
+  color: var(--text-1);
+  font-weight: 600;
+  margin: 0;
+}
+.agentes__revogados {
+  margin-top: var(--sp-5);
+  color: var(--text-3);
+}
+.agentes__form {
+  display: grid;
+  gap: var(--sp-4);
+}
+.agentes__texto {
+  margin: 0;
+  color: var(--text-2);
+  line-height: var(--lh-body);
+}
+.agentes__texto--fraco {
+  color: var(--text-3);
+  font-size: var(--fs-13);
+}
+.comando {
+  display: grid;
+  gap: var(--sp-1);
+}
+.comando__rotulo {
+  font-size: var(--fs-12);
+  color: var(--text-3);
+}
+.comando__linha {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: stretch;
+}
+.comando__linha code {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+/* tarefa ao vivo */
+.tarefa {
+  display: grid;
+  gap: var(--sp-4);
+}
+.tarefa__cabeca {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+.tarefa__id {
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+  color: var(--text-3);
+}
+.tarefa__barra {
+  position: relative;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.tarefa__preenchida {
+  height: 100%;
+  background: linear-gradient(90deg, var(--p-brand-600), var(--p-brand-400));
+  box-shadow: 0 0 18px var(--accent-glow);
+}
+.tarefa__preenchida--sucesso {
+  background: linear-gradient(90deg, var(--p-green-700), var(--p-green-400));
+}
+.tarefa__preenchida--falha,
+.tarefa__preenchida--recusada,
+.tarefa__preenchida--cancelada {
+  background: var(--crit-bg);
+}
+.tarefa__pct {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: var(--fs-13);
+}
+.tarefa__linha {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  display: grid;
+  gap: var(--sp-1);
+  font-size: var(--fs-13);
+}
+.tarefa__evento {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--sp-3);
+  padding: var(--sp-1) var(--sp-2);
+  border-left: 2px solid var(--accent-line);
+}
+.tarefa__evento time {
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.tarefa__evento--aviso {
+  border-left-color: var(--warn);
+}
+.tarefa__evento--erro {
+  border-left-color: var(--crit);
+}

@@ -1,0 +1,52 @@
+# Configuração do revoada-agent (instale em /etc/revoada/agent.yaml).
+gateway_url: http://gateway.exemplo.com.br:8090
+key: TROQUE-PELA-CHAVE-DE-INGESTAO
+# hostname: sobrescreve o nome detectado (opcional)
+interval_seconds: 15
+buffer_dir: /var/lib/revoada-agent/buffer
+
+# Coleta de disco: "all" (default) emite uso por montagem física (label mount),
+# incluindo swap e contagem de processos; "root" restringe o disco ao `/`.
+collect_filesystems: all
+
+# Métricas por container Docker (CPU/mem/estado/reinícios, inclui containers
+# parados/falhos). Default: true quando há socket do Docker. Use false para desligar.
+collect_containers: true
+
+# Logs opcionais (P5): segue arquivos e envia como logs.
+collect_logs: false
+log_paths:
+  - /var/log/revoada/*.log
+
+# Logs do servidor inteiro (Fase D). Todos opt-in (default false). Cada fonte
+# marca os registros com um label `source` ∈ {journald,docker,syslog,kernel}.
+# ATENÇÃO: cada toggle exige afrouxar o sandbox do systemd — veja o bloco
+# comentado em deploy/agent/revoada-agent.service antes de habilitar.
+# Só rodam no modo loop contínuo (systemd), não no modo once/cron.
+collect_journald: false     # journald via `journalctl -o json --follow` (grupo systemd-journal)
+collect_docker_logs: false  # logs de containers via socket do Docker (grupo docker)
+collect_syslog: false       # /var/log/syslog + /var/log/messages (leitura de /var/log)
+collect_dmesg: false        # ring buffer do kernel via /dev/kmsg (CAP_SYSLOG)
+
+# ─── Salvaguardas de não-sobrecarga (opcionais; defaults seguros) ────────────
+# Garantem que o agente não pese no host mesmo sob condições anormais. Veja os
+# números medidos em docs/nao-sobrecarga.md.
+# self_metrics: emite o próprio consumo do agente (agent.self.cpu.percent,
+#   agent.self.memory.rss_bytes, agent.self.goroutines) a cada ciclo — permite
+#   PROVAR o footprint num painel. Default: true.
+self_metrics: true
+# log_max_lines_per_sec: teto de linhas de log/segundo (todas as fontes somadas).
+#   Protege contra floods (um container tagarela). Default: 5000. 0 = sem limite.
+log_max_lines_per_sec: 5000
+# max_containers: teto de containers coletados por ciclo (prioriza os em execução).
+#   0 (default) = sem teto explícito (só o orçamento interno de 10s).
+max_containers: 0
+# buffer_max_files: teto do WAL em disco (lotes OTLP quando o gateway está fora).
+#   Default: 5000 (~20,8h a ticks de 15s). Ao estourar, descarta o lote mais antigo.
+buffer_max_files: 5000
+
+# Sonda multi-região (P6.3): marque true para usar este agente como sonda de sites.
+probe: false
+probe_location: ""
+probe_urls:
+  - https://www.exemplo.com.br/

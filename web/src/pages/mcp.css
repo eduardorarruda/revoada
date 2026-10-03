@@ -1,0 +1,118 @@
+/* MCP — só tokens. */
+.mcp {
+  display: grid;
+  gap: var(--sp-5);
+}
+.mcp__garantias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.mcp__garantias span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: var(--fs-12);
+}
+.mcp__vazio {
+  color: var(--text-2);
+}
+.mcp__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+}
+.mcp__lista li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-2);
+}
+.mcp__escopos {
+  display: inline-flex;
+  gap: var(--sp-1);
+}
+.mcp__meta {
+  flex: 1;
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+.mcp__form {
+  display: grid;
+  gap: var(--sp-4);
+}
+.mcp__escolhas {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+}
+.mcp__escolhas legend {
+  font-size: var(--fs-12);
+  color: var(--text-3);
+  margin-bottom: var(--sp-1);
+}
+.mcp__escolhas label {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: flex-start;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-13);
+  color: var(--text-2);
+  cursor: pointer;
+}
+.mcp__escolhas label.is-on {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--text-1);
+}
+.mcp__criado {
+  display: grid;
+  gap: var(--sp-4);
+}
+.mcp__aviso {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-sm);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-line);
+}
+.mcp__token {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+}
+.mcp__token code {
+  flex: 1;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  font-family: var(--font-mono);
+  word-break: break-all;
+}
+.mcp__config pre {
+  margin: var(--sp-1) 0 0;
+  padding: var(--sp-3);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  font-size: var(--fs-12);
+  overflow-x: auto;
+}
+.mcp__config-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}

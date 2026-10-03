@@ -1,0 +1,2094 @@
+/* Estilos dos componentes base — só tokens, nenhuma cor literal. */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: var(--btn-h);
+  padding: 0 var(--sp-4);
+  font: inherit;
+  font-size: var(--fs-13);
+  font-weight: 550;
+  letter-spacing: -0.005em;
+  border-radius: var(--btn-radius);
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  box-shadow: var(--highlight);
+  color: var(--text-1);
+  cursor: pointer;
+  user-select: none;
+  /* background-color, não o atalho `background` — ver o comentário em .kpi. */
+  transition:
+    background-color var(--dur-1) ease,
+    border-color var(--dur-1) ease,
+    color var(--dur-1) ease,
+    transform var(--dur-1) var(--ease-out),
+    box-shadow var(--dur-2) ease;
+}
+.btn:hover {
+  background: var(--btn-bg-hover);
+  border-color: var(--border-strong);
+}
+/* O clique se sente: o botão afunda 1px. Tátil sem ser teatral. */
+.btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+}
+.btn--primary {
+  background: var(--btn-primary-bg);
+  border-color: transparent;
+  color: var(--on-accent);
+  box-shadow:
+    var(--btn-primary-shine),
+    var(--shadow-sm),
+    0 0 0 0 var(--accent-glow);
+}
+.btn--primary:hover {
+  background: var(--btn-primary-bg-hover);
+  border-color: transparent;
+  color: var(--on-accent);
+  box-shadow:
+    var(--btn-primary-shine),
+    var(--shadow-sm),
+    0 0 0 4px var(--accent-soft),
+    0 6px 20px -6px var(--accent-glow);
+}
+.btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--text-2);
+}
+.btn--ghost:hover {
+  background: var(--bg-3);
+  color: var(--text-1);
+}
+/* botão só-ícone: alvo de clique quadrado e consistente */
+.btn--icon {
+  padding: 0;
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Cartão: superfície + brilho do vidro no topo + fio de luz. O brilho que segue o
+   cursor (--mx/--my, escritas pelo MotionRoot) só acende no hover, e fica no fundo:
+   nunca atrapalha a leitura do número que está em cima dele. */
+.card {
+  background:
+    radial-gradient(420px circle at var(--mx, -999px) var(--my, -999px), var(--spot, transparent), transparent 42%),
+    var(--sheen),
+    var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  padding: 20px;
+  box-shadow: var(--card-shadow);
+  transition: border-color var(--dur-2) ease, box-shadow var(--dur-2) ease;
+}
+.card:hover {
+  --spot: var(--accent-soft);
+  border-color: var(--border-strong);
+}
+.card__title {
+  font-size: var(--fs-12);
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin: 0 0 var(--sp-3);
+}
+
+/* Badge de estado: cor + ícone + texto (nunca só cor — acessível). */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-11);
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  line-height: 1.5;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.badge__icon {
+  font-size: 0.9em;
+  line-height: 1;
+}
+.badge--ok {
+  color: var(--ok);
+  background: var(--ok-bg);
+  border-color: var(--ok-line);
+}
+.badge--warn {
+  color: var(--warn);
+  background: var(--warn-bg);
+  border-color: var(--warn-line);
+}
+.badge--crit {
+  color: var(--crit);
+  background: var(--crit-bg);
+  border-color: var(--crit-line);
+}
+.badge--info {
+  color: var(--info);
+  background: var(--info-bg);
+  border-color: var(--info-line);
+}
+/* Três pulsos e para: chama o olho quando o selo aparece, sem piscar para sempre
+   (WCAG 2.2.2 — movimento sem fim precisa de um jeito de parar). */
+.badge--crit .badge__icon {
+  animation: crit-pulse 2s var(--ease-in-out) 3;
+}
+@keyframes crit-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.badge--neutral {
+  color: var(--text-2);
+  background: var(--bg-3);
+  border-color: var(--border);
+}
+
+.field {
+  min-height: var(--input-h);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--input-radius);
+  color: var(--text-1);
+  font: inherit;
+  transition: border-color var(--dur-1) ease, box-shadow var(--dur-2) ease, background-color var(--dur-1) ease;
+}
+.field::placeholder {
+  color: var(--text-3);
+}
+.field:hover {
+  border-color: var(--border-focus);
+}
+/* Foco do campo é o halo da marca, não o contorno padrão: fica claro onde se digita. */
+.field:focus,
+.field:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  /* anel de 1px sólido + halo: o foco se distingue do hover, não só pela cor */
+  box-shadow: 0 0 0 1px var(--accent), 0 0 0 4px var(--accent-soft);
+}
+/* opções do <select>: usar tokens (o padrão nativo era cinza ~3.95:1 no tema claro) */
+.field option {
+  color: var(--text-1);
+  background: var(--bg-2);
+}
+
+.skeleton {
+  background: linear-gradient(100deg, var(--bg-3) 20%, var(--bg-4) 40%, var(--bg-3) 60%);
+  background-size: 220% 100%;
+  animation: skeleton-shimmer 1.6s var(--ease-in-out) infinite;
+  border-radius: var(--radius-sm);
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+}
+
+/* Indicador de frescor (live / stale / reconectando). */
+.freshness {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--fs-12);
+  color: var(--text-2);
+}
+.freshness__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-3);
+}
+/* "Ao vivo" é uma onda que sai do ponto, não um pisca-pisca: diz "está chegando
+   dado" sem gritar. */
+.freshness--live .freshness__dot {
+  position: relative;
+  background: var(--accent);
+  box-shadow: 0 0 0 0 var(--accent-glow);
+  animation: live-ring 2.4s var(--ease-out) infinite;
+}
+@keyframes live-ring {
+  0% { box-shadow: 0 0 0 0 var(--accent-glow); }
+  70% { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.freshness--stale .freshness__dot { background: var(--warn); }
+.freshness--reconnecting .freshness__dot {
+  background: var(--warn);
+  animation: freshness-pulse 0.8s ease-in-out infinite;
+}
+@keyframes freshness-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .freshness--live .freshness__dot,
+  .freshness--reconnecting .freshness__dot { animation: none; }
+}
+
+/* =========================================================================
+ * KIT DE COMPONENTES (UX.2) + utilitários de layout responsivo.
+ * Breakpoints (guia único do app):
+ *   < 768px      mobile   — 1 coluna; tabelas viram cards; toolbar quebra
+ *   768–1023px   tablet   — grids de 2 colunas
+ *   ≥ 1024px     desktop  — grids completos
+ * No mobile, inputs usam font-size ≥ 16px para evitar o zoom automático do iOS.
+ * Só tokens; nenhuma cor literal.
+ * ========================================================================= */
+
+/* --- botão destrutivo (deletes) --- */
+.btn--danger {
+  background: var(--crit-bg);
+  border-color: var(--crit);
+  color: var(--crit);
+}
+.btn--danger:hover {
+  background: var(--crit);
+  color: var(--bg-0);
+}
+/* botão só-ícone destrutivo (ex.: apagar servidor): ícone crítico, sem virar bloco vermelho */
+.btn--icon-danger {
+  color: var(--crit);
+}
+.btn--icon-danger:hover {
+  background: var(--crit-bg);
+  border-color: var(--crit);
+}
+
+/* --- utilitários de layout --- */
+.page {
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: var(--sp-6) var(--page-pad) var(--sp-8);
+}
+/* Entrada de cada tela (motion/PageTransition.tsx). */
+.page-transition {
+  animation: tela-entra var(--dur-3) var(--ease-out) backwards;
+}
+@keyframes tela-entra {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+/* Entrada em cascata: os blocos de primeiro nível da página acendem um depois do
+   outro (CSS puro — vale para as 30 telas sem tocar em nenhuma). O atraso para no
+   8º bloco: página longa não pode demorar a ficar inteira. */
+.page > :not(.drawer):not(.drawer__backdrop) {
+  animation: surgir var(--dur-4) var(--ease-out) backwards;
+}
+.page > :nth-child(2):not(.drawer):not(.drawer__backdrop) { animation-delay: 40ms; }
+.page > :nth-child(3):not(.drawer):not(.drawer__backdrop) { animation-delay: 80ms; }
+.page > :nth-child(4):not(.drawer):not(.drawer__backdrop) { animation-delay: 120ms; }
+.page > :nth-child(5):not(.drawer):not(.drawer__backdrop) { animation-delay: 160ms; }
+.page > :nth-child(6):not(.drawer):not(.drawer__backdrop) { animation-delay: 200ms; }
+.page > :nth-child(7):not(.drawer):not(.drawer__backdrop) { animation-delay: 240ms; }
+.page > :nth-child(n + 8):not(.drawer):not(.drawer__backdrop) { animation-delay: 280ms; }
+@keyframes surgir {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.row {
+  display: flex;
+  flex-direction: row;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  align-items: center;
+}
+.row--end {
+  justify-content: flex-end;
+}
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+.grid-2,
+.grid-3,
+.grid-4 {
+  display: grid;
+  gap: var(--sp-4);
+}
+.grid-2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.grid-3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.grid-4 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+/* Grade de servidores: 1 coluna no estreito, 2 a partir de 760px. O teto de duas
+   por linha (regra 5.4) vale para quem lê a tela de perto — no painel logado, um
+   cartão largo é mais fácil de varrer que quatro estreitos. */
+.wall-grid { display: grid; gap: var(--sp-4); grid-template-columns: 1fr; }
+@media (min-width: 760px) { .wall-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Na TV o teto é outro. Ali a tela é grande e a distância também: cabem TRÊS
+   colunas sem que a fonte fique pequena para 5–10 m, e três colunas × duas
+   linhas dão SEIS servidores por página.
+   Por que isso importa mais do que parece: a parede não rola — ela pagina em
+   rodízio. Com duas colunas, uma frota de cinco hosts virava "página 1/2", e o
+   quinto servidor só aparecia depois de 20 segundos, numa tela onde sobrava
+   metade do espaço vertical. Quem passa na frente do telão vê o que está na
+   página do momento; um host escondido em rodízio é um host que ninguém olha.
+   1400px é o piso: abaixo disso a terceira coluna espremeria a linha de
+   "RAM 13,2 GB / 31,3 GB", que é o texto mais largo do cartão. */
+@media (min-width: 1400px) {
+  .wall-grid--tv { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* --- InfoTip --- */
+.infotip {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+}
+.infotip__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-3);
+  color: var(--text-2);
+  font-size: var(--fs-12);
+  line-height: 1;
+  cursor: help;
+}
+.infotip__btn:hover {
+  color: var(--info);
+  border-color: var(--info);
+}
+.infotip__pop {
+  /* Posição é aplicada via JS (position: fixed + coordenadas do botão) por um
+     portal em document.body — ver InfoTip.tsx. z-index acima dos modais (100/120)
+     para o popover nunca ficar atrás nem ser cortado por overflow de ancestral. */
+  z-index: 200;
+  width: max-content;
+  max-width: 280px;
+  padding: var(--sp-3);
+  background: var(--bg-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg), var(--highlight);
+  color: var(--text-1);
+  font-size: var(--fs-12);
+  animation: janela-entra var(--dur-2) var(--ease-out) backwards;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: normal;
+}
+.infotip__title {
+  font-weight: 600;
+  margin-bottom: var(--sp-1);
+  color: var(--text-1);
+}
+.infotip__body {
+  color: var(--text-2);
+}
+.infotip__sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: var(--scrim);
+  display: flex;
+  align-items: flex-end;
+}
+.infotip__sheet {
+  width: 100%;
+  background: var(--bg-2);
+  border-top: 1px solid var(--border-strong);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+/* --- FormField --- */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  margin-bottom: var(--sp-3);
+}
+.form-field__label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-14);
+  font-weight: 500;
+  color: var(--text-1);
+}
+.form-field__req {
+  color: var(--crit);
+}
+.form-field__hint {
+  font-size: var(--fs-12);
+  color: var(--text-3);
+}
+.form-field__error {
+  font-size: var(--fs-12);
+  color: var(--crit);
+}
+/* inputs de formulário dentro de FormField ocupam a largura toda */
+.form-field .field,
+.form-field input,
+.form-field select,
+.form-field textarea {
+  width: 100%;
+}
+
+/* --- Modal --- */
+.modal__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--scrim);
+  backdrop-filter: blur(6px) saturate(1.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-4);
+  animation: acender var(--dur-2) ease backwards;
+}
+/* A janela sobe e cresce 3% ao abrir — chega, não aparece. */
+.modal {
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow: auto;
+  background: var(--sheen), var(--bg-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg), var(--highlight);
+  display: flex;
+  flex-direction: column;
+  animation: janela-entra var(--dur-3) var(--ease-out) backwards;
+}
+@keyframes janela-entra {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.modal--wide {
+  max-width: 800px;
+}
+.modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: 18px var(--sp-5);
+  border-bottom: 1px solid var(--border);
+}
+.modal__title {
+  margin: 0;
+  font-size: var(--fs-18);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--text-1);
+}
+.modal__body {
+  padding: var(--sp-5);
+}
+.modal__foot {
+  padding: var(--sp-4) var(--sp-5);
+  border-top: 1px solid var(--border);
+  background: var(--bg-1);
+}
+.confirm__body {
+  margin: 0;
+  color: var(--text-2);
+}
+
+/* --- Toast --- */
+.toast-stack {
+  position: fixed;
+  top: var(--sp-4);
+  right: var(--sp-4);
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  max-width: 360px;
+}
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-3);
+  box-shadow: var(--shadow-lg), var(--highlight);
+  color: var(--text-1);
+  font-size: var(--fs-13);
+  backdrop-filter: blur(12px);
+  animation: aviso-entra var(--dur-3) var(--ease-spring) backwards;
+}
+@keyframes aviso-entra {
+  from { opacity: 0; transform: translateX(16px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+/* O estado vai numa faixa à esquerda + fundo tingido; o texto continua legível. */
+.toast--success {
+  border-color: var(--ok-line);
+  background: linear-gradient(90deg, var(--ok-bg), transparent 70%), var(--bg-3);
+  box-shadow: var(--shadow-lg), inset 3px 0 0 var(--ok);
+}
+.toast--error {
+  border-color: var(--crit-line);
+  background: linear-gradient(90deg, var(--crit-bg), transparent 70%), var(--bg-3);
+  box-shadow: var(--shadow-lg), inset 3px 0 0 var(--crit);
+}
+.toast__msg {
+  flex: 1;
+}
+.toast__close {
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  font-size: var(--fs-14);
+  line-height: 1;
+}
+
+/* --- EmptyState --- */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--sp-3);
+  padding: var(--sp-7) var(--sp-4);
+  color: var(--text-2);
+}
+.empty-state__icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  color: var(--accent);
+  box-shadow: 0 10px 30px -12px var(--accent-glow);
+}
+.empty-state__title {
+  margin: 0;
+  font-size: var(--fs-20);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--text-1);
+}
+.empty-state__body {
+  max-width: 460px;
+  color: var(--text-2);
+}
+.empty-state__steps {
+  text-align: left;
+  max-width: 460px;
+  margin: 0;
+  padding-left: var(--sp-5);
+  color: var(--text-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+/* --- PageHeader --- */
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-6);
+}
+.page-header__title {
+  margin: 0;
+  font-size: var(--fs-32);
+  font-weight: 650;
+  line-height: var(--lh-tight);
+  letter-spacing: -0.03em;
+  color: var(--text-1);
+}
+.page-header__subtitle {
+  margin: var(--sp-2) 0 0;
+  color: var(--text-2);
+  font-size: var(--fs-14);
+  max-width: 70ch;
+}
+.page-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.page-header__help {
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-strong);
+  font-weight: 700;
+  color: var(--text-2);
+}
+.page-header__help:hover {
+  color: var(--accent);
+  border-color: var(--accent-line);
+}
+
+/* --- HelpPanel / drawer lateral direito --- */
+.drawer__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: var(--scrim);
+  backdrop-filter: blur(3px);
+  animation: acender var(--dur-2) ease backwards;
+}
+@keyframes acender {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 460px;
+  max-width: 92vw;
+  z-index: 91;
+  background: var(--sheen), var(--bg-1);
+  border-left: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-lg);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  animation: gaveta-entra var(--dur-3) var(--ease-out) backwards;
+}
+@keyframes gaveta-entra {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+.drawer__title {
+  font-size: var(--fs-18);
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+.drawer__body {
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.drawer__section-title {
+  font-size: var(--fs-12);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-3);
+  margin-bottom: var(--sp-1);
+}
+.drawer__section-body {
+  color: var(--text-2);
+}
+
+/* --- Tabs --- */
+.tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tab {
+  position: relative;
+  padding: var(--sp-3) var(--sp-4);
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-13);
+  font-weight: 550;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--dur-1) ease;
+}
+/* Sublinhado da marca que cresce do centro — o indicador tem peso sem pesar. */
+.tab::after {
+  content: "";
+  position: absolute;
+  left: var(--sp-3);
+  right: var(--sp-3);
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--accent);
+  transform: scaleX(0);
+  transition: transform var(--dur-3) var(--ease-out);
+}
+.tab:hover {
+  color: var(--text-1);
+}
+.tab--active {
+  color: var(--text-1);
+}
+.tab--active::after {
+  transform: scaleX(1);
+}
+
+/* --- DataTable --- */
+.dtable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--fs-13);
+}
+/* Modo "fit": a tabela nunca ultrapassa o container (sem scroll lateral). As
+   larguras vêm do <colgroup>; colunas sem largura dividem a sobra. Conteúdo
+   longo (URLs, diagnóstico) quebra dentro da célula em vez de estourar. */
+.dtable--fit {
+  table-layout: fixed;
+  /* Piso opcional (prop `minWidth` do DataTable). Com table-layout:fixed, quando
+     a soma das larguras declaradas quase preenche o container, as colunas SEM
+     largura recebem os pixels que sobraram — e "sobrar 8px" vira texto quebrado
+     letra por letra. O piso faz o .table-scroll rolar de lado em vez de espremer. */
+  min-width: var(--dt-min, 0);
+}
+.dtable--fit thead th {
+  white-space: normal;
+}
+.dtable--fit tbody td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+/* No modo fit a coluna de Ações também pode quebrar (os botões já usam flex-wrap),
+   evitando estouro quando a largura fica apertada. */
+.dtable--fit .dt-actions {
+  white-space: normal;
+}
+
+/* Sparkline clicável (abre o gráfico ampliado). Botão "invisível" que só envolve
+   o mini-gráfico, com foco/hover acessíveis. */
+.spark-zoom {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  margin: -2px;
+  border: 0;
+  background: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.12s;
+}
+.spark-zoom:hover:not(:disabled) {
+  background: var(--bg-3);
+}
+.spark-zoom:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.spark-zoom:disabled {
+  cursor: default;
+}
+.dtable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-align: left;
+  padding: 10px var(--sp-3);
+  background: var(--table-head-bg);
+  color: var(--text-3);
+  font-size: var(--fs-11);
+  font-weight: 650;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border-strong);
+  white-space: nowrap;
+}
+.dtable tbody td {
+  padding: 11px var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-1);
+  transition: background-color var(--dur-1) ease;
+}
+.dtable tbody tr:last-child td {
+  border-bottom: none;
+}
+/* zebra sutil para varredura em coluna */
+.dtable tbody tr:nth-child(even) td {
+  background: var(--zebra);
+}
+/* Linha sob o cursor: fundo + fio da marca à esquerda, para o olho não perder a
+   linha ao correr até a coluna de ações. */
+.dtable tbody tr:hover td {
+  background: var(--table-row-hover);
+}
+.dtable tbody tr:hover td:first-child {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+/* colunas numéricas: alinhadas à direita + tabular figures (comparáveis) */
+.dtable th.num,
+.dtable td.num,
+.dtable th.tabular,
+.dtable td.tabular {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+.dt-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+/* Ajuda que explica a coluna inteira, ao lado do rótulo no cabeçalho (em vez de
+   repetida em toda linha). */
+.dt-head-extra {
+  display: inline-flex;
+  margin-left: var(--sp-1);
+  vertical-align: middle;
+  cursor: default;
+}
+
+/* --- AdvancedSection --- */
+.advanced {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-1);
+  margin: var(--sp-3) 0;
+}
+.advanced__summary {
+  padding: var(--sp-2) var(--sp-3);
+  cursor: pointer;
+  color: var(--text-2);
+  font-weight: 500;
+  user-select: none;
+}
+.advanced[open] .advanced__summary {
+  border-bottom: 1px solid var(--border);
+  color: var(--text-1);
+}
+.advanced__body {
+  padding: var(--sp-3);
+}
+
+/* Alerta já reconhecido: ícone em vez de botão (não há o que clicar) + o nome de
+   quem reconheceu no title. Ocupa o mesmo espaço do IconButton que substitui,
+   para a fila de ações não dançar entre uma linha e outra. */
+.alerta-ack {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  color: var(--ok);
+  cursor: help;
+}
+
+/* --- Kpi / KpiGrid (components/Kpi.tsx) ----------------------------------
+   A faixa de indicadores do topo. Escrita mobile-first: a regra base é a do
+   celular (duas colunas, que é o que cabe sem espremer um número de 5 dígitos),
+   e as telas maiores só somam colunas. */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+}
+@media (min-width: 600px) {
+  .kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sp-3);
+  }
+}
+@media (min-width: 1100px) {
+  .kpi-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+.kpi {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: var(--sp-4);
+  background:
+    radial-gradient(360px circle at var(--mx, -999px) var(--my, -999px), var(--spot, transparent), transparent 45%),
+    var(--sheen),
+    var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  color: inherit;
+  text-decoration: none;
+  overflow: hidden;
+  /* Transiciona background-COLOR, não o atalho `background`: o atalho arrasta
+     junto sub-propriedades que não animam (imagem, posição, tamanho), e o que se
+     quer aqui é só a cor. Mesma correção aplicada em .btn, .opcao, .stat-card e
+     no item do menu, que também usavam o atalho. */
+  transition: border-color var(--dur-2) ease, transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2) ease;
+}
+.kpi:hover {
+  --spot: var(--accent-soft);
+}
+a.kpi:hover {
+  border-color: var(--accent-line);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg), var(--highlight);
+}
+/* Faixa de estado no topo do cartão: o tom aparece antes de o número ser lido. */
+.kpi:has(.kpi__valor--warn)::before,
+.kpi:has(.kpi__valor--crit)::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: var(--warn);
+  box-shadow: 0 0 18px 2px var(--warn);
+  opacity: 0.85;
+}
+.kpi:has(.kpi__valor--crit)::before {
+  background: var(--crit);
+  box-shadow: 0 0 18px 2px var(--crit);
+}
+.kpi__rotulo {
+  font-size: var(--fs-11);
+  font-weight: 650;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.kpi__valor {
+  /* Grande o bastante para ser lido de relance, pequeno o bastante para caber
+     em duas colunas de 375px sem estourar. No desktop cresce. */
+  font-size: var(--fs-28);
+  font-weight: 650;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  color: var(--text-1);
+  overflow-wrap: anywhere;
+}
+@media (min-width: 1100px) {
+  .kpi__valor {
+    font-size: var(--fs-32);
+  }
+}
+.kpi__valor {
+  white-space: nowrap;
+}
+.kpi__unidade {
+  margin-left: 0.14em;
+  font-size: 0.55em;
+  font-weight: 550;
+  letter-spacing: -0.01em;
+  color: var(--text-3);
+}
+.kpi__valor--warn .kpi__unidade,
+.kpi__valor--crit .kpi__unidade {
+  color: inherit;
+  opacity: 0.75;
+}
+.kpi__valor--warn {
+  color: var(--warn);
+}
+.kpi__valor--crit {
+  color: var(--crit);
+}
+.kpi__sub {
+  font-size: var(--fs-12);
+  color: var(--text-3);
+  /* O nome do servidor pode ser longo; corta com reticências em vez de empurrar
+     a coluna e desalinhar a faixa inteira. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Collapsible (components/Collapsible.tsx) ----------------------------
+   O bloco recolhível padrão. Mobile-first: as regras abaixo são as do celular,
+   e o desktop só ganha um pouco mais de respiro no bloco @media (min-width). */
+.colap {
+  border-radius: var(--radius-sm);
+}
+.colap--secao {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--sheen), var(--bg-2);
+  box-shadow: var(--highlight);
+}
+.colap__resumo {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  /* 44px de alvo de toque: abaixo disso o dedo erra o alvo no celular. */
+  min-height: 44px;
+  padding: var(--sp-2) var(--sp-3);
+  cursor: pointer;
+  color: var(--text-2);
+  font-weight: 500;
+  user-select: none;
+}
+.colap--discreto .colap__resumo {
+  padding: var(--sp-2) 0;
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+/* O marcador nativo some (não dá para estilizar entre navegadores); a seta é nossa. */
+.colap__resumo::-webkit-details-marker {
+  display: none;
+}
+.colap__resumo::marker {
+  content: "";
+}
+.colap__resumo:hover .colap__titulo {
+  color: var(--text-1);
+}
+.colap__resumo:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: var(--radius-sm);
+}
+.colap__seta {
+  flex: none;
+  width: 0;
+  height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform var(--dur-2) var(--ease-out);
+}
+.colap[open] > .colap__resumo .colap__seta {
+  transform: rotate(90deg);
+}
+.colap__titulo {
+  min-width: 0;
+  color: var(--text-1);
+}
+.colap--discreto .colap__titulo {
+  color: inherit;
+}
+.colap__contador {
+  flex: none;
+  padding: 0 var(--sp-2);
+  border-radius: var(--radius-pill);
+  background: var(--bg-3);
+  color: var(--text-2);
+  font-size: var(--fs-12);
+  font-weight: 600;
+}
+/* O contexto do bloco FECHADO. No celular ele quebra para a linha de baixo em
+   vez de espremer o título — por isso o resumo pode crescer em altura. */
+.colap__contexto {
+  min-width: 0;
+  margin-left: auto;
+  color: var(--text-3);
+  font-size: var(--fs-12);
+  text-align: right;
+}
+.colap[open] > .colap--secao,
+.colap--secao[open] > .colap__resumo {
+  border-bottom: 1px solid var(--border);
+}
+.colap__corpo {
+  padding: var(--sp-3);
+}
+.colap--discreto .colap__corpo {
+  padding: 0 0 var(--sp-2);
+  color: var(--text-2);
+}
+@media (max-width: 480px) {
+  /* Tela estreita: o contexto vira uma linha própria abaixo do título, senão
+     "3 críticos · pior: srv-web-producao" espreme o rótulo até sumir. */
+  .colap__resumo {
+    flex-wrap: wrap;
+  }
+  .colap__contexto {
+    flex-basis: 100%;
+    margin-left: 0;
+    text-align: left;
+  }
+}
+
+/* =========================================================================
+ * MOBILE (< 768px)
+ * ========================================================================= */
+@media (max-width: 767px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .grid-2,
+  .grid-3,
+  .grid-4 {
+    grid-template-columns: 1fr;
+  }
+
+  /* inputs ≥ 16px evitam o zoom automático do iOS */
+  .field,
+  input,
+  select,
+  textarea {
+    font-size: var(--fs-16);
+  }
+
+  /* Modal em tela cheia */
+  .modal__backdrop {
+    padding: 0;
+    align-items: stretch;
+  }
+  .modal {
+    max-width: none;
+    max-height: none;
+    height: 100%;
+    border-radius: 0;
+    border: none;
+    animation-name: folha-sobe;
+  }
+  @keyframes folha-sobe {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: none; }
+  }
+  .page {
+    padding: var(--sp-5) var(--sp-4) var(--sp-7);
+  }
+  .page-header__title {
+    font-size: var(--fs-24);
+  }
+
+  /* Toasts embaixo no mobile (longe do polegar de navegação) */
+  .toast-stack {
+    top: auto;
+    bottom: var(--sp-4);
+    left: var(--sp-3);
+    right: var(--sp-3);
+    max-width: none;
+  }
+
+  /* drawers ocupam a tela toda */
+  .drawer {
+    width: 100vw;
+    max-width: none;
+  }
+
+  /* colunas marcadas escondem no mobile */
+  .dt-hide-mobile {
+    display: none;
+  }
+
+  /* O piso de largura vale só no desktop: no mobile a tabela vira cards
+     empilhados, e um min-width em px empurraria a página para o scroll lateral. */
+  .dtable--fit {
+    min-width: 0;
+  }
+
+  /* DataTable: cada linha vira card empilhado; o rótulo vem do data-label */
+  .dtable thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .dtable,
+  .dtable tbody,
+  .dtable tr,
+  .dtable td {
+    display: block;
+    width: 100%;
+  }
+  .dtable tbody tr {
+    margin-bottom: var(--sp-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--sheen), var(--bg-2);
+    box-shadow: var(--highlight);
+    padding: var(--sp-2);
+  }
+  .dtable tbody tr:hover td:first-child {
+    box-shadow: none;
+  }
+  .dtable tbody td {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    padding: var(--sp-1) var(--sp-2);
+    border-bottom: none;
+    text-align: right;
+  }
+  .dtable tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-3);
+    text-align: left;
+  }
+  .dt-actions {
+    justify-content: flex-end;
+    text-align: right;
+  }
+}
+
+/* --- Barra de filtros de uma tela (Logs, Explore…) -------------------------
+   Grade, e não `flex-wrap`. Com flex, um campo mais alto que os outros — o
+   filtro servidor/container/serviço, que são três seletores — arrastava a
+   quebra de linha junto: os vizinhos iam para a linha de baixo em posições
+   imprevisíveis e os rótulos deixavam de se alinhar entre si. Numa grade, cada
+   campo ocupa uma célula, todos começam na mesma altura (`align-items: start`)
+   e o campo largo declara que ocupa duas colunas em vez de empurrar os outros.
+   Mobile-first: uma coluna no celular, duas no tablet, quatro no desktop. */
+.filtros {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sp-3);
+  align-items: start;
+}
+@media (min-width: 700px) {
+  .filtros {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .filtros__largo {
+    grid-column: span 2;
+  }
+}
+@media (min-width: 1024px) {
+  .filtros {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* --- Filtro servidor→container (regra 5.9) --- */
+.sc-filter {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.sc-filter select {
+  /* `min-width: 150px` sozinho deixava a OPÇÃO MAIS LONGA mandar na largura: um
+     <select> se dimensiona pelo texto do maior <option>, e com dezenas de
+     servidores de nome comprido cada seletor esticava até ocupar a linha
+     inteira — os três empilhavam, o campo ficava com o triplo da altura dos
+     vizinhos e a barra de filtros da tela de Logs saía torta.
+     Agora eles dividem o espaço em partes iguais (base de 150px) e `min-width:
+     0` autoriza encolher abaixo do conteúdo, que é o que faz caber. */
+  /* Base de 120px, não 150: com 150 os TRÊS seletores pediam 466px numa célula
+     de 462 e o terceiro caía sozinho para a linha de baixo por quatro pixels.
+     Com 120 eles cabem lado a lado e crescem para dividir a sobra por igual. */
+  flex: 1 1 120px;
+  min-width: 0;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--bg-1);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-1);
+  font: inherit;
+}
+.sc-filter select option {
+  color: var(--text-1);
+  background: var(--bg-1);
+}
+.sc-filter select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* --- Home: resumo denso de servidores (visão "seca", sem scroll) --- */
+.home-servers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--sp-2);
+}
+.srv-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  /* Eram --radius-2 e --surface-2: dois tokens que NUNCA existiram em
+     tokens.css. Custom property indefinida não avisa nada — só não aplica —, e
+     o resultado era o cartão de cada servidor da Home renderizando de canto
+     vivo e fundo transparente, fora do padrão de todos os outros cartões. */
+  border-radius: var(--radius);
+  background:
+    radial-gradient(300px circle at var(--mx, -999px) var(--my, -999px), var(--spot, transparent), transparent 45%),
+    var(--sheen),
+    var(--bg-2);
+  box-shadow: var(--highlight);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color var(--dur-2) ease, transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2) ease;
+}
+.srv-tile:hover {
+  --spot: var(--accent-soft);
+  border-color: var(--accent-line);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow), var(--highlight);
+}
+.srv-tile--off {
+  opacity: 0.62;
+}
+.srv-tile__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+.srv-tile__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+/* Servidor vivo: ponto verde com a mesma onda do "ao vivo" — está falando agora. */
+.srv-tile__dot--on {
+  background: var(--ok);
+  animation: srv-vivo 2.4s var(--ease-out) infinite;
+}
+@keyframes srv-vivo {
+  0% { box-shadow: 0 0 0 0 var(--ok-line); }
+  70% { box-shadow: 0 0 0 6px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.srv-tile__dot--off {
+  background: var(--text-3);
+}
+.srv-tile__status {
+  font-size: var(--fs-12);
+  font-weight: 600;
+  color: var(--text-2);
+  flex-shrink: 0;
+}
+.srv-tile__name {
+  font-size: var(--fs-14);
+  font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.srv-tile__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px var(--sp-3);
+  font-size: var(--fs-12);
+  color: var(--text-2);
+}
+.srv-tile__metrics--off {
+  color: var(--text-3);
+  font-style: italic;
+}
+
+/* --- Containers: bloco colapsável + lista virtualizada (regra 5.4) --- */
+/* O botão de abrir/fechar e o "?" da explicação são IRMÃOS (botão dentro de
+   botão é HTML inválido e o clique do "?" acabava caindo no de fora). */
+.containers-head-linha {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  width: 100%;
+}
+.containers-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  cursor: pointer;
+  color: var(--text-3);
+  font: inherit;
+  text-align: left;
+}
+.containers-head:hover {
+  color: var(--text-2);
+}
+/* Rótulo estático (collapsible=false): sem chevron, sem afordância de clique. */
+.containers-head--static,
+.containers-head--static:hover {
+  cursor: default;
+  color: var(--text-3);
+}
+.containers-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+  font-size: var(--fs-12);
+}
+.containers-top__item {
+  color: var(--text-2);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 8px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.containers-scroll {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-1);
+}
+.container-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-2);
+  box-sizing: border-box;
+}
+.container-row__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex: none;
+}
+.container-row__name {
+  font-size: var(--fs-12);
+  font-weight: 600;
+  color: var(--text-1);
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.container-row__state {
+  font-size: var(--fs-12);
+  flex: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 40%;
+}
+.container-row__right {
+  font-size: var(--fs-12);
+  color: var(--text-3);
+  white-space: nowrap;
+  flex: none;
+  margin-left: auto;
+}
+
+/* --- LastSeen: frescor por objeto (ponto + texto, não só cor) --- */
+.lastseen {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-12);
+  white-space: nowrap;
+}
+.lastseen__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+.lastseen--fresh {
+  color: var(--text-3);
+}
+.lastseen--fresh .lastseen__dot {
+  background: var(--ok);
+}
+.lastseen--stale {
+  color: var(--warn);
+}
+.lastseen--stale .lastseen__dot {
+  background: var(--warn);
+}
+.lastseen--nodata {
+  color: var(--text-3);
+}
+.lastseen--nodata .lastseen__dot {
+  background: var(--text-3);
+}
+
+/* --- DataTable v2: toolbar (busca), ordenação, paginação e estados --- */
+.dt-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.dt-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+.dt-search {
+  flex: 1;
+  min-width: 180px;
+  max-width: 320px;
+}
+.dt-count {
+  color: var(--text-3);
+  font-size: var(--fs-12);
+  white-space: nowrap;
+}
+th.dt-sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+th.dt-sortable:hover {
+  color: var(--text-1);
+}
+.dt-sort-ind {
+  margin-left: 4px;
+  font-size: 0.72em;
+  color: var(--text-3);
+}
+th.dt-sortable[aria-sort] .dt-sort-ind {
+  color: var(--accent);
+}
+.dt-pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+}
+.dt-page-btn {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  border-radius: var(--radius-sm, 6px);
+  padding: 4px 10px;
+  cursor: pointer;
+  font: inherit;
+}
+.dt-page-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.dt-page-btn:not(:disabled):hover {
+  border-color: var(--accent);
+}
+.dt-expand-col {
+  width: 28px;
+  text-align: center;
+  padding-left: var(--sp-2);
+  padding-right: 0;
+}
+.dt-expand-btn {
+  background: none;
+  border: none;
+  color: var(--text-2);
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 2px 4px;
+}
+.dt-expand-btn:hover {
+  color: var(--accent);
+}
+.dt-detail-row > td {
+  background: var(--bg-1);
+  padding: var(--sp-3) var(--sp-4);
+}
+.dt-state {
+  padding: var(--sp-5);
+  text-align: center;
+  color: var(--text-3);
+}
+.dt-state--error {
+  color: var(--crit);
+}
+.dt-skel-row {
+  display: flex;
+  gap: var(--sp-3);
+  padding: var(--sp-2) 0;
+}
+.dt-skel-cell {
+  flex: 1;
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--bg-2), var(--bg-3), var(--bg-2));
+  background-size: 200% 100%;
+  animation: dt-shimmer 1.2s ease-in-out infinite;
+}
+@keyframes dt-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dt-skel-cell {
+    animation: none;
+  }
+}
+
+/* --- Checkbox & Radio: base única de alinhamento (vale para TODAS as telas) ---
+   Todos os checkboxes/radios do app são inputs nativos, então estilizar o elemento
+   aqui corrige o desalinhamento reportado de uma vez, sem depender de cada tela.
+   Usa accent-color para casar com o tema (sem reescrever o controle do zero). */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+  min-width: 16px; /* não encolhe dentro de flex */
+  margin: 0;
+  vertical-align: middle;
+  cursor: pointer;
+  flex: none;
+}
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+/* Rótulo clicável ao lado do controle: centro vertical + área de toque + gap fixo. */
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  cursor: pointer;
+  user-select: none;
+  line-height: 1.3;
+}
+.check input {
+  margin: 0;
+}
+/* Variante para rótulo de múltiplas linhas: controle alinha ao topo do texto. */
+.check--top {
+  align-items: flex-start;
+}
+.check--top input {
+  margin-top: 2px;
+}
+.check--disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ─── Usuários & Acessos (authz) ─────────────────────────────────────────── */
+.authz-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--warn);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+  color: var(--text-1);
+  /* --fs-13 não existe na escala (12/14/16/20/28/40/64/120). Como token
+     indefinido não aplica nada, isto já vinha renderizando nos 14px herdados
+     do body — trocar pelo token real não muda um pixel, só para de mentir. */
+  font-size: var(--fs-14);
+}
+.authz-banner svg {
+  color: var(--warn);
+  flex-shrink: 0;
+}
+.authz-grouprow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+}
+.authz-grouprow__flags {
+  display: inline-flex;
+  gap: var(--sp-3);
+  padding-left: var(--sp-3);
+  border-left: 1px solid var(--border);
+}
+.authz-tag {
+  display: inline-block;
+  margin-left: var(--sp-2);
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--bg-3); /* era --surface-2, token inexistente: a pílula saía sem fundo */
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+.authz-matrix th:not(:first-child),
+.authz-matrix td:not(:first-child) {
+  text-align: center;
+  width: 7rem;
+}
+.authz-matrix td :where(label) {
+  justify-content: center;
+}
+
+/* ── Cartões de escolha ───────────────────────────────────────────────────────
+   Usados quando a tela precisa perguntar "por qual caminho?" antes de pedir
+   qualquer dado (ex.: como adicionar um servidor). São <button> de verdade: o
+   teclado navega, o Enter escolhe e o foco aparece — coisas que uma <div>
+   clicável perde. */
+.opcao {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: flex-start;
+  width: 100%;
+  text-align: left;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--sp-3);
+  color: var(--text-1);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+.opcao:hover {
+  border-color: var(--accent);
+  background: var(--bg-2);
+}
+.opcao:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.opcao__icone {
+  color: var(--accent);
+  flex: none;
+  margin-top: 2px;
+}
+.opcao__titulo {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  font-size: var(--fs-14);
+  font-weight: 600;
+  margin: 0 0 2px;
+}
+.opcao__texto {
+  font-size: var(--fs-14); /* era --fs-13 (inexistente) — já renderizava assim */
+  color: var(--text-2);
+  margin: 0;
+}
+.opcao__requisito {
+  font-size: var(--fs-12);
+  color: var(--text-3);
+  margin: var(--sp-1) 0 0;
+}
+/* Voltar ao passo anterior: discreto, mas com alvo de clique decente. */
+.voltar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 0;
+  padding: var(--sp-1) 0;
+  color: var(--text-2);
+  font-size: var(--fs-14); /* era --fs-13 (inexistente) — já renderizava assim */
+  cursor: pointer;
+}
+.voltar:hover {
+  color: var(--text-1);
+}
+.voltar:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- ErrorBoundary: a tela com defeito, contida --- */
+.tela-erro {
+  max-width: 620px;
+  margin: var(--sp-7) auto;
+  padding: var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  border: 1px solid var(--crit-line);
+  border-radius: var(--radius-xl);
+  background: radial-gradient(500px 160px at 0% 0%, var(--crit-bg), transparent 70%), var(--sheen), var(--bg-2);
+  box-shadow: var(--card-shadow);
+}
+.tela-erro__icone {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  background: var(--crit-bg);
+  border: 1px solid var(--crit-line);
+  color: var(--crit);
+}
+.tela-erro__titulo {
+  margin: 0;
+  font-size: var(--fs-24);
+  font-weight: 650;
+}
+.tela-erro__texto {
+  margin: 0;
+  color: var(--text-2);
+}
+.tela-erro__detalhe {
+  display: block;
+  padding: var(--sp-3);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+  overflow-wrap: anywhere;
+}
+
+/* --- Cartão do Mural de Saúde (pages/HealthWall.tsx) ---
+   O tom do estado vai numa faixa à esquerda, no contorno e num brilho no topo.
+   Era `color-mix()` inline, que navegador de TV antigo ignora (o cartão ficava
+   sem fundo). Estado sempre em cor + ícone + texto, nunca só cor. */
+.saude {
+  --tom: var(--ok);
+  --tom-bg: var(--ok-bg);
+  --tom-line: var(--ok-line);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-height: 140px;
+  padding: var(--sp-4) var(--sp-4) var(--sp-4) calc(var(--sp-4) + 3px);
+  border: 1px solid var(--tom-line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, var(--tom-bg), transparent 55%), var(--sheen), var(--bg-2);
+  box-shadow: var(--card-shadow), inset 3px 0 0 var(--tom);
+}
+.saude--warn { --tom: var(--warn); --tom-bg: var(--warn-bg); --tom-line: var(--warn-line); }
+.saude--crit { --tom: var(--crit); --tom-bg: var(--crit-bg); --tom-line: var(--crit-line); }
+.saude--nosignal { --tom: var(--text-3); --tom-bg: transparent; --tom-line: var(--border-strong); }
+/* Quebra no hífen ou no ponto antes de cortar no meio da palavra: com break-all,
+   "vps-demo.exemplo.com" virava "vps-demo.exemplo.c" / "om" na TV. */
+.saude__nome {
+  min-width: 0;
+  font-size: var(--fs-20);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.saude__selo {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--tom-line);
+  background: var(--tom-bg);
+  color: var(--tom);
+  font-size: var(--fs-11);
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.saude--tv {
+  min-height: 22vh;
+  gap: 2vh;
+  padding: 2.6vh 2.6vh 2.6vh calc(2.6vh + 4px);
+  border-radius: clamp(14px, 2vh, 56px);
+  box-shadow: var(--card-shadow), inset 4px 0 0 var(--tom);
+}
+.saude--tv .saude__nome {
+  font-size: clamp(18px, 3.2vh, 92px);
+}
+.saude--tv .saude__selo {
+  font-size: clamp(11px, 1.8vh, 48px);
+  padding: 0.5vh 1.4vh;
+}
+
+/* ── Serviços descobertos (pages/ServicosDescobertos.tsx) ─────────────────────
+   Chips: ícone + nome + complemento. Sem cor por categoria (cor semântica é só
+   para estado); a categoria fala pelo ícone. ────────────────────────────────── */
+.svc-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.svc {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 6px 8px 6px 10px;
+  max-width: 100%;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  animation: svc-entra var(--dur-3) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+  transition: border-color var(--dur-2) ease, background var(--dur-2) ease;
+}
+.svc:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-4);
+}
+@keyframes svc-entra {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .svc { animation: none; }
+}
+.svc__icone {
+  display: inline-flex;
+  color: var(--text-2);
+  flex: none;
+}
+.svc__texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+.svc__nome {
+  font-size: var(--fs-13);
+  font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap;
+}
+.svc__detalhe {
+  font-size: var(--fs-11);
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.svc__abrir {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.svc__abrir:hover { background: var(--bg-2); color: var(--text-1); }
+/* O foco fica com a regra global (:focus-visible em --accent, opaco): a versão
+   translúcida de --border-focus dava 2,35:1 sobre o chip no tema claro. */
+/* O "?" de ajuda tem 18 px de glifo; dentro do chip o alvo de toque sobe para
+   24 px (WCAG 2.5.8) sem mudar o desenho. */
+.svc .infotip__btn {
+  min-width: 24px;
+  min-height: 24px;
+}
+/* A lista de containers cai abaixo do chip, ocupando a largura da linha. */
+.svc__itens {
+  flex-basis: 100%;
+  list-style: none;
+  margin: var(--sp-1) 0 0;
+  padding: var(--sp-2) 0 0;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-2);
+}
+.svc:has(.svc__itens) { flex-wrap: wrap; }
+.svc__item {
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  color: var(--text-2);
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-2);
+}
+
+.svc-resumo {
+  margin: 0;
+  font-size: var(--fs-12);
+  color: var(--text-2);
+}
+.svc-resumo__nota { color: var(--text-3); }
+.svc-servidores {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: var(--sp-3);
+}
+.svc-servidor {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+.svc-servidor__topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.svc-servidor__nome {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.svc-servidor__titulo {
+  margin: 0;
+  font: inherit;
+}
+.svc-servidor__link {
+  font-size: var(--fs-14);
+  font-weight: 600;
+  color: var(--text-1);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.svc-servidor__link:hover { color: var(--accent); }
+.svc-servidor__hostname {
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  color: var(--text-3);
+  overflow-wrap: anywhere;
+}
+.svc-servidor__visto {
+  font-size: var(--fs-11);
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.svc-vazio {
+  margin: 0;
+  font-size: var(--fs-12);
+  color: var(--text-3);
+}

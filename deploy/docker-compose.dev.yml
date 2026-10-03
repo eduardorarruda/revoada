@@ -1,0 +1,187 @@
+# Ambiente de desenvolvimento — apenas os serviços de dados.
+# Os serviços Go (gateway, server) entram a partir da Fase 1.
+# Nome de projeto fixo para volumes previsíveis entre sessões.
+name: revoada
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: revoada-clickhouse
+    ports:
+      - "8123:8123"   # HTTP
+      - "9000:9000"   # native
+    environment:
+      CLICKHOUSE_DB: revoada
+      CLICKHOUSE_USER: revoada
+      CLICKHOUSE_PASSWORD: revoada
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      # MESMO config.d da produção: TTL curto nos logs internos do ClickHouse
+      # (system.*_log) e desligamento dos mais volumosos. Só produção montava isto, e o
+      # resultado medido em dev foi 564 MiB de system.*_log contra 4,4 MiB de dado real
+      # — o ambiente de desenvolvimento gastando 99% do disco consigo mesmo, e ainda
+      # divergindo de produção justamente na retenção (o system.query_log é onde o
+      # trecho procurado num expurgo fica guardado; testar retenção num ambiente que
+      # retém diferente não prova nada).
+      #
+      # Monta SÓ o arquivo, nunca o diretório: um bind do diretório inteiro esconderia
+      # o docker_related_config.xml da imagem, que define <listen_host>0.0.0.0</listen_host>;
+      # sem ele o CH só escuta em localhost e as conexões de rede são recusadas.
+      - ./prod/clickhouse/config.d/system-logs-ttl.xml:/etc/clickhouse-server/config.d/system-logs-ttl.xml:ro
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--user", "revoada", "--password", "revoada", "--query", "SELECT 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 20s
+
+  postgres:
+    image: postgres:16
+    container_name: revoada-postgres
+    ports:
+      # 5432 do host costuma estar ocupada por outro Postgres; expomos em 5433.
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: revoada
+      POSTGRES_USER: revoada
+      POSTGRES_PASSWORD: revoada
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U revoada -d revoada"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: revoada-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+
+  nats:
+    image: nats:2-alpine
+    container_name: revoada-nats
+    ports:
+      - "4222:4222"   # client
+      - "8222:8222"   # HTTP monitoring
+    command: ["--jetstream", "--store_dir=/data", "--http_port=8222"]
+    volumes:
+      - nats_data:/data
+    healthcheck:
+      # /healthz é servido pela porta de monitoramento (8222); wget vem na imagem alpine
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8222/healthz || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+
+  gateway:
+    build:
+      context: ..
+      dockerfile: gateway/Dockerfile
+    container_name: revoada-gateway
+    ports:
+      - "8090:8090"
+      - "4317:4317"   # OTLP/gRPC
+    environment:
+      REVOADA_HTTP_ADDR: ":8090"
+      REVOADA_CH_ADDR: "http://clickhouse:8123"
+      REVOADA_CH_USER: "revoada"
+      REVOADA_CH_PASSWORD: "revoada"
+      REVOADA_CH_DB: "revoada"
+      REVOADA_PG_DSN: "postgres://revoada:revoada@postgres:5432/revoada?sslmode=disable"
+      REVOADA_NATS_URL: "nats://nats:4222"
+      REVOADA_NATS_MON_URL: "http://nats:8222/healthz"
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    healthcheck:
+      # imagem distroless não tem shell nem curl; o próprio binário responde em /healthz.
+      # Usamos o gateway como cliente de si mesmo via wget do busybox? Não há. Então
+      # deixamos o compose observar a porta com um teste TCP simples do Docker.
+      test: ["CMD", "/gateway", "-healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 10s
+
+  server:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    container_name: revoada-server
+    ports:
+      - "8091:8091"
+    environment:
+      # REVOADA_ENV=development libera o segredo JWT default (inseguro) só em dev;
+      # em produção o server aborta o boot se REVOADA_JWT_SECRET não for forte.
+      REVOADA_ENV: "development"
+      REVOADA_SERVER_ADDR: ":8091"
+      REVOADA_PG_DSN: "postgres://revoada:revoada@postgres:5432/revoada?sslmode=disable"
+      REVOADA_CH_ADDR: "http://clickhouse:8123"
+      REVOADA_CH_USER: "revoada"
+      REVOADA_CH_PASSWORD: "revoada"
+      REVOADA_CH_DB: "revoada"
+      REVOADA_JWT_SECRET: "dev-secret-troque-em-producao"
+      # De onde o painel lê os artefatos do agente para montar o instalador com a
+      # chave embutida. Em dev o diretório é o `dist/` do repositório: rode
+      # `make agent` para preenchê-lo, senão a tela avisa que falta publicar.
+      REVOADA_AGENT_DIST_DIR: "/srv/agent-dist"
+      # Dados do painel, incluindo a CHAVE MESTRA do cofre (fora do banco). Num volume
+      # para sobreviver a recriações do container.
+      REVOADA_DATA_DIR: "/var/lib/revoada"
+    volumes:
+      - ../dist:/srv/agent-dist:ro
+      - revoada_dados:/var/lib/revoada
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  minio:
+    image: minio/minio:latest
+    container_name: revoada-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9002:9000"   # API (9000 do host é do ClickHouse native)
+      - "9001:9001"   # console
+    environment:
+      MINIO_ROOT_USER: "minioadmin"
+      MINIO_ROOT_PASSWORD: "minioadmin"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+
+volumes:
+  revoada_dados:
+  clickhouse_data:
+  postgres_data:
+  redis_data:
+  nats_data:
+  minio_data:
