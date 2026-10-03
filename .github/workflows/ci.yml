@@ -39,6 +39,7 @@ jobs:
           cache-dependency-path: '**/go.sum'
       - name: vet + test
         run: |
+          set +e  # o shell do Actions roda com -e: sem isto a falha sai antes das anotações
           fail=0
           for m in $GO_MODULES; do
             [ -f "$m/go.mod" ] || continue
