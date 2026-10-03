@@ -1,5 +1,5 @@
 # Configuração compartilhada do golangci-lint (v2) para todos os módulos Go
-# (gateway, server, agent). Cada módulo é lintado com `golangci-lint run` a
+# (core, gateway, server, agent). Cada módulo é lintado com `golangci-lint run` a
 # partir da sua pasta; a descoberta de config sobe a árvore e encontra este arquivo.
 #
 # misspell NÃO é usado de propósito: o código tem comentários em português e o
@@ -18,6 +18,16 @@ linters:
       # Body/conn/tx em defer, escrita em ResponseWriter de métricas etc.).
       exclude-functions:
         - (io.Closer).Close
+        - (*database/sql.Rows).Close
+        - (*database/sql.DB).Close
+        - (*database/sql.Conn).Close
+        - (*database/sql.Tx).Rollback
+        - (*os.File).Close
+        - (*io.PipeWriter).Close
+        - (*github.com/nakagami/firebirdsql.ServiceManager).Close
+        - (*github.com/nakagami/firebirdsql.UserManager).Close
+        - (*google.golang.org/grpc.ClientConn).Close
+        - os.Remove
         - (github.com/jackc/pgx/v5.Tx).Rollback
         - (*github.com/coder/websocket.Conn).CloseNow
         - fmt.Fprint

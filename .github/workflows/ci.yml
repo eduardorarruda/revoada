@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GO_VERSION: '1.25'
+  GO_VERSION: '1.26'
   GO_MODULES: core agent gateway server
 
 jobs:
@@ -43,8 +43,18 @@ jobs:
           for m in $GO_MODULES; do
             [ -f "$m/go.mod" ] || continue
             echo "::group::$m"
-            (cd "$m" && go vet ./... && go test -race -count=1 ./...) || fail=1
+            log="$RUNNER_TEMP/teste-$m.log"
+            (cd "$m" && go vet ./... && go test -race -count=1 ./...) > "$log" 2>&1
+            rc=$?
+            cat "$log"
             echo "::endgroup::"
+            if [ $rc -ne 0 ]; then
+              fail=1
+              # As linhas da falha viram anotações: aparecem no resumo do run sem
+              # precisar abrir (nem ter acesso a) o log inteiro.
+              grep -E -- '^(--- FAIL|FAIL|panic:|# )|_test\.go:[0-9]+:|\.go:[0-9]+:[0-9]+:' "$log" | head -25 |
+                while IFS= read -r l; do echo "::error title=go test ($m)::$l"; done
+            fi
           done
           exit $fail
 
@@ -106,7 +116,7 @@ jobs:
         if: hashFiles(format('{0}/go.mod', matrix.module)) != ''
         uses: golangci/golangci-lint-action@v8
         with:
-          version: v2.12.2
+          version: v2.14.0
           working-directory: ${{ matrix.module }}
 
   web:

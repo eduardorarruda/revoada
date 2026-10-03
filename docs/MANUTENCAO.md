@@ -54,7 +54,7 @@ flowchart LR
 
 ## 3. Rodar e depurar localmente
 
-Pré-requisitos: Docker + Docker Compose, Go 1.25+, `python3` e `curl`
+Pré-requisitos: Docker + Docker Compose, Go 1.26+, `python3` e `curl`
 (o runbook completo está em [`docs/runbook-dev.md`](runbook-dev.md)).
 
 ```bash

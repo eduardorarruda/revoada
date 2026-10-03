@@ -10,7 +10,7 @@ linha a linha, que nada se perdeu no caminho.
 
 [![CI](https://github.com/eduardorarruda/revoada/actions/workflows/ci.yml/badge.svg)](https://github.com/eduardorarruda/revoada/actions/workflows/ci.yml)
 [![Licença: AGPL-3.0](https://img.shields.io/badge/licen%C3%A7a-AGPL--3.0-0d7a73)](LICENSE)
-[![Go 1.25](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white)](https://go.dev)
+[![Go 1.26](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](web)
 [![Self-hosted](https://img.shields.io/badge/self--hosted-docker%20compose-2496ED?logo=docker&logoColor=white)](#-início-rápido)
 

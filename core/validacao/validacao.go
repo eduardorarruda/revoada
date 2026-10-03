@@ -85,7 +85,7 @@ func hostValido(h string) bool {
 			return false
 		}
 		for _, r := range parte {
-			if !(r == '-' || r == '_' || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')) {
+			if !charDeRotulo(r) {
 				return false
 			}
 		}
@@ -116,7 +116,7 @@ func Usuario(campo, s string) (string, error) {
 		return "", falha(campo, "obrigatório (até 128 caracteres)")
 	}
 	for _, r := range s {
-		if !(unicode.IsLetter(r) || unicode.IsDigit(r) || strings.ContainsRune("_.@-$", r)) {
+		if !charDeUsuario(r) {
 			return "", falha(campo, "caractere %q não permitido", r)
 		}
 	}
@@ -149,4 +149,14 @@ func Opcoes(campo string, m map[string]string, permitidas ...string) (map[string
 		out[k] = limpo
 	}
 	return out, nil
+}
+
+// charDeRotulo: letra ASCII, dígito, hífen ou sublinhado (rótulo de nome de host).
+func charDeRotulo(r rune) bool {
+	return r == '-' || r == '_' || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')
+}
+
+// charDeUsuario: letra, dígito ou um dos símbolos aceitos em nome de usuário de banco.
+func charDeUsuario(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r) || strings.ContainsRune("_.@-$", r)
 }

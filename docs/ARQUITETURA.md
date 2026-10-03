@@ -112,7 +112,7 @@ o código Go gerado, incluindo a assinatura/conferência Ed25519 das tarefas.
 
 ## 4. Stack e multiplataforma
 
-- **Back-end:** Go 1.25, organizado em módulos num `go.work` (`core`, `proto`, `agent`, `gateway`,
+- **Back-end:** Go 1.26, organizado em módulos num `go.work` (`core`, `proto`, `agent`, `gateway`,
   `server`). **Front-end:** React 19 + TypeScript + Vite. **Agente:** binário Go.
 - **Armazenamento:** PostgreSQL 16 (metadados, tarefas, auditoria, cofre), ClickHouse (métricas,
   logs, traces), NATS JetStream (fila de ingestão).

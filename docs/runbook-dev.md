@@ -4,7 +4,7 @@ Como subir o Revoada do zero e rodar as verificações. Escrito para quem nunca 
 
 ## Pré-requisitos
 - Docker + Docker Compose
-- Go 1.25+ no PATH
+- Go 1.26+ no PATH
 - `python3` e `curl` (usados pelo teste de integração)
 
 ## 1. Subir o stack de dados

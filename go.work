@@ -1,9 +1,9 @@
-go 1.25.0
+go 1.26.0
 
 use (
-	./core
-	./proto
 	./agent
+	./core
 	./gateway
+	./proto
 	./server
 )

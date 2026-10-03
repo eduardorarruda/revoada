@@ -10,7 +10,7 @@ Obrigado por querer melhorar o Revoada! Correções, testes, documentação e id
 
 ## Ambiente de desenvolvimento
 
-Pré-requisitos: Docker + Compose, Go 1.25 e Node 22+.
+Pré-requisitos: Docker + Compose, Go 1.26 e Node 22+.
 
 ```bash
 make dev-up                                   # PostgreSQL, ClickHouse, NATS, Redis

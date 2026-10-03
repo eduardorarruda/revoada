@@ -329,21 +329,6 @@ func nomesDaChave(conf conferencia) []string {
 	return out
 }
 
-// buscar lê do destino as linhas com as chaves pedidas (IN com parâmetros, em
-// pedaços que cabem no limite do PostgreSQL) e devolve chave canônica → valores das
-// colunas gravadas (na ordem de dest), mais as chaves que aparecem em MAIS de uma
-// linha (nunca são dadas como idênticas). Os parâmetros são os valores CONVERTIDOS —
-// os mesmos que o INSERT mandou, então o PostgreSQL infere o tipo pela coluna
-// exatamente como na gravação.
-func (g destino) buscar(ctx context.Context, tabela string, dest []esquema.Coluna, conf conferencia,
-	linhas []linhaOrigem) (map[string][]any, map[string]bool, error) {
-	extras, err := g.colunasEntreAspas(dest)
-	if err != nil {
-		return nil, nil, err
-	}
-	return g.buscarPor(ctx, tabela, dest, conf, linhas, extras)
-}
-
 func (g destino) colunasEntreAspas(dest []esquema.Coluna) ([]string, error) {
 	out := make([]string, len(dest))
 	for i, c := range dest {
@@ -356,7 +341,14 @@ func (g destino) colunasEntreAspas(dest []esquema.Coluna) ([]string, error) {
 	return out, nil
 }
 
-// buscarPor é o buscar com os itens do SELECT escolhidos por quem chama (colunas ou
+// buscarPor lê do destino as linhas com as chaves pedidas (IN com parâmetros, em
+// pedaços que cabem no limite do PostgreSQL) e devolve chave canônica → valores das
+// colunas gravadas (na ordem de dest), mais as chaves que aparecem em MAIS de uma
+// linha (nunca são dadas como idênticas). Os parâmetros são os valores CONVERTIDOS —
+// os mesmos que o INSERT mandou, então o PostgreSQL infere o tipo pela coluna
+// exatamente como na gravação.
+//
+// Os itens do SELECT são escolhidos por quem chama (colunas ou
 // expressões montadas pelo motor, como o texto renderizado pelo próprio banco na
 // dupla conferência). A chave da linha vem junto, para achar a linha da origem.
 func (g destino) buscarPor(ctx context.Context, tabela string, dest []esquema.Coluna, conf conferencia,

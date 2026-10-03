@@ -3,7 +3,7 @@ package validacao
 import "testing"
 
 func TestTextoSanitiza(t *testing.T) {
-	got, err := Texto("nome", "  ERP‮ cliente​ X \n prod  ", true, 50)
+	got, err := Texto("nome", "  ERP\u202e cliente\u200b X \n prod  ", true, 50)
 	if err != nil || got != "ERP cliente X prod" {
 		t.Fatalf("%q %v", got, err)
 	}
