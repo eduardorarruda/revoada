@@ -42,7 +42,7 @@ jobs:
         with:
           go-version: '1.26'
           cache-dependency-path: '**/go.sum'
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: interface
           path: server/internal/webui/dist
@@ -67,7 +67,7 @@ jobs:
     needs: binarios
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: bin-*
           path: dist
