@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/eduardorarruda/revoada/core v0.0.0-00010101000000-000000000000
 	github.com/eduardorarruda/revoada/proto v0.0.0-00010101000000-000000000000
-	github.com/jackc/pgx/v5 v5.10.0
+	github.com/jackc/pgx/v5 v5.11.0
 	github.com/kardianos/service v1.3.0
 	github.com/nakagami/firebirdsql v0.9.21
 	github.com/shirou/gopsutil/v4 v4.26.6
