@@ -168,9 +168,13 @@ func TestPausarRetomarECancelar(t *testing.T) {
 		t.Fatalf("em andamento: %v", est)
 	}
 	e.Controlar(&agentev1.Controle{TarefaId: "tf_p", Acao: agentev1.Controle_RETOMAR})
-	time.Sleep(80 * time.Millisecond)
-	if c.eventos() <= parado+1 {
-		t.Fatal("retomar não voltou a andar")
+	// Espera com prazo, não um sleep fixo: no Windows o relógio tem granularidade de
+	// ~15 ms e, com -race, 80 ms às vezes não cabiam dois passos de 20 ms.
+	for prazo := time.Now().Add(2 * time.Second); c.eventos() <= parado+1; {
+		if time.Now().After(prazo) {
+			t.Fatal("retomar não voltou a andar")
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
 	e.Controlar(&agentev1.Controle{TarefaId: "tf_p", Acao: agentev1.Controle_CANCELAR})
 	if r := esperarResultado(t, c); r.GetEstado() != agentev1.ResultadoTarefa_CANCELADA {
