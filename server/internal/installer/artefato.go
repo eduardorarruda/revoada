@@ -40,7 +40,7 @@ type Artefato struct {
 // pode conter um binário mais antigo do que o servidor (deploy parcial, rollback
 // só do front). Por isso o VERSION do dist tem precedência, e por isso existe um
 // teste que compara esta constante com a do agente — ver artefato_test.go.
-const versaoAgentePadrao = "0.8.3"
+const versaoAgentePadrao = "0.8.4"
 
 // arqVersao é o marcador de versão publicado junto com os binários. Uma linha,
 // só o número.

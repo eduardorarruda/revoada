@@ -86,7 +86,13 @@ func applyResourceLimits(log *slog.Logger, r config.ResourceLimits) {
 // A 0.8.3 também não muda medida nenhuma: a descoberta de serviços passa a
 // reconhecer Apache (httpd/apache2) e PHP-FPM, com as versões do PHP lidas do
 // cmdline do processo mestre (ver discover.go). Sobe pelo mesmo motivo da 0.8.2.
-var version = "0.8.3"
+//
+// A 0.8.4 não muda medida nenhuma: corrige o travamento do agente com uma linha de
+// log gigante de container (44 MB de uma vez, de um Postgres registrando os
+// parâmetros de uma consulta lenta). O demux do Docker passa a cortar a linha no
+// teto e descartar o resto, como o tail de arquivo, e o lote de logs fecha também
+// por bytes (1 MiB).
+var version = "0.8.4"
 
 // defaultConfigPath é onde cada sistema guarda o agent.yaml. O serviço sempre
 // passa -config explicitamente; este default é para quem roda um comando à mão

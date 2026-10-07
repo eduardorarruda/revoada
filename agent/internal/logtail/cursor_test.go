@@ -218,3 +218,68 @@ func TestDrainComConfirmaUltimoRegistroEntregue(t *testing.T) {
 		t.Fatalf("cursor confirmado = %q, queria o do último registro entregue (s=2)", confirmado)
 	}
 }
+
+// quadroDocker monta um frame do stream multiplexado do Docker (header de 8 bytes).
+func quadroDocker(stream byte, texto []byte) []byte {
+	b := make([]byte, 8)
+	b[0] = stream
+	binary.BigEndian.PutUint32(b[4:], uint32(len(texto)))
+	return append(b, texto...)
+}
+
+// PROVA (incidente real em produção): um Postgres registrou numa linha só os
+// parâmetros de uma consulta lenta — 44 MB. O Docker entrega a linha em frames de
+// 16 KiB; o demux cortava no teto e CONTINUAVA emitindo o resto em pedaços de
+// 256 KiB (~175 "linhas"), e o lote de 200 linhas levou o agente a 170 MB de heap,
+// ao teto do systemd, e o travou. A linha gigante tem de virar UMA linha cortada e
+// marcada — o resto, até o \n, é descartado — e a linha seguinte chega inteira.
+func TestDemuxLinhaGiganteViraUmaLinhaSo(t *testing.T) {
+	var fluxo bytes.Buffer
+	gigante := bytes.Repeat([]byte("x"), 3*maxLineBytes+12345)
+	linha := append([]byte("2026-10-07T11:48:25.071000000Z DETAIL: parameters: "), gigante...)
+	linha = append(linha, '\n')
+	for i := 0; i < len(linha); i += 16 << 10 {
+		fim := min(i+16<<10, len(linha))
+		fluxo.Write(quadroDocker(2, linha[i:fim]))
+	}
+	fluxo.Write(quadroDocker(1, []byte("2026-10-07T11:48:26.000000000Z seguinte\n")))
+
+	out := make(chan dline, 64)
+	demux(context.Background(), &fluxo, "id1", "pischat-db", out)
+	close(out)
+
+	var linhas []dline
+	for dl := range out {
+		linhas = append(linhas, dl)
+	}
+	if len(linhas) != 2 {
+		t.Fatalf("a linha gigante virou %d linhas (esperava 1 cortada + a seguinte)", len(linhas))
+	}
+	if !strings.HasSuffix(linhas[0].text, truncMark) || len(linhas[0].text) > maxLineBytes+len(truncMark) {
+		t.Fatalf("linha gigante: %d bytes, marcada=%v", len(linhas[0].text), strings.HasSuffix(linhas[0].text, truncMark))
+	}
+	if linhas[0].ts != "2026-10-07T11:48:25.071000000Z" || linhas[0].stream != "stderr" {
+		t.Fatalf("o cursor e o stream saem do começo da linha: ts=%q stream=%q", linhas[0].ts, linhas[0].stream)
+	}
+	if linhas[1].text != "seguinte" {
+		t.Fatalf("a linha depois da gigante chega inteira: %q", linhas[1].text)
+	}
+}
+
+// PROVA: o lote é fechado também por BYTES, não só por 200 linhas — 200 linhas de
+// 256 KiB seriam 50 MB num lote só (e o JSON do envio o dobro).
+func TestLoteFechaPorBytes(t *testing.T) {
+	grande := strings.Repeat("y", maxLineBytes)
+	n := 0
+	tamanho := 0
+	for !loteCheio(n, tamanho) {
+		n++
+		tamanho += len(grande)
+	}
+	if tamanho > maxLoteBytes+maxLineBytes {
+		t.Fatalf("lote com %d bytes passa do teto %d", tamanho, maxLoteBytes)
+	}
+	if !loteCheio(maxLoteLinhas, 10) {
+		t.Fatal("o teto de linhas continua valendo")
+	}
+}

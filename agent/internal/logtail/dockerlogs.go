@@ -108,6 +108,18 @@ func (d *DockerLogs) Run(ctx context.Context) {
 	}
 }
 
+// Teto do lote de logs do Docker: 200 linhas OU 1 MiB de texto, o que vier
+// primeiro. Só o número de linhas não segura a memória: 200 linhas no teto de
+// 256 KiB seriam 50 MB num lote (e o JSON do envio, outro tanto).
+const (
+	maxLoteLinhas = 200
+	maxLoteBytes  = 1 << 20
+)
+
+func loteCheio(linhas, bytes int) bool {
+	return linhas >= maxLoteLinhas || bytes >= maxLoteBytes
+}
+
 // listRunning devolve os containers em execução (id → nome). Best-effort.
 func (d *DockerLogs) listRunning(ctx context.Context) map[string]string {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://docker/containers/json", nil)
@@ -217,7 +229,15 @@ func (d *DockerLogs) hasTTY(ctx context.Context, id string) bool {
 func demux(ctx context.Context, r io.Reader, id, container string, out chan<- dline) {
 	br := bufio.NewReader(r)
 	header := make([]byte, 8)
-	var acc [3][]byte // buffer de linha por tipo de stream (índices 1 e 2)
+	// Um acumulador por stream (índices 1 e 2), o MESMO do tail de arquivo: passou do
+	// teto, a linha é cortada e marcada e o RESTO dela, até o \n, é descartado.
+	//
+	// Antes o demux cortava no teto e seguia emitindo o resto em pedaços de 256 KiB.
+	// Num caso real, um Postgres registrou 44 MB numa linha (parâmetros de uma
+	// consulta lenta): viraram ~175 "linhas", o lote levou o agente a 170 MB de heap,
+	// ao teto do systemd (MemoryHigh), e ele travou — o painel mostrou "servidor
+	// parou de reportar" com o servidor saudável.
+	var acc [3]acumulador
 	for {
 		if _, err := io.ReadFull(br, header); err != nil {
 			return
@@ -234,26 +254,16 @@ func demux(ctx context.Context, r io.Reader, id, container string, out chan<- dl
 		if st != 1 && st != 2 {
 			continue
 		}
-		acc[st] = append(acc[st], payload...)
-		for {
-			i := bytes.IndexByte(acc[st], '\n')
+		for len(payload) > 0 {
+			i := bytes.IndexByte(payload, '\n')
 			if i < 0 {
-				// Sem newline: um container que escreve muito sem quebrar linha
-				// (saída binária, JSON gigante numa linha) faria acc crescer sem
-				// limite. Ao passar do teto, corta como uma linha e segue — com o
-				// mesmo marcador do caminho de arquivo, senão a linha cortada chega
-				// ao painel indistinguível de uma linha que terminava ali.
-				if len(acc[st]) > maxLineBytes {
-					line := string(acc[st][:maxLineBytes]) + truncMark
-					acc[st] = acc[st][:0]
-					if !emit(ctx, out, id, container, streamName(st), line) {
-						return
-					}
-				}
+				acc[st].anexar(payload)
 				break
 			}
-			line := string(acc[st][:i])
-			acc[st] = acc[st][i+1:]
+			acc[st].anexar(payload[:i])
+			payload = payload[i+1:]
+			line := string(acc[st].fechar())
+			acc[st].reiniciar()
 			if !emit(ctx, out, id, container, streamName(st), line) {
 				return
 			}
@@ -307,6 +317,7 @@ func (d *DockerLogs) consume(ctx context.Context, lines <-chan dline) {
 	tk := time.NewTicker(1500 * time.Millisecond)
 	defer tk.Stop()
 	var buf []dline
+	bytesLote := 0
 	flush := func() {
 		if len(buf) == 0 {
 			return
@@ -338,6 +349,7 @@ func (d *DockerLogs) consume(ctx context.Context, lines <-chan dline) {
 			d.cur.salvar()
 		}
 		buf = buf[:0]
+		bytesLote = 0
 	}
 	for {
 		select {
@@ -350,7 +362,8 @@ func (d *DockerLogs) consume(ctx context.Context, lines <-chan dline) {
 				return
 			}
 			buf = append(buf, dl)
-			if len(buf) >= 200 {
+			bytesLote += len(dl.text)
+			if loteCheio(len(buf), bytesLote) {
 				flush()
 			}
 		case <-tk.C:
