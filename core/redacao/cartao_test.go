@@ -1,4 +1,4 @@
-package logtail
+package redacao
 
 import (
 	"strings"
@@ -18,8 +18,8 @@ func TestRedactCartao(t *testing.T) {
 		{"elo 6362970000457013", "6362970000457013"},
 		{`{"card":"4012888888881881"}`, "4012888888881881"},
 	} {
-		got := redactSecrets(c.entrada)
-		if strings.Contains(got, c.cartao) || !strings.Contains(got, redactMark) {
+		got := Texto(c.entrada)
+		if strings.Contains(got, c.cartao) || !strings.Contains(got, Marca) {
 			t.Errorf("%q → %q: o cartão deveria sair mascarado", c.entrada, got)
 		}
 	}
@@ -29,7 +29,7 @@ func TestRedactCartao(t *testing.T) {
 		"pedido 9876543210123456 enviado",        // sem bandeira conhecida
 		"telefone 11987654321 e cpf 12345678909", // curtos demais
 	} {
-		if got := redactSecrets(s); got != s {
+		if got := Texto(s); got != s {
 			t.Errorf("%q virou %q: número legítimo não é cartão", s, got)
 		}
 	}
@@ -38,7 +38,7 @@ func TestRedactCartao(t *testing.T) {
 // Os quatro últimos dígitos ficam: é o que o atendimento usa para achar a transação,
 // e o padrão PCI permite exibi-los.
 func TestRedactCartaoMantemFinal(t *testing.T) {
-	if got := redactSecrets("cartão 4111 1111 1111 1111"); !strings.HasSuffix(got, "1111") || strings.Contains(got, "4111 1111") {
+	if got := Texto("cartão 4111 1111 1111 1111"); !strings.HasSuffix(got, "1111") || strings.Contains(got, "4111 1111") {
 		t.Fatalf("%q", got)
 	}
 }

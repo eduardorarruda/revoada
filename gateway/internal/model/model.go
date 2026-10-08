@@ -1,7 +1,11 @@
 // Package model define os tipos de telemetria compartilhados entre os módulos.
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/eduardorarruda/revoada/core/genai"
+)
 
 // Metric é um ponto de série temporal pronto para ir ao ClickHouse (tabela metrics).
 type Metric struct {
@@ -49,6 +53,39 @@ type Span struct {
 	StatusCode string            `json:"status_code"` // UNSET|OK|ERROR
 	StatusMsg  string            `json:"status_msg"`
 	Labels     map[string]string `json:"labels"`
+
+	// GenAI vem preenchido quando o span é uma chamada de IA (LLM, agente,
+	// ferramenta). Não vai para a tabela spans: vira uma linha de genai_spans.
+	GenAI *genai.Chamada `json:"-"`
+}
+
+// GenAISpan é uma linha de genai_spans: o span de IA com as colunas normalizadas.
+type GenAISpan struct {
+	TenantID    string
+	TS          time.Time
+	TraceID     string
+	SpanID      string
+	ParentID    string
+	Service     string
+	Host        string
+	Nome        string
+	DuracaoMs   float64
+	Chamada     genai.Chamada
+	ComConteudo bool // o conteúdo desta chamada foi gravado em genai_conteudo
+}
+
+// GenAIConteudo é uma linha de genai_conteudo: um trecho de prompt ou de resposta.
+type GenAIConteudo struct {
+	TenantID string
+	TS       time.Time
+	TraceID  string
+	SpanID   string
+	Lado     string
+	Papel    string
+	Ordem    int
+	Texto    string
+	Truncado bool
+	Redigido bool
 }
 
 // Host é o inventário de um host monitorado (tabela hosts no PostgreSQL).

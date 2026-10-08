@@ -162,3 +162,7 @@ func CHBatch() (maxRows int, interval time.Duration, queue int) {
 		EnvDuration("REVOADA_CH_BATCH_INTERVAL", time.Second),
 		EnvInt("REVOADA_CH_BATCH_QUEUE", 256)
 }
+
+// GenAIConteudo diz o que fazer com o conteúdo (prompt/resposta) das chamadas de IA:
+// desligado (padrão), redigido ou completo. Var: REVOADA_GENAI_CONTEUDO.
+func GenAIConteudo() string { return Env("REVOADA_GENAI_CONTEUDO", "desligado") }

@@ -138,6 +138,13 @@ type Receiver struct {
 	// hostBind: política de amarração de host (anti-spoofing). Off por padrão.
 	hostBind HostBindMode
 
+	// IA: linhas normalizadas e conteúdo (ver genai.go). nil = recurso desligado; os
+	// spans continuam indo para a tabela spans normalmente.
+	genaiSink     GenAISink
+	genaiBatch    GenAIEnqueuer
+	conteudoBatch ConteudoEnqueuer
+	conteudo      ConteudoIA
+
 	// clock é a faixa de timestamps aceita (ver guard.go). Zero-value = sem guarda,
 	// para não quebrar Receivers montados por struct literal em teste; NewReceiver
 	// sempre preenche.

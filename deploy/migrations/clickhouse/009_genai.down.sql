@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS genai_1m_mv;
+DROP TABLE IF EXISTS genai_1m;
+DROP TABLE IF EXISTS genai_spans;
+DROP TABLE IF EXISTS genai_conteudo;

@@ -3,6 +3,7 @@ module github.com/eduardorarruda/revoada/gateway
 go 1.26.0
 
 require (
+	github.com/eduardorarruda/revoada/core v0.0.0-00010101000000-000000000000
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/nats-io/nats.go v1.52.0
 	go.opentelemetry.io/collector/pdata v1.62.0
@@ -34,3 +35,5 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 )
+
+replace github.com/eduardorarruda/revoada/core => ../core

@@ -125,10 +125,100 @@ func (c *Client) InsertSpans(ctx context.Context, rows []model.Span) error {
 	return c.insertJSONEachRow(ctx, "spans", &buf)
 }
 
-func (c *Client) insertJSONEachRow(ctx context.Context, table string, body *bytes.Buffer) error {
+// InsertGenAISpans grava um lote em genai_spans (uma linha por chamada de IA).
+func (c *Client) InsertGenAISpans(ctx context.Context, rows []model.GenAISpan) error {
+	if len(rows) == 0 {
+		return nil
+	}
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	for _, r := range rows {
+		ch := r.Chamada
+		motivos := ch.MotivosFim
+		if motivos == nil {
+			motivos = []string{}
+		}
+		if err := enc.Encode(map[string]any{
+			"tenant_id":            r.TenantID,
+			"ts":                   r.TS.UTC().Format("2006-01-02 15:04:05.000"),
+			"trace_id":             r.TraceID,
+			"span_id":              r.SpanID,
+			"parent_span_id":       r.ParentID,
+			"service":              r.Service,
+			"host":                 r.Host,
+			"nome":                 r.Nome,
+			"duracao_ms":           r.DuracaoMs,
+			"convencao":            ch.Convencao,
+			"operacao":             ch.Operacao,
+			"provedor":             ch.Provedor,
+			"modelo":               ch.Modelo,
+			"agente":               ch.Agente,
+			"agente_id":            ch.AgenteID,
+			"conversa_id":          ch.ConversaID,
+			"ferramenta":           ch.Ferramenta,
+			"chamada_id":           ch.ChamadaID,
+			"tokens_entrada":       ch.TokensEntrada,
+			"tokens_saida":         ch.TokensSaida,
+			"tokens_cache_leitura": ch.TokensCacheLeitura,
+			"tokens_cache_escrita": ch.TokensCacheEscrita,
+			"custo_informado_usd":  ch.CustoInformadoUSD,
+			"erro":                 ch.Erro,
+			"motivos_fim":          motivos,
+			"com_conteudo":         boolUInt8(r.ComConteudo),
+		}); err != nil {
+			return err
+		}
+	}
+	return c.insertJSONEachRow(ctx, "genai_spans", &buf, dedupMV)
+}
+
+// InsertGenAIConteudo grava um lote em genai_conteudo (prompt e resposta).
+func (c *Client) InsertGenAIConteudo(ctx context.Context, rows []model.GenAIConteudo) error {
+	if len(rows) == 0 {
+		return nil
+	}
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	for _, r := range rows {
+		if err := enc.Encode(map[string]any{
+			"tenant_id": r.TenantID,
+			"ts":        r.TS.UTC().Format("2006-01-02 15:04:05.000"),
+			"trace_id":  r.TraceID,
+			"span_id":   r.SpanID,
+			"lado":      r.Lado,
+			"papel":     r.Papel,
+			"ordem":     r.Ordem,
+			"texto":     r.Texto,
+			"truncado":  boolUInt8(r.Truncado),
+			"redigido":  boolUInt8(r.Redigido),
+		}); err != nil {
+			return err
+		}
+	}
+	return c.insertJSONEachRow(ctx, "genai_conteudo", &buf)
+}
+
+func boolUInt8(b bool) uint8 {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+// dedupMV faz o ClickHouse descartar também na MV um bloco que a tabela de origem já
+// descartou como repetido (retry do batcher). Sem isto, genai_spans fica certa e
+// genai_1m conta a chamada — e o custo — em dobro.
+var dedupMV = map[string]string{"deduplicate_blocks_in_dependent_materialized_views": "1"}
+
+func (c *Client) insertJSONEachRow(ctx context.Context, table string, body *bytes.Buffer, settings ...map[string]string) error {
 	q := url.Values{}
 	if c.db != "" {
 		q.Set("database", c.db)
+	}
+	for _, s := range settings {
+		for k, v := range s {
+			q.Set(k, v)
+		}
 	}
 	q.Set("query", fmt.Sprintf("INSERT INTO %s FORMAT JSONEachRow", table))
 	endpoint := c.addr + "/?" + q.Encode()

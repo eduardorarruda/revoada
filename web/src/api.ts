@@ -1582,15 +1582,7 @@ export interface TraceSummary {
   root_name: string;
   spans: number;
   has_error: number;
-  /**
-   * Trace incompleto (spans descartados pela amostragem).
-   *
-   * PENDENTE NO BACKEND: `/api/traces/search` ainda não agrega o rótulo — falta
-   * `max(labels['revoada.trace_partial'] = '1') AS partial` no GROUP BY trace_id de
-   * server/internal/traces/traces.go. Enquanto não vier, isto é sempre false na
-   * LISTA (a marca aparece ao abrir o trace, onde os labels dos spans chegam).
-   * Assim que o campo existir, a coluna passa a marcar sozinha.
-   */
+  /** Trace incompleto (spans descartados pela amostragem antes de ele virar "manter"). */
   partial: boolean;
 }
 export interface TraceSpan {
