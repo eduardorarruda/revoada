@@ -168,12 +168,32 @@ func (f Filtros) comuns(p string) []string {
 	if f.Host != "" {
 		c = append(c, p+"host = "+quote(f.Host))
 	}
-	if f.escopo != nil {
-		if pred := f.escopo.HostPredicate(p + "host"); pred != "" {
-			c = append(c, pred)
-		}
+	if pred := predicadoHost(f.escopo, p+"host"); pred != "" {
+		c = append(c, pred)
 	}
 	return c
+}
+
+// sqlAgenteDoTrace é A regra do agente de uma execução: o do span invoke_agent mais
+// antigo do trace. A chamada ao modelo quase nunca traz o nome do agente (é o span pai
+// que traz). Usada em toda consulta que precisa do agente — não reescreva à mão.
+const sqlAgenteDoTrace = `argMinIf(agente, ts, operacao = 'invoke_agent' AND agente != '')`
+
+// predicadoHost devolve "<coluna> IN (...)" com os servidores que o usuário vê, ou ""
+// sem restrição (admin, ou chamada do MCP com escopo nil).
+func predicadoHost(escopo *authz.Scope, coluna string) string {
+	if escopo == nil {
+		return ""
+	}
+	return escopo.HostPredicate(coluna)
+}
+
+// eTambem prefixa um predicado opcional com AND (vazio continua vazio).
+func eTambem(pred string) string {
+	if pred == "" {
+		return ""
+	}
+	return " AND " + pred
 }
 
 func quote(s string) string {

@@ -47,12 +47,10 @@ func (h *Handler) ConteudoHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Conteudo devolve as mensagens gravadas do trace, só dos spans que o usuário vê.
 func (h *Handler) Conteudo(ctx context.Context, traceID string, escopo *authz.Scope) ([]Mensagem, error) {
-	pred := ""
-	if escopo != nil {
-		if p := escopo.HostPredicate("host"); p != "" {
-			pred = " AND " + p
-		}
+	if !ehTraceID(traceID) { // a borda HTTP já valida; o MCP chega aqui direto
+		return nil, nil
 	}
+	pred := eTambem(predicadoHost(escopo, "host"))
 	rows, err := h.ch.QueryJSON(ctx, fmt.Sprintf(`SELECT span_id, lado, papel, ordem, texto, truncado, redigido
 		FROM genai_conteudo WHERE tenant_id = 'default' AND trace_id = %[1]s
 		AND span_id IN (SELECT span_id FROM genai_spans WHERE tenant_id = 'default' AND trace_id = %[1]s%[2]s)

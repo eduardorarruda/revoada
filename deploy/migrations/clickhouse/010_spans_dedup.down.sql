@@ -1,0 +1,1 @@
+ALTER TABLE spans RESET SETTING non_replicated_deduplication_window;

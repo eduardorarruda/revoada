@@ -72,14 +72,14 @@ func (h *Handler) Execucoes(ctx context.Context, fe FiltroExecucoes) ([]Execucao
 	rows, err := h.ch.QueryJSON(ctx, fmt.Sprintf(`SELECT trace_id,
 		min(toUnixTimestamp64Milli(ts)) AS inicio, max(toUnixTimestamp64Milli(ts) + duracao_ms) AS fim,
 		any(service) AS svc, any(host) AS hst,
-		argMinIf(agente, ts, operacao = 'invoke_agent' AND agente != '') AS ag,
+		%[5]s AS ag,
 		anyIf(conversa_id, conversa_id != '') AS conv,
 		countIf(operacao IN %[1]s) AS chamadas_modelo, countIf(operacao = 'execute_tool') AS ferramentas,
 		countIf(erro != '') AS erros,
 		sumIf(ifNull(tokens_entrada, 0), operacao IN %[1]s) AS te, sumIf(ifNull(tokens_saida, 0), operacao IN %[1]s) AS tsa,
 		groupUniqArrayIf(modelo, operacao IN %[1]s AND modelo != '') AS modelos
 		FROM genai_spans WHERE %[2]s GROUP BY trace_id %[3]s ORDER BY inicio DESC LIMIT %[4]d`,
-		opsDeModelo, f.onde(""), having, fe.Limite))
+		opsDeModelo, f.onde(""), having, fe.Limite, sqlAgenteDoTrace))
 	if err != nil {
 		return nil, err
 	}

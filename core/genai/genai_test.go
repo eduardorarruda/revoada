@@ -338,3 +338,20 @@ func TestVercelLegado(t *testing.T) {
 		}
 	}
 }
+
+func TestSoConteudoLegadoEhReconhecido(t *testing.T) {
+	// Instrumentação parcial: só o conteúdo, sem nenhum marcador de IA.
+	c, ok := Normalizar(Span{Atributos: map[string]string{"gen_ai.prompt.0.role": "user", "gen_ai.prompt.0.content": "oi"}})
+	if !ok || c.Convencao != ConvLegado || len(c.Mensagens) != 1 {
+		t.Fatalf("ok=%v %+v", ok, c)
+	}
+}
+
+func TestChavesDeConteudoDoOpenInferenceRAG(t *testing.T) {
+	for _, k := range []string{"retrieval.documents.0.document.content", "reranker.input_documents.2.document.content",
+		"reranker.output_documents.0.document.content", "reranker.query", "embedding.embeddings.0.embedding.text"} {
+		if !EhChaveDeConteudo(k) {
+			t.Errorf("%s deveria ser conteúdo", k)
+		}
+	}
+}

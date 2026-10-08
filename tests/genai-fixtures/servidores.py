@@ -27,7 +27,7 @@ class LLM(BaseHTTPRequestHandler):
                        "function": {"name": nome, "arguments": json.dumps({"cidade": "Recife"})}}]}
                 fim = "tool_calls"
             else:
-                msg = {"role": "assistant", "content": "Faz 29 graus em Recife. Chave de teste sk-proj-ABCDEFGHIJKLMNOPQRSTUV."}
+                msg = {"role": "assistant", "content": "Faz 29 graus em Recife. Chave de teste sk-teste-falso-de-fixture-0000."}
                 fim = "stop"
             return self._json(200, {"id": "chatcmpl-1", "object": "chat.completion", "created": 1760000000,
                 "model": req.get("model", "gpt-4o-mini") + "-2024-07-18", "choices": [{"index": 0, "message": msg, "finish_reason": fim}],

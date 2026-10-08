@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 
 G = "ia"
 PRECO_ENTRADA, PRECO_SAIDA, PRECO_CACHE = 2.0, 8.0, 0.5  # US$ por 1 mi de tokens
-CHAVE_SECRETA = "sk-proj-VALIDACAO0123456789abcdef"
+CHAVE_SECRETA = "sk-teste-validacao-0123456789"
 CARTAO = "4111 1111 1111 1111"
 
 

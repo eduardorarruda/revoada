@@ -106,12 +106,10 @@ func (h *Handler) ExecucaoHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Execucao monta o replay de um trace. escopo nil = sem restrição de servidor (MCP).
 func (h *Handler) Execucao(ctx context.Context, traceID string, escopo *authz.Scope) (Replay, error) {
-	pred := ""
-	if escopo != nil {
-		if p := escopo.HostPredicate("host"); p != "" {
-			pred = " AND " + p
-		}
+	if !ehTraceID(traceID) { // a borda HTTP já valida; o MCP chega aqui direto
+		return Replay{}, ErrExecucaoNaoEncontrada
 	}
+	pred := eTambem(predicadoHost(escopo, "host"))
 	rows, err := h.ch.QueryJSON(ctx, fmt.Sprintf(`SELECT span_id, parent_span_id, toUnixTimestamp64Milli(ts) AS ts_ms,
 		duracao_ms, operacao, nome, provedor, modelo, agente, ferramenta, chamada_id, service, host, conversa_id,
 		tokens_entrada, tokens_saida, tokens_cache_leitura, tokens_cache_escrita, custo_informado_usd,
@@ -177,12 +175,19 @@ func linhaDoPasso(r map[string]any, p Passo) linhaUso {
 	if p.Erro != "" {
 		l.Erros = 1
 	}
-	if p.TokensEntrada != nil || p.TokensSaida != nil {
+	temTokens := p.TokensEntrada != nil || p.TokensSaida != nil
+	informado := r["custo_informado_usd"] != nil
+	switch {
+	case temTokens && !informado:
+		l.ComTokens, l.Estimaveis = 1, 1
+	case temTokens:
 		l.ComTokens = 1
+	case !informado:
+		l.SemTokens = 1
 	}
 	l.Uso = genai.Uso{Entrada: inteiro(r["tokens_entrada"]), Saida: inteiro(r["tokens_saida"]),
 		CacheLeitura: inteiro(r["tokens_cache_leitura"]), CacheEscrita: inteiro(r["tokens_cache_escrita"])}
-	if r["custo_informado_usd"] != nil {
+	if informado {
 		l.CustoInformado, l.ComCustoInformado = numero(r["custo_informado_usd"]), 1
 	} else {
 		l.Estimar = l.Uso
@@ -210,8 +215,8 @@ func somarPasso(rep *Replay, r map[string]any, p Passo, c custo, tot *custo) {
 		rep.Totais.ChamadasFerramenta++
 	case genai.EhChamadaDeModelo(p.Operacao):
 		rep.Totais.ChamadasModelo++
-		rep.Totais.TokensEntrada += valorDe(p.TokensEntrada)
-		rep.Totais.TokensSaida += valorDe(p.TokensSaida)
+		rep.Totais.TokensEntrada += valorOuZero(p.TokensEntrada)
+		rep.Totais.TokensSaida += valorOuZero(p.TokensSaida)
 		tot.somar(c)
 	}
 }
@@ -223,7 +228,7 @@ func primeiroNaoVazio(a, b string) string {
 	return b
 }
 
-func valorDe(p *int64) int64 {
+func valorOuZero(p *int64) int64 {
 	if p == nil {
 		return 0
 	}

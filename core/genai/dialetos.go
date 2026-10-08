@@ -34,6 +34,12 @@ func Dialeto(a map[string]string) string {
 		}
 		return ConvOTel
 	}
+	// Instrumentação antiga ou parcial que só manda o conteúdo (gen_ai.prompt.N.*)
+	// continua sendo uma chamada de IA: reconhecê-la é o que leva o conteúdo para a
+	// tabela certa em vez de deixá-lo sumir.
+	if ehLegado(a) {
+		return ConvLegado
+	}
 	return ""
 }
 

@@ -9,17 +9,16 @@ import (
 	"github.com/eduardorarruda/revoada/core/genai"
 )
 
-// agentePorTrace é a subconsulta que dá o agente de cada execução: o do span
-// invoke_agent mais antigo do trace. A chamada ao modelo em si quase nunca traz o nome
-// do agente — é o span pai que traz —, então agrupar por genai_spans.agente jogaria
-// todo o custo num agente vazio. A janela começa uma hora antes para alcançar o span
-// do agente de uma execução longa que começou antes do intervalo consultado.
+// agentePorTrace é a subconsulta que dá o agente de cada execução (sqlAgenteDoTrace).
+// Agrupar direto por genai_spans.agente jogaria todo o custo num agente vazio. A janela
+// começa uma hora antes para alcançar o span do agente de uma execução longa que
+// começou antes do intervalo consultado.
 func agentePorTrace(f Filtros) string {
 	g := f
 	g.De = f.De.Add(-time.Hour)
 	g.Modelo = "" // o span do agente não tem modelo; filtrar por ele aqui o esconderia
-	return fmt.Sprintf(`SELECT trace_id, argMinIf(agente, ts, operacao = 'invoke_agent' AND agente != '') AS ag
-		FROM genai_spans WHERE %s GROUP BY trace_id`, g.onde(""))
+	return fmt.Sprintf(`SELECT trace_id, %s AS ag FROM genai_spans WHERE %s GROUP BY trace_id`,
+		sqlAgenteDoTrace, g.onde(""))
 }
 
 // porAgente soma uso e custo por agente (execuções sem agente aparecem pelo service).

@@ -37,6 +37,7 @@ var chavesDeConteudo = map[string]bool{
 	"ai.values":                    true,
 	"ai.embedding":                 true,
 	"ai.embeddings":                true,
+	"reranker.query":               true,
 }
 
 var prefixosDeConteudo = []string{
@@ -45,9 +46,15 @@ var prefixosDeConteudo = []string{
 	"llm.prompts.", "llm.completions.",
 	"llm.tools.", "llm.prompt_template.",
 	"ai.prompt", // ai.prompt, ai.prompt.messages, ai.prompt.tools…
+	// OpenInference: os spans de busca, embedding e reordenação carregam o TEXTO dos
+	// documentos e das consultas (em RAG, quase sempre dado do cliente).
+	"retrieval.documents.", "reranker.input_documents.", "reranker.output_documents.",
+	"embedding.embeddings.",
 }
 
-// EhChaveDeConteudo diz se a chave carrega conteúdo de prompt/resposta.
+// EhChaveDeConteudo diz se a chave carrega conteúdo de prompt/resposta. O gateway a
+// aplica a TODO span, reconhecido como IA ou não: um span sem marcador de IA que ainda
+// assim traga gen_ai.prompt.0.content não pode deixar o prompt nos rótulos.
 func EhChaveDeConteudo(k string) bool {
 	if chavesDeConteudo[k] {
 		return true

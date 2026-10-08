@@ -77,6 +77,9 @@ var criticas = map[Permissao]bool{
 	PermGerenciarConexoes: true,
 	PermGerenciarUsuarios: true,
 	PermVerCredencial:     true,
+	// Prompt de cliente é dado pessoal: ler o conteúdo das conversas pede a mesma
+	// confirmação de identidade que ver credencial.
+	PermVerConteudoIA: true,
 }
 
 // Pode diz se o papel tem a permissão.

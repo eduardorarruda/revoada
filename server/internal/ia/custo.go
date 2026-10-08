@@ -14,15 +14,22 @@ type linhaUso struct {
 	Provedor, Modelo  string
 	Chamadas, Erros   int64
 	ComTokens         int64
-	Uso, Estimar      genai.Uso // Estimar = só as chamadas SEM custo informado
+	SemTokens         int64     // sem tokens E sem custo informado: nada a calcular
+	Estimaveis        int64     // com tokens e sem custo informado: dependem do preço
+	Uso, Estimar      genai.Uso // Estimar = tokens só das chamadas Estimaveis
 	CustoInformado    float64
 	ComCustoInformado int64
 }
 
-// colunasUso são as somas, escritas sobre as linhas de genai_spans (prefixo p).
+// colunasUso são as somas, escritas sobre as linhas de genai_spans (prefixo p). As
+// contagens sem_tok e estimaveis são feitas linha a linha, aqui no SQL: deduzi-las das
+// outras contagens no Go exigiria supor que "tem tokens" e "tem custo informado"
+// andam juntos — e um proxy que informa custo sem tokens quebraria a conta.
 func colunasUso(p string) string {
 	return fmt.Sprintf(`count() AS chamadas, countIf(%[1]serro != '') AS erros,
 		countIf(%[1]stokens_entrada IS NOT NULL OR %[1]stokens_saida IS NOT NULL) AS com_tokens,
+		countIf(%[1]stokens_entrada IS NULL AND %[1]stokens_saida IS NULL AND %[1]scusto_informado_usd IS NULL) AS sem_tok,
+		countIf((%[1]stokens_entrada IS NOT NULL OR %[1]stokens_saida IS NOT NULL) AND %[1]scusto_informado_usd IS NULL) AS estimaveis,
 		sum(ifNull(%[1]stokens_entrada, 0)) AS te, sum(ifNull(%[1]stokens_saida, 0)) AS tsa,
 		sum(ifNull(%[1]stokens_cache_leitura, 0)) AS tcl, sum(ifNull(%[1]stokens_cache_escrita, 0)) AS tce,
 		sumIf(ifNull(%[1]stokens_entrada, 0), %[1]scusto_informado_usd IS NULL) AS ee,
@@ -34,6 +41,7 @@ func colunasUso(p string) string {
 
 // colunasUsoAgregado são as mesmas somas sobre genai_1m.
 const colunasUsoAgregado = `sum(chamadas) AS chamadas, sum(erros) AS erros, sum(com_tokens) AS com_tokens,
+	sum(sem_tokens) AS sem_tok, sum(estimaveis) AS estimaveis,
 	sum(tokens_entrada) AS te, sum(tokens_saida) AS tsa,
 	sum(tokens_cache_leitura) AS tcl, sum(tokens_cache_escrita) AS tce,
 	sum(estimar_entrada) AS ee, sum(estimar_saida) AS es,
@@ -45,6 +53,7 @@ func lerUso(r map[string]any, quando time.Time) linhaUso {
 	return linhaUso{
 		Quando: quando, Provedor: texto(r["provedor"]), Modelo: texto(r["modelo"]),
 		Chamadas: inteiro(r["chamadas"]), Erros: inteiro(r["erros"]), ComTokens: inteiro(r["com_tokens"]),
+		SemTokens: inteiro(r["sem_tok"]), Estimaveis: inteiro(r["estimaveis"]),
 		Uso: genai.Uso{Entrada: inteiro(r["te"]), Saida: inteiro(r["tsa"]),
 			CacheLeitura: inteiro(r["tcl"]), CacheEscrita: inteiro(r["tce"])},
 		Estimar: genai.Uso{Entrada: inteiro(r["ee"]), Saida: inteiro(r["es"]),
@@ -85,16 +94,13 @@ func (c custo) usdOuNulo() *float64 {
 // calcular faz a conta de uma linha: custo informado + estimativa pelo preço vigente
 // em l.Quando. Chamada com tokens e sem preço é contada (SemPreco), nunca vira zero.
 func calcular(t *genai.Tabela, l linhaUso) custo {
-	c := custo{USD: l.CustoInformado, Calculado: l.ComCustoInformado > 0}
-	cobertas := max(l.ComTokens, l.ComCustoInformado)
-	c.SemTokens = max(l.Chamadas-cobertas, 0)
-	estimaveis := max(l.ComTokens-l.ComCustoInformado, 0)
-	if estimaveis == 0 && l.Estimar == (genai.Uso{}) {
+	c := custo{USD: l.CustoInformado, Calculado: l.ComCustoInformado > 0, SemTokens: l.SemTokens}
+	if l.Estimaveis == 0 {
 		return c
 	}
 	p, ok := t.Achar(l.Provedor, l.Modelo, l.Quando)
 	if !ok {
-		c.SemPreco = max(estimaveis, 1)
+		c.SemPreco = l.Estimaveis
 		return c
 	}
 	c.USD += genai.Custo(l.Estimar, p)

@@ -86,9 +86,10 @@ func (h *Handler) CriarPrecoHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, msg, http.StatusBadRequest)
 		return
 	}
-	p := store.PrecoLLM{Provedor: strings.ToLower(strings.TrimSpace(n.Provedor)), Modelo: strings.ToLower(strings.TrimSpace(n.Modelo)),
+	// provedor/modelo vão crus: o store normaliza (minúsculas), num lugar só.
+	p := store.PrecoLLM{Provedor: n.Provedor, Modelo: n.Modelo,
 		EntradaPor1M: *n.EntradaPor1M, SaidaPor1M: *n.SaidaPor1M, CacheLeituraPor1M: n.CacheLeituraPor1M,
-		CacheEscritaPor1M: n.CacheEscritaPor1M, Moeda: "USD", VigenteDesde: h.agora().UTC().Truncate(time.Second), Origem: "manual"}
+		CacheEscritaPor1M: n.CacheEscritaPor1M, VigenteDesde: h.agora().UTC().Truncate(time.Second), Origem: "manual"}
 	if n.VigenteDesde != nil {
 		p.VigenteDesde = n.VigenteDesde.UTC()
 	}

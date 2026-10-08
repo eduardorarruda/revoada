@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/eduardorarruda/revoada/core/genai"
+	"github.com/eduardorarruda/revoada/core/redacao"
 	"github.com/eduardorarruda/revoada/gateway/internal/model"
 	tpb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
@@ -115,13 +116,16 @@ func FromResourceSpans(tenant string, rss []*tpb.ResourceSpans) []model.Span {
 	return out
 }
 
-// reconhecerIA normaliza o span quando ele é uma chamada de IA (core/genai) e, nesse
-// caso, TIRA dos rótulos as chaves de conteúdo (prompt, resposta, argumentos). O
-// conteúdo segue só dentro da Chamada; se e como ele é gravado é decisão do modo de
-// conteúdo (genai.go). Duas consequências deliberadas: com o conteúdo desligado, o
-// prompt não sobra em spans.labels, que todo leitor vê por 15 dias; e o span do
-// OpenInference, que achata cada mensagem em várias chaves, não estoura mais o teto
-// de rótulos e deixa de ser recusado inteiro.
+// reconhecerIA normaliza o span quando ele é uma chamada de IA (core/genai) e TIRA dos
+// rótulos as chaves de conteúdo (prompt, resposta, argumentos, documentos) de QUALQUER
+// span — reconhecido ou não. O conteúdo segue só dentro da Chamada; se e como ele é
+// gravado é decisão do modo de conteúdo (genai.go). Consequências deliberadas:
+//   - com o conteúdo desligado, o prompt não sobra em spans.labels, que todo leitor vê
+//     por 15 dias — nem quando a instrumentação esqueceu o marcador de IA;
+//   - o span do OpenInference, que achata cada mensagem em várias chaves, não estoura
+//     mais o teto de rótulos e deixa de ser recusado inteiro;
+//   - a mensagem de exceção de um span de IA passa pela redação: provedor costuma
+//     ecoar trecho do pedido (e às vezes a chave) no corpo do erro 4xx.
 func reconhecerIA(sp *tpb.Span, labels map[string]string) *genai.Chamada {
 	ch, ok := genai.Normalizar(genai.Span{
 		Nome:      sp.GetName(),
@@ -129,12 +133,17 @@ func reconhecerIA(sp *tpb.Span, labels map[string]string) *genai.Chamada {
 		Atributos: labels,
 		Eventos:   eventosIA(sp.GetEvents()),
 	})
-	if !ok {
-		return nil
-	}
 	for k := range labels {
 		if genai.EhChaveDeConteudo(k) {
 			delete(labels, k)
+		}
+	}
+	if !ok {
+		return nil
+	}
+	for _, k := range []string{"exception.message", "exception.stacktrace"} {
+		if v, tem := labels[k]; tem {
+			labels[k] = redacao.Texto(v)
 		}
 	}
 	return &ch

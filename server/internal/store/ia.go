@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -60,18 +61,27 @@ func (s *Store) ListarPrecosLLM(ctx context.Context) ([]PrecoLLM, error) {
 
 // CriarPrecoLLM grava uma linha nova. ErrPrecoDuplicado se a vigência já existir.
 func (s *Store) CriarPrecoLLM(ctx context.Context, p PrecoLLM) (PrecoLLM, error) {
+	p = normalizarPreco(p)
 	criado, err := scanPrecoLLM(s.pool.QueryRow(ctx, `INSERT INTO llm_precos
 		(provedor, modelo, entrada_por_1m, saida_por_1m, cache_leitura_por_1m, cache_escrita_por_1m,
-		 moeda, vigente_desde, origem, criado_por)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+		 vigente_desde, origem, criado_por)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
 		ON CONFLICT (tenant_id, provedor, modelo, vigente_desde) DO NOTHING
 		RETURNING `+colunasPrecoLLM,
 		p.Provedor, p.Modelo, p.EntradaPor1M, p.SaidaPor1M, p.CacheLeituraPor1M, p.CacheEscritaPor1M,
-		p.Moeda, p.VigenteDesde, p.Origem, p.CriadoPor))
+		p.VigenteDesde, p.Origem, p.CriadoPor))
 	if errors.Is(err, ErrNotFound) {
 		return criado, ErrPrecoDuplicado
 	}
 	return criado, err
+}
+
+// normalizarPreco põe provedor e modelo em minúsculas: é como a busca de preço compara,
+// e duas linhas que só diferem na caixa seriam o mesmo preço com duas vigências.
+func normalizarPreco(p PrecoLLM) PrecoLLM {
+	p.Provedor = strings.ToLower(strings.TrimSpace(p.Provedor))
+	p.Modelo = strings.ToLower(strings.TrimSpace(p.Modelo))
+	return p
 }
 
 // ApagarPrecoLLM remove uma linha. ErrNotFound se não existir.
@@ -92,30 +102,34 @@ func (s *Store) ApagarPrecoLLM(ctx context.Context, id int64) error {
 // administrador apagar uma linha de referência, ela não volta no próximo boot.
 func (s *Store) SemearPrecosLLM(ctx context.Context, origem string, precos []PrecoLLM) (int, error) {
 	var ja bool
-	if err := s.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM llm_precos WHERE origem = $1)`, origem).Scan(&ja); err != nil {
+	if err := s.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM llm_precos
+		WHERE tenant_id = 'default' AND origem = $1)`, origem).Scan(&ja); err != nil {
 		return 0, err
 	}
-	if ja {
+	if ja || len(precos) == 0 {
 		return 0, nil
 	}
-	tx, err := s.pool.Begin(ctx)
+	// Um INSERT só, com unnest das colunas: a tabela inteira entra ou nada entra.
+	var prov, mod []string
+	var ent, sai []float64
+	var cl, ce []*float64
+	var vig []time.Time
+	for _, p := range precos {
+		p = normalizarPreco(p)
+		prov, mod = append(prov, p.Provedor), append(mod, p.Modelo)
+		ent, sai = append(ent, p.EntradaPor1M), append(sai, p.SaidaPor1M)
+		cl, ce = append(cl, p.CacheLeituraPor1M), append(ce, p.CacheEscritaPor1M)
+		vig = append(vig, p.VigenteDesde)
+	}
+	tag, err := s.pool.Exec(ctx, `INSERT INTO llm_precos
+		(provedor, modelo, entrada_por_1m, saida_por_1m, cache_leitura_por_1m, cache_escrita_por_1m,
+		 vigente_desde, origem, criado_por)
+		SELECT u.*, $8, 'referência'
+		FROM unnest($1::text[], $2::text[], $3::float8[], $4::float8[], $5::float8[], $6::float8[], $7::timestamptz[]) AS u
+		ON CONFLICT (tenant_id, provedor, modelo, vigente_desde) DO NOTHING`,
+		prov, mod, ent, sai, cl, ce, vig, origem)
 	if err != nil {
 		return 0, err
 	}
-	defer func() { _ = tx.Rollback(ctx) }()
-	n := 0
-	for _, p := range precos {
-		tag, err := tx.Exec(ctx, `INSERT INTO llm_precos
-			(provedor, modelo, entrada_por_1m, saida_por_1m, cache_leitura_por_1m, cache_escrita_por_1m,
-			 moeda, vigente_desde, origem, criado_por)
-			VALUES ($1,$2,$3,$4,$5,$6,'USD',$7,$8,'referência')
-			ON CONFLICT (tenant_id, provedor, modelo, vigente_desde) DO NOTHING`,
-			p.Provedor, p.Modelo, p.EntradaPor1M, p.SaidaPor1M, p.CacheLeituraPor1M, p.CacheEscritaPor1M,
-			p.VigenteDesde, origem)
-		if err != nil {
-			return 0, err
-		}
-		n += int(tag.RowsAffected())
-	}
-	return n, tx.Commit(ctx)
+	return int(tag.RowsAffected()), nil
 }

@@ -34,6 +34,7 @@ func (l *lojaFalsa) ListarPrecosLLM(context.Context) ([]store.PrecoLLM, error) {
 func (l *lojaFalsa) CriarPrecoLLM(_ context.Context, p store.PrecoLLM) (store.PrecoLLM, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	p.Provedor, p.Modelo = strings.ToLower(strings.TrimSpace(p.Provedor)), strings.ToLower(strings.TrimSpace(p.Modelo)) // como o store
 	for _, x := range l.precos {
 		if x.Provedor == p.Provedor && x.Modelo == p.Modelo && x.VigenteDesde.Equal(p.VigenteDesde) {
 			return p, store.ErrPrecoDuplicado
@@ -118,15 +119,21 @@ func TestCalcular(t *testing.T) {
 		calculado bool
 	}{
 		{"estimado", linhaUso{Quando: quando, Provedor: "openai", Modelo: "gpt-4o-mini-2024-07-18", Chamadas: 1, ComTokens: 1,
-			Uso: genai.Uso{Entrada: 1_000_000, Saida: 1_000_000}, Estimar: genai.Uso{Entrada: 1_000_000, Saida: 1_000_000}},
+			Estimaveis: 1, Uso: genai.Uso{Entrada: 1_000_000, Saida: 1_000_000}, Estimar: genai.Uso{Entrada: 1_000_000, Saida: 1_000_000}},
 			f64(0.75), 0, 0, true},
 		{"sem preço não vira zero", linhaUso{Quando: quando, Provedor: "openai", Modelo: "desconhecido", Chamadas: 2, ComTokens: 2,
-			Estimar: genai.Uso{Entrada: 10}}, nil, 2, 0, false},
-		{"sem tokens", linhaUso{Quando: quando, Modelo: "gpt-4o-mini", Chamadas: 3}, nil, 0, 3, false},
+			Estimaveis: 2, Estimar: genai.Uso{Entrada: 10}}, nil, 2, 0, false},
+		{"sem tokens", linhaUso{Quando: quando, Modelo: "gpt-4o-mini", Chamadas: 3, SemTokens: 3}, nil, 0, 3, false},
 		{"informado vence", linhaUso{Quando: quando, Modelo: "desconhecido", Chamadas: 1, ComTokens: 1, ComCustoInformado: 1,
 			CustoInformado: 0.5, Uso: genai.Uso{Entrada: 99}}, f64(0.5), 0, 0, true},
+		// Proxy que informa custo sem tokens numa chamada e tokens sem custo noutra: as
+		// contagens vêm do SQL linha a linha, sem supor que andam juntas.
+		{"custo e tokens em chamadas diferentes", linhaUso{Quando: quando, Provedor: "openai", Modelo: "gpt-4o-mini",
+			Chamadas: 2, ComTokens: 1, Estimaveis: 1, ComCustoInformado: 1, CustoInformado: 0.25,
+			Estimar: genai.Uso{Entrada: 1_000_000}}, f64(0.40), 0, 0, true},
 		{"antes da vigência não tem preço", linhaUso{Quando: jan2025.Add(-time.Hour), Provedor: "openai", Modelo: "gpt-4o-mini",
-			Chamadas: 1, ComTokens: 1, Estimar: genai.Uso{Entrada: 1}}, nil, 1, 0, false},
+			Chamadas: 1, ComTokens: 1, Estimaveis: 1, Estimar: genai.Uso{Entrada: 1}}, nil, 1, 0, false},
+		{"grupo vazio", linhaUso{Quando: quando, Modelo: "gpt-4o-mini"}, nil, 0, 0, false},
 	}
 	for _, c := range casos {
 		t.Run(c.nome, func(t *testing.T) {
@@ -345,5 +352,35 @@ func TestErroDoClickHouseViraErro500(t *testing.T) {
 	h.ResumoHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/ia/resumo", nil))
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("código %d", rec.Code)
+	}
+}
+
+func TestEhTraceID(t *testing.T) {
+	casos := map[string]bool{"": false, "abc123": true, "ABCDEF0123": true, strings.Repeat("a", 64): true,
+		strings.Repeat("a", 65): false, "xyz": false, "ab cd": false, "ab'--": false}
+	for id, quer := range casos {
+		if ehTraceID(id) != quer {
+			t.Errorf("ehTraceID(%q) = %v, quer %v", id, !quer, quer)
+		}
+	}
+}
+
+func TestDominioRecusaTraceIDInvalido(t *testing.T) {
+	ch := &chFalso{}
+	h := New(ch, &lojaFalsa{}, nil)
+	if _, err := h.Execucao(context.Background(), "x' OR 1=1 --", nil); !errors.Is(err, ErrExecucaoNaoEncontrada) {
+		t.Fatalf("replay com id inválido: %v", err)
+	}
+	if ms, err := h.Conteudo(context.Background(), "não-hex", nil); err != nil || ms != nil {
+		t.Fatalf("conteúdo com id inválido: %v %v", ms, err)
+	}
+	if len(ch.sqls) != 0 {
+		t.Fatalf("id inválido chegou ao ClickHouse: %v", ch.sqls)
+	}
+}
+
+func TestLeituraToleraTiposInesperados(t *testing.T) {
+	if inteiro(true) != 0 || numero(nil) != 0 || inteiroOuNulo(nil) != nil || len(textos([]any{"a", nil, 3})) != 1 {
+		t.Fatal("leitura de tipo inesperado deveria cair em zero/nil")
 	}
 }

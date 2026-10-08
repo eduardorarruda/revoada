@@ -148,13 +148,14 @@ func rotulos(agente, service string) map[string]string {
 func (h *Handler) passosMaximos(ctx context.Context, m time.Time) ([]chquery.MetricPoint, error) {
 	rows, err := h.ch.QueryJSON(ctx, fmt.Sprintf(`SELECT ag AS agente, svc AS service, max(n) AS passos FROM (
 		SELECT trace_id, any(service) AS svc,
-			argMinIf(agente, ts, operacao = 'invoke_agent' AND agente != '') AS ag,
+			%[5]s AS ag,
 			countIf(operacao IN %[1]s) AS n, max(ts) AS ultimo
 		FROM genai_spans WHERE tenant_id = 'default'
 			AND ts >= fromUnixTimestamp64Milli(%[2]d) AND ts < fromUnixTimestamp64Milli(%[3]d)
 		GROUP BY trace_id
 		HAVING ultimo >= fromUnixTimestamp64Milli(%[4]d) AND n > 0
-	) GROUP BY agente, svc`, opsDeModelo, m.Add(-time.Hour).UnixMilli(), m.Add(time.Minute).UnixMilli(), m.UnixMilli()))
+	) GROUP BY agente, svc`, opsDeModelo, m.Add(-time.Hour).UnixMilli(), m.Add(time.Minute).UnixMilli(), m.UnixMilli(),
+		sqlAgenteDoTrace))
 	if err != nil {
 		return nil, err
 	}

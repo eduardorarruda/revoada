@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/eduardorarruda/revoada/core/genai"
 	"github.com/eduardorarruda/revoada/core/redacao"
 	"github.com/eduardorarruda/revoada/gateway/internal/model"
 )
@@ -131,7 +132,7 @@ func conteudoDoSpan(s model.Span, modo ConteudoIA) []model.GenAIConteudo {
 		}
 		truncado := false
 		if len(texto) > maxBytesMensagemIA {
-			texto, truncado = cortarUTF8(texto, maxBytesMensagemIA), true
+			texto, truncado = genai.CortarUTF8(texto, maxBytesMensagemIA), true
 		}
 		if usado+len(texto) > maxBytesSpanIA {
 			if len(out) > 0 {
@@ -147,15 +148,4 @@ func conteudoDoSpan(s model.Span, modo ConteudoIA) []model.GenAIConteudo {
 		})
 	}
 	return out
-}
-
-// cortarUTF8 corta s em no máximo n bytes sem partir um caractere no meio.
-func cortarUTF8(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	for n > 0 && s[n]&0xC0 == 0x80 {
-		n--
-	}
-	return s[:n]
 }

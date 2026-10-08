@@ -172,14 +172,14 @@ func normalizarCache(c *Chamada) {
 	if c.TokensEntrada == nil {
 		return
 	}
-	cache := valor(c.TokensCacheLeitura) + valor(c.TokensCacheEscrita)
+	cache := valorOuZero(c.TokensCacheLeitura) + valorOuZero(c.TokensCacheEscrita)
 	if cache > *c.TokensEntrada {
 		total := *c.TokensEntrada + cache
 		c.TokensEntrada = &total
 	}
 }
 
-func valor(p *int64) int64 {
+func valorOuZero(p *int64) int64 {
 	if p == nil {
 		return 0
 	}
@@ -193,11 +193,12 @@ func curto(s string) string {
 	if len(s) <= maxCampoCurto {
 		return s
 	}
-	return cortarUTF8(s, maxCampoCurto)
+	return CortarUTF8(s, maxCampoCurto)
 }
 
-// cortarUTF8 corta s em no máximo n bytes sem partir um caractere no meio.
-func cortarUTF8(s string, n int) string {
+// CortarUTF8 corta s em no máximo n bytes sem partir um caractere no meio. É a regra
+// única de corte de texto do Revoada (campos curtos aqui, conteúdo no gateway).
+func CortarUTF8(s string, n int) string {
 	if len(s) <= n {
 		return s
 	}

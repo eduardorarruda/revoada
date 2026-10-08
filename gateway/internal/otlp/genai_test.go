@@ -228,7 +228,7 @@ func TestModosDeConteudo(t *testing.T) {
 			redigidas++
 		}
 	}
-	if strings.Contains(tudo.String(), "4111 1111 1111 1111") || strings.Contains(tudo.String(), "sk-proj-ABCDEFGHIJKLMNOPQRSTUV") {
+	if strings.Contains(tudo.String(), "4111 1111 1111 1111") || strings.Contains(tudo.String(), "sk-teste-falso-de-fixture-0000") {
 		t.Fatal("modo redigido gravou o cartão ou a chave")
 	}
 	if redigidas == 0 || !strings.Contains(tudo.String(), redacao.Marca) {
