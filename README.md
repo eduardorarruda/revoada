@@ -34,6 +34,9 @@ linha a linha, que nada se perdeu no caminho.
   afirma o que não mediu: servidor mudo, métrica velha ou fonte que falhou aparecem como tal.
 - **Migração de banco com prova.** Simulação obrigatória, execução em lotes com checkpoint,
   troca atômica, reversão em uma transação e **verificação em três camadas independentes**.
+- **Agentes de IA ao lado da infraestrutura.** Custo, tokens, latência, erros e o replay
+  passo a passo de cada execução, a partir do OpenTelemetry que a aplicação já emite — e, na
+  mesma tela, a CPU e os logs do servidor onde o agente rodou.
 - **Seu servidor, seus dados.** Self-hosted, um `docker compose up`. O agente abre a conexão
   (mTLS) — o servidor monitorado não expõe porta nenhuma.
 - **Seguro por padrão.** MFA obrigatório para quem administra, cofre de credenciais em
@@ -126,15 +129,33 @@ sem systemd (cPanel)? Veja [docs/agente-cpanel.md](docs/agente-cpanel.md).
 ## 🤖 Agentes de IA
 
 Se a sua aplicação chama LLM — chatbot, agente com ferramentas, RAG —, mande os traces
-OpenTelemetry dela para o gateway. O Revoada reconhece a convenção GenAI do
-OpenTelemetry, o OpenLLMetry, o OpenInference e o Vercel AI SDK e mostra quanto custa, quanto demora,
-onde falha e o que o agente fez em cada passo, ao lado da CPU e dos logs do mesmo
-servidor. Custo é estimativa por uma tabela de preços com data (e "sem preço" quando
-falta, nunca zero); prompt e resposta ficam **desligados** por padrão. O Revoada observa
-IA, mas não usa: nada nele chama um modelo ([ADR 008](docs/adr/008-observar-agentes-de-ia.md)).
+OpenTelemetry dela para o gateway. O Revoada entende a convenção GenAI do OpenTelemetry, o
+OpenLLMetry, o OpenInference e o Vercel AI SDK (testado contra spans gravados de cada
+biblioteca) e responde, ao lado da CPU e dos logs do mesmo servidor:
 
-Guia por biblioteca (Python, Node.js, Go): [docs/instrumentacao-ia.md](docs/instrumentacao-ia.md).
-Para ver a tela sem chave de API: [exemplos/agente-demo](exemplos/agente-demo).
+- **Quanto custa** — custo por modelo, agente e execução, estimado por uma tabela de preços
+  com vigência (troca de preço não reescreve o passado) ou o informado pela biblioteca;
+  modelo sem preço aparece como "sem preço", nunca como zero.
+- **Onde falha e quanto demora** — erros por modelo e por ferramenta, p50/p95/p99.
+- **O que o agente fez** — replay de cada execução, passo a passo, com o loop de ferramenta
+  apontado e, se você ligar, a conversa com segredos e cartões redigidos.
+- **Quando avisar** — séries `llm.*` nos alertas comuns: gasto por hora, erros, latência,
+  agente em loop, modelo sem preço (modelos prontos na tela de Alertas). E as mesmas
+  respostas pelo MCP.
+
+<p align="center">
+  <img src="docs/imagens/agentes-ia.png" alt="Agentes de IA: veredito, custo, chamadas, erros, latência e tokens da última hora" width="49%">
+  <img src="docs/imagens/agentes-ia-replay.png" alt="Replay de uma execução: passos em ordem, loop de ferramenta apontado e o detalhe de cada chamada" width="49%">
+</p>
+
+Prompt e resposta ficam **desligados** por padrão (`REVOADA_GENAI_CONTEUDO`); ler ou apagar
+conversas pede 2FA e confirmação de identidade, e cada leitura entra na auditoria. O
+Revoada observa IA, mas não usa: nada nele chama um modelo
+([ADR 008](docs/adr/008-observar-agentes-de-ia.md)).
+
+Guia por biblioteca (Python, Node.js, Go): [docs/instrumentacao-ia.md](docs/instrumentacao-ia.md) ·
+API: [docs/api-ia.md](docs/api-ia.md) · para ver a tela sem chave de API:
+[exemplos/agente-demo](exemplos/agente-demo).
 
 ## 🛡️ Migração que se prova certa
 
@@ -164,13 +185,13 @@ fecharam em **192.005 linhas × 20 colunas idênticas**. Reverter desfaz tudo em
 flowchart LR
   subgraph srv["Servidores monitorados"]
     A["revoada-agent<br/>métricas · logs · tarefas"]
-    APP["Suas aplicações<br/>(OTLP)"]
+    APP["Suas aplicações e agentes de IA<br/>(OTLP · GenAI)"]
   end
   A -- "OTLP" --> G
   APP -- "OTLP" --> G
   A <-. "canal mTLS (o agente conecta)" .-> P
   G["Gateway<br/>ingestão"] --> N[("NATS<br/>JetStream")]
-  N --> CH[("ClickHouse<br/>séries · logs · traces")]
+  N --> CH[("ClickHouse<br/>séries · logs · traces · chamadas de IA")]
   G --> CH
   P["Painel<br/>API · interface · MCP"] --> CH
   P --> PG[("PostgreSQL<br/>metadados · cofre")]
@@ -180,15 +201,16 @@ flowchart LR
 | Pasta | Papel |
 |---|---|
 | [`server/`](server) | Painel: API, autenticação, alertas, migração, MCP e a interface embutida (binário único) |
-| [`gateway/`](gateway) | Ingestão OTLP (HTTP e gRPC), scrape Prometheus, descoberta e sondas |
+| [`gateway/`](gateway) | Ingestão OTLP (HTTP e gRPC), reconhecimento das chamadas de IA, scrape Prometheus, descoberta e sondas |
 | [`agent/`](agent) | Agente em Go: coleta, buffer em disco, canal mTLS, migração, upgrade Firebird, deploy |
 | [`web/`](web) | Interface React + Vite + TypeScript |
-| [`core/`](core) | Regras puras compartilhadas: cofre, selo, schema, mapeamento, transformações, plano |
+| [`core/`](core) | Regras puras compartilhadas: cofre, selo, schema, mapeamento, transformações, plano, normalização de spans de IA (`genai`), redação de segredos |
 | [`proto/`](proto) | Contrato gRPC painel ↔ agente |
 | [`desktop/`](desktop) | App desktop (Wails) |
 | [`acoes/`](acoes) | GitHub Action [`revoada-deploy-action`](acoes/revoada-deploy-action) |
 | [`deploy/`](deploy) | Compose de desenvolvimento, migrações do ClickHouse, instaladores do agente, backup |
-| [`tests/validacao/`](tests/validacao) | Bateria que confere o stack rodando contra o kernel da máquina |
+| [`tests/validacao/`](tests/validacao) | Bateria que confere o stack rodando contra o kernel da máquina e contra o que foi enviado |
+| [`exemplos/agente-demo/`](exemplos/agente-demo) | Agente de IA de demonstração, com LLM falso local |
 
 Mais detalhes em [docs/ARQUITETURA.md](docs/ARQUITETURA.md) e
 [docs/SEGURANCA.md](docs/SEGURANCA.md).
@@ -199,8 +221,11 @@ Além dos testes de unidade e de integração (Firebird 2.5, Firebird 5 e Postgr
 em UTC e no fuso de São Paulo), a [bateria de validação](tests/validacao) compara o que a tela
 mostra com o que a máquina mede: RAM contra `/proc/meminfo`, CPU contra `/proc/stat` sob carga
 conhecida, disco contra `statvfs`, cada linha de log marcada, e cada checagem de site contra o
-log de um servidor de teste que registra exatamente o que recebeu. Resultado atual: **152 de
-152** verificações.
+log de um servidor de teste que registra exatamente o que recebeu. Para os agentes de IA, ela
+envia spans com tokens, erros e ferramentas conhecidos e confere cada número da tela: custo
+exato (inclusive com troca de preço no meio do período), permissões com usuários reais, MCP
+por HTTP, isenção de amostragem e o apagamento de dados. Resultado atual: **152 de 152**
+verificações de servidor, logs e sites, e **60 de 60** de agentes de IA.
 
 ## 🧑‍💻 Desenvolvimento
 
