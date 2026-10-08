@@ -5,7 +5,7 @@ import { PanelFrame } from "./PanelFrame";
 import type { PanelBaseProps, TimeSeriesData } from "./types";
 import { cssVar, seriesPalette } from "./chart";
 import { openCorrelation } from "../api";
-import { APP_TIME_ZONE, formatValue, rotulosEixo } from "../format";
+import { APP_TIME_ZONE, formatValue, larguraEixoY, rotulosEixo } from "../format";
 import { instante, rotulosTempo } from "./tempo";
 
 // tzDate obriga o eixo X e o tooltip do uPlot a falarem HORÁRIO DE BRASÍLIA.
@@ -83,7 +83,9 @@ export function TimeSeriesPanel({ data, ...base }: PanelBaseProps & { data: Time
           ticks: { stroke: cssVar("--border") },
           values: (_u, splits) => rotulosEixo(splits, unit),
           font: `11px ${cssVar("--font-sans")}`,
-          size: 56,
+          // Largura pelo rótulo mais longo: fixa em 56 px, "US$ 0,0015" (custo de IA,
+          // fração de centavo) saía cortado na borda esquerda.
+          size: (_u, valores) => larguraEixoY(valores),
         },
       ],
       series: [

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rotulosEixo } from "./format";
+import { larguraEixoY, rotulosEixo } from "./format";
 
 // Eixo de CPU entre 99% e 100% saía "100% 100% 100% 99%": o formato compacto não
 // tem casas decimais e rótulos iguais em alturas diferentes mentem sobre a escala.
@@ -11,5 +11,13 @@ describe("rótulos do eixo", () => {
 
   it("vai até duas casas se uma ainda repetir", () => {
     expect(new Set(rotulosEixo([99.91, 99.94, 99.97, 100], "percent")).size).toBe(4);
+  });
+});
+
+describe("larguraEixoY", () => {
+  it("cabe o rótulo mais longo e nunca fica abaixo de 56 px", () => {
+    expect(larguraEixoY(["0", "50"])).toBe(56);
+    expect(larguraEixoY(["US$ 0", "US$ 0,0015"])).toBeGreaterThan(56);
+    expect(larguraEixoY(undefined)).toBe(56);
   });
 });

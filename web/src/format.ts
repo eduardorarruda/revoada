@@ -291,6 +291,12 @@ export function rotulosEixo(splits: (number | null)[], unit: Unit): string[] {
   return r;
 }
 
+/** Largura do eixo Y (px) que cabe o rótulo mais longo a 11 px; nunca menos que 56. */
+export function larguraEixoY(rotulos: (string | null)[] | undefined): number {
+  const maior = Math.max(0, ...(rotulos ?? []).map((r) => (r ?? "").length));
+  return Math.max(56, Math.ceil(maior * 6.6) + 18);
+}
+
 export function unitFormatter(unit: Unit, compact = false): (v: number | null | undefined) => string {
   return (v) => formatValue(v, unit, { compact });
 }
