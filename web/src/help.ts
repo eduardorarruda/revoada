@@ -558,6 +558,26 @@ export const help: {
         "Cada tela também tem um botão \"?\" que abre a ajuda específica dela.",
       ],
     },
+    ia: {
+      title: "Agentes de IA",
+      what: "Custo, tokens, latência e erros das suas aplicações de IA (chatbots, automações com ferramentas, pipelines que chamam LLM), e o passo a passo de cada execução. Os dados vêm dos spans OpenTelemetry que essas aplicações já mandam. O Revoada só observa: não chama nenhum modelo nem guarda chave de provedor.",
+      how: [
+        "Visão geral: a frase do topo resume a janela; abaixo, o custo no tempo, quanto cada modelo e cada agente gastou e as ferramentas que mais falham.",
+        "Execuções: filtre por agente, modelo, status ou custo mínimo e clique numa execução para ver o replay.",
+        "Replay: cada passo (modelo, ferramenta, agente) com tokens, custo e duração. Use ← → para andar; repetições da mesma ferramenta aparecem como possível loop.",
+        "Modelos e preços: o custo é tokens × preço vigente na data da chamada. Cadastre o preço dos modelos marcados \"sem preço\".",
+      ],
+      faq: [
+        {
+          q: "Por que o custo aparece como \"parcial\"?",
+          a: "Porque parte das chamadas não entrou na soma: o modelo não tem preço cadastrado ou a biblioteca não informou os tokens. O valor real é maior. O Revoada mostra \"sem preço\" em vez de inventar zero.",
+        },
+        {
+          q: "Por que não vejo a conversa?",
+          a: "A gravação de prompts e respostas vem desligada (é dado pessoal). Quando ligada (REVOADA_GENAI_CONTEUDO no gateway), o conteúdo é redigido, guardado por 7 dias e só administradores e operadores leem, com cada leitura na auditoria.",
+        },
+      ],
+    },
   },
 
   fields: {

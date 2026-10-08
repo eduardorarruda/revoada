@@ -15,6 +15,7 @@ uma verdade independente.
 | Sites | `POST/GET /api/site-checks`, `/api/site-checks/{id}/history` (tela Websites) | registro de cada requisição num servidor HTTP/HTTPS de teste local |
 | Jornadas | `POST/GET /api/journeys` | idem (ordem dos passos, método, formulário, cookies) |
 | Alertas | canal webhook temporário (`/api/notify/channels`) | POSTs recebidos pelo servidor de teste |
+| Agentes de IA | `GET /api/ia/resumo`, `/api/ia/execucoes`, `/api/ia/execucoes/{trace}` (e `/conteudo`), `GET /api/traces/{trace}`, `POST /api/query` (`llm.chamadas`) | spans OTLP montados pelo próprio script com tokens, erros e ferramentas conhecidos, e um preço criado na rodada (custo esperado = conta exata) |
 
 Cada verificação sai com **esperado / observado / tolerância / veredito**
 (✅ ok, ❌ falhou, ⚠️ inconclusivo — por exemplo, a máquina já estava a 100% de CPU
@@ -56,6 +57,9 @@ python3 tests/validacao/validar.py --painel https://painel.exemplo \
 
 # só um grupo
 python3 tests/validacao/validar.py --dev DIR --somente logs
+
+# agentes de IA: precisa de uma chave de ingestão (X-Revoada-Key) e do gateway
+RV_CHAVE=... python3 tests/validacao/validar.py --dev DIR --somente ia --gateway http://127.0.0.1:8090
 ```
 
 Opções úteis:

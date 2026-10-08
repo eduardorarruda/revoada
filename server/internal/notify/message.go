@@ -7,6 +7,7 @@ import (
 	"html"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -174,6 +175,15 @@ var nomesDoPainel = map[string]string{
 	"container.memory.utilization": "RAM do container",
 	"container.memory.usage":       "RAM usada pelo container",
 	"container.memory.limit":       "Limite de RAM do container",
+	// Séries das chamadas de IA (server/internal/ia, runner por minuto).
+	"llm.custo_usd":           "Gasto com IA",
+	"llm.chamadas":            "Chamadas de IA",
+	"llm.erros":               "Chamadas de IA com erro",
+	"llm.tokens.entrada":      "Tokens de entrada da IA",
+	"llm.tokens.saida":        "Tokens de saída da IA",
+	"llm.latencia_p95_ms":     "Latência p95 da IA",
+	"llm.execucao.passos_max": "Chamadas numa execução do agente",
+	"llm.sem_preco":           "Chamadas de IA sem preço cadastrado",
 }
 
 // fmtValue formata o valor como quem lê no celular espera: porcentagem com
@@ -191,6 +201,9 @@ func fmtValue(metric string, v float64) string {
 	if metric == alerting.HeartbeatMetric {
 		return humanDuration(time.Duration(v) * time.Second)
 	}
+	if f, ok := formatosIA[metric]; ok {
+		return f(v)
+	}
 	if metricaEmPorcento(metric) {
 		return fmtPercent(v)
 	}
@@ -201,6 +214,48 @@ func fmtValue(metric string, v float64) string {
 		return fmt.Sprintf("%.0f", v)
 	}
 	return virgula(fmt.Sprintf("%.2f", v))
+}
+
+// formatosIA: dinheiro em dólar ("US$ 18,20"; centavo de dólar não basta para custo de
+// chamada, então valores pequenos ganham casas), latência como tempo ("4,2 s") e
+// contagem de tokens com separador de milhar ("1.840.000").
+var formatosIA = map[string]func(float64) string{
+	"llm.custo_usd":       fmtDolar,
+	"llm.latencia_p95_ms": func(v float64) string { return fmtMs(v) },
+	"llm.tokens.entrada":  fmtMilhar,
+	"llm.tokens.saida":    fmtMilhar,
+}
+
+func fmtDolar(v float64) string {
+	casas := 2
+	if v != 0 && math.Abs(v) < 0.01 {
+		casas = 4
+	}
+	return "US$ " + virgula(strconv.FormatFloat(v, 'f', casas, 64))
+}
+
+func fmtMs(ms float64) string {
+	if ms < 1000 {
+		return fmt.Sprintf("%.0f ms", ms)
+	}
+	return virgula(fmt.Sprintf("%.1f s", ms/1000))
+}
+
+func fmtMilhar(v float64) string {
+	s := strconv.FormatInt(int64(math.Round(v)), 10)
+	neg := strings.HasPrefix(s, "-")
+	s = strings.TrimPrefix(s, "-")
+	var b strings.Builder
+	for i, c := range s {
+		if i > 0 && (len(s)-i)%3 == 0 {
+			b.WriteByte('.')
+		}
+		b.WriteRune(c)
+	}
+	if neg {
+		return "-" + b.String()
+	}
+	return b.String()
 }
 
 // fmtHTTPStatus: "500", "404" — nunca com casas, unidade ou vírgula.

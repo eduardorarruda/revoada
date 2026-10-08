@@ -3,7 +3,7 @@
 // regras.
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { HEARTBEAT_METRIC } from "./tv/valorAlerta";
-import { Bell, Layers } from "lucide-react";
+import { Bell, Bot, Layers } from "lucide-react";
 import { usePolling } from "../hooks/usePolling";
 import {
   AdvancedSection,
@@ -53,6 +53,7 @@ import {
 } from "../api";
 import { useHostNames } from "../hooks/useHostNames";
 import { ContainersIgnorados, podeIgnorar } from "./alerts/ContainersIgnorados";
+import { ModelosIA } from "./alerts/ModelosIA";
 import { help } from "../help";
 import { fmtRelAbs, formatMetric, formatValue, sevRank } from "../format";
 import { metricLabel } from "../metrics/dict";
@@ -425,6 +426,7 @@ export function Alerts() {
   const [channels, setChannels] = useState<NotificationChannel[]>([]);
 
   // Modais / diálogos.
+  const [modelosIA, setModelosIA] = useState(false);
   const [wizard, setWizard] = useState<
     { mode: "new"; preset?: Partial<WizardState> } | { mode: "edit"; rule: AlertRule } | null
   >(null);
@@ -803,11 +805,25 @@ export function Alerts() {
               >
                 + Container caído
               </Button>
+              <Button
+                onClick={() => setModelosIA(true)}
+                title="Modelos prontos para agentes de IA: gasto por hora, erros, latência, loop e modelo sem preço."
+              >
+                <Bot size={16} aria-hidden /> Agentes de IA
+              </Button>
               <Button variant="primary" onClick={() => setWizard({ mode: "new" })}>
                 Nova regra
               </Button>
             </div>
           )}
+          <ModelosIA
+            aberto={modelosIA}
+            onFechar={() => setModelosIA(false)}
+            onEscolher={(preset) => {
+              setModelosIA(false);
+              setWizard({ mode: "new", preset });
+            }}
+          />
           <TableOrSkeleton data={rules}>
             {(rows) => (
               <DataTable<AlertRule>

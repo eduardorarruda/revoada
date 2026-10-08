@@ -20,7 +20,7 @@ const ESCOPOS: { id: EscopoMCP; titulo: string; texto: string }[] = [
     id: "leitura",
     titulo: "Leitura",
     texto:
-      "servidores, alertas, agentes, conexões (sem senha), schemas, mapeamentos e status",
+      "servidores, alertas, agentes, conexões (sem senha), schemas, mapeamentos, status e custo/erros/passo a passo dos agentes de IA",
   },
   {
     id: "mapeamento",
@@ -31,6 +31,11 @@ const ESCOPOS: { id: EscopoMCP; titulo: string; texto: string }[] = [
     id: "simulacao",
     titulo: "Simulação",
     texto: "pedir dry-run (lê e confere tudo, não grava nada)",
+  },
+  {
+    id: "ia_conteudo",
+    titulo: "Conteúdo de IA",
+    texto: "ler o texto gravado das conversas dos agentes de IA (prompts e respostas, já redigidos se o painel redige)",
   },
 ];
 

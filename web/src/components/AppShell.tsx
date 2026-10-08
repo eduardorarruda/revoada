@@ -116,6 +116,13 @@ export const NAV: NavGroup[] = [
     items: [
       { label: "Logs", href: "#/logs", icon: ScrollText },
       { label: "Traces", href: "#/traces", icon: Waypoints },
+      {
+        label: "Agentes de IA",
+        href: "#/ia",
+        icon: Bot,
+        // Execuções, replay, ferramentas e preços são abas da mesma tela.
+        match: (r) => r === "/ia" || r.startsWith("/ia/"),
+      },
     ],
   },
   {

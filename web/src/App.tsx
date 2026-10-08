@@ -44,6 +44,7 @@ const Deploys = lazy(() => import("./pages/Deploys").then((m) => ({ default: m.D
 const Mcp = lazy(() => import("./pages/Mcp").then((m) => ({ default: m.Mcp })));
 const ModoMigracao = lazy(() => import("./modos/migracao/ModoMigracao").then((m) => ({ default: m.ModoMigracao })));
 const AgentUpdates = lazy(() => import("./pages/AgentUpdates").then((m) => ({ default: m.AgentUpdates })));
+const PaginaIa = lazy(() => import("./pages/ia/Ia").then((m) => ({ default: m.PaginaIa })));
 
 // Fallback acessível enquanto um chunk sob demanda é buscado.
 function PageLoading() {
@@ -121,8 +122,10 @@ function renderPage(route: string, query = "") {
   // Detalhe de um host: /hosts/<hostname> (o hostname pode conter pontos/traços).
   if (route.startsWith("/hosts/")) {
     const hostname = decodeURIComponent(route.slice("/hosts/".length));
-    if (hostname) return <HostDetail hostname={hostname} />;
+    if (hostname) return <HostDetail hostname={hostname} initialWindow={new URLSearchParams(query).get("janela") ?? ""} />;
   }
+  // Agentes de IA: /ia, /ia/execucoes, /ia/execucoes/<trace_id>, /ia/ferramentas, /ia/precos.
+  if (route === "/ia" || route.startsWith("/ia/")) return <PaginaIa rota={route} query={query} />;
   switch (route) {
     case "/wall":
       return <HealthWall />;
@@ -137,7 +140,7 @@ function renderPage(route: string, query = "") {
     case "/logs":
       return <Logs initialHost={new URLSearchParams(query).get("host") ?? ""} />;
     case "/traces":
-      return <Traces />;
+      return <Traces initialTrace={new URLSearchParams(query).get("trace") ?? ""} />;
     case "/notify":
       return <Notify />;
     case "/websites":

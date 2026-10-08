@@ -2481,7 +2481,7 @@ export const descartarUpgrade = (id: string, execucaoId: string) =>
 
 // ---------------------------------------------------------------- MCP (ARQUITETURA §12)
 
-export type EscopoMCP = "leitura" | "mapeamento" | "simulacao";
+export type EscopoMCP = "leitura" | "mapeamento" | "simulacao" | "ia_conteudo";
 
 export interface TokenMCP {
   id: string;

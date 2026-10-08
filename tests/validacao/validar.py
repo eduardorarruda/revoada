@@ -19,12 +19,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import cliente  # noqa: E402
 import grupo_host  # noqa: E402
+import grupo_ia  # noqa: E402
 import grupo_logs  # noqa: E402
 import grupo_sites  # noqa: E402
 import relatorio  # noqa: E402
 import servidor_teste  # noqa: E402
 
-GRUPOS = ("host", "logs", "sites")
+GRUPOS = ("host", "logs", "sites", "ia")
 
 
 def args_cli():
@@ -45,6 +46,12 @@ def args_cli():
     p.add_argument("--sem-carga", action="store_true", help="não gera carga de CPU")
     p.add_argument("--sem-disco", action="store_true", help="não escreve o arquivo de 2 GiB")
     p.add_argument("--sonda", help="probe_location de um agente em modo sonda já rodando (opcional)")
+    p.add_argument("--gateway", default=os.environ.get("RV_GATEWAY", "http://127.0.0.1:8090"),
+                   help="URL do gateway (grupo ia envia spans OTLP para ele)")
+    p.add_argument("--chave-ingestao", default=os.environ.get("RV_CHAVE"),
+                   help="chave de ingestão de um servidor (X-Revoada-Key) para o grupo ia (ou RV_CHAVE)")
+    p.add_argument("--duracao-ia", type=int, default=480,
+                   help="segundos esperando a série llm.* (o runner fecha cada minuto com 5 min de atraso)")
     a = p.parse_args()
     a.saida_dir = os.path.dirname(a.relatorio) if a.relatorio else tempfile.mkdtemp(prefix="revoada-validacao-")
     if not a.relatorio:
@@ -56,6 +63,8 @@ def args_cli():
 def main():
     args = args_cli()
     grupos = [g.strip() for g in args.somente.split(",") if g.strip()]
+    if "ia" in grupos and not args.chave_ingestao:
+        raise SystemExit("--chave-ingestao (ou RV_CHAVE) é obrigatória para o grupo ia")
     if "logs" in grupos and not args.dir_logs:
         if args.dev and os.path.isdir(os.path.join(args.dev, "logs")):
             args.dir_logs = os.path.join(args.dev, "logs")
@@ -64,7 +73,7 @@ def main():
     run = time.strftime("%H%M%S")
     painel = cliente.Painel(args.painel, cliente.Credenciais.de_args(args)).entrar()
     hosts = {h["hostname"] for h in painel.get("/api/hosts")["hosts"]}
-    if args.host not in hosts:
+    if args.host not in hosts and ({"host", "logs"} & set(grupos)):
         raise SystemExit(f"host {args.host!r} não está no inventário do painel ({sorted(hosts)})")
     res = relatorio.Resultados()
     contexto = {"inicio": time.strftime("%Y-%m-%d %H:%M:%S %z"), "painel": args.painel, "host": args.host,
@@ -80,6 +89,10 @@ def main():
             p2 = cliente.Painel(args.painel, painel.cred)
             p2.jar, p2.token = painel.jar, painel.token
             threads.append(threading.Thread(target=grupo_logs.executar, args=(res, p2, args.host, args, run)))
+        if "ia" in grupos:
+            p3 = cliente.Painel(args.painel, painel.cred)
+            p3.jar, p3.token = painel.jar, painel.token
+            threads.append(threading.Thread(target=grupo_ia.executar, args=(res, p3, args, run)))
         if "host" in grupos:
             threads.append(threading.Thread(target=grupo_host.executar, args=(res, painel, args.host, args)))
         for t in threads:

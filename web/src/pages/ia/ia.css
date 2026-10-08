@@ -1,0 +1,281 @@
+/* Telas de Agentes de IA (#/ia/*). Só tokens de styles/tokens.css; cor semântica
+   apenas para estado (erro, atenção, repetição). */
+
+.ia-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.ia-topo .tabs {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+.ia-topo .tab {
+  text-decoration: none;
+}
+.ia-topo__janela {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.ia-sub {
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+.ia-texto {
+  color: var(--text-2);
+  margin: 0;
+  line-height: var(--lh-body);
+}
+.ia-mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+}
+
+/* Aviso (callout): faixa à esquerda na cor do estado, fundo discreto. */
+.ia-aviso {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: flex-start;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--text-3);
+  border-radius: var(--radius-sm);
+  background: var(--bg-2);
+  color: var(--text-1);
+}
+.ia-aviso > svg {
+  flex: none;
+  margin-top: 2px;
+}
+.ia-aviso__corpo {
+  display: grid;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+.ia-aviso__corpo p {
+  margin: 0;
+  color: var(--text-2);
+}
+.ia-aviso--warn {
+  border-color: var(--warn-line);
+  border-left-color: var(--warn);
+  background: var(--warn-bg);
+}
+.ia-aviso--warn > svg { color: var(--warn); }
+.ia-aviso--crit {
+  border-color: var(--crit-line);
+  border-left-color: var(--crit);
+  background: var(--crit-bg);
+}
+.ia-aviso--crit > svg { color: var(--crit); }
+.ia-aviso--info {
+  border-color: var(--info-line);
+  border-left-color: var(--info);
+  background: var(--info-bg);
+}
+.ia-aviso--info > svg { color: var(--info); }
+
+.ia-parcial {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+/* Filtros de Execuções */
+.ia-filtros {
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  align-items: end;
+}
+.ia-filtros label {
+  display: grid;
+  gap: var(--sp-1);
+  font-size: var(--fs-12);
+  color: var(--text-3);
+}
+.ia-filtros .field {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Replay: linha do tempo + painel do passo escolhido. */
+.ia-replay {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 1100px) {
+  .ia-replay {
+    grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
+    align-items: start;
+  }
+  .ia-replay__detalhe {
+    position: sticky;
+    top: var(--sp-4);
+  }
+}
+.ia-passos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-1);
+}
+.ia-passo {
+  display: grid;
+  gap: var(--sp-1);
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  padding-left: calc(var(--sp-3) + var(--nivel, 0) * var(--sp-4));
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ia-passo:hover {
+  background: var(--bg-3);
+}
+.ia-passo:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 1px;
+}
+.ia-passo--sel {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+.ia-passo--repeticao {
+  border-left: 3px solid var(--warn);
+}
+.ia-passo--erro {
+  border-color: var(--crit-line);
+  background: var(--crit-bg);
+}
+.ia-passo__linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+.ia-passo__titulo {
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.ia-passo__tipo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+.ia-passo__nums {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-3);
+  color: var(--text-2);
+  font-size: var(--fs-12);
+}
+.ia-passo__erro {
+  color: var(--crit);
+  font-size: var(--fs-12);
+  overflow-wrap: anywhere;
+}
+.ia-barra {
+  position: relative;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-4);
+  overflow: hidden;
+}
+.ia-barra__trecho {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+}
+.ia-passo--erro .ia-barra__trecho {
+  background: var(--crit);
+}
+
+.ia-detalhe {
+  display: grid;
+  gap: var(--sp-2) var(--sp-3);
+  grid-template-columns: max-content minmax(0, 1fr);
+  margin: 0;
+}
+.ia-detalhe dt {
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+.ia-detalhe dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Conversa */
+.ia-conversa {
+  display: grid;
+  gap: var(--sp-4);
+}
+.ia-conversa__passo {
+  display: grid;
+  gap: var(--sp-2);
+}
+.ia-msg {
+  display: grid;
+  gap: var(--sp-1);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+}
+.ia-msg__cabeca {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+}
+.ia-msg__texto {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--text-1);
+  font-size: var(--fs-13);
+  line-height: var(--lh-body);
+}
+.ia-msg__texto.ia-mono {
+  font-size: var(--fs-12);
+}
+.ia-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--sp-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text-2);
+  font-size: var(--fs-11);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+/* Formulário de preço */
+.ia-form-preco {
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: start;
+}
+.ia-form-preco .field {
+  width: 100%;
+  min-width: 0;
+}
