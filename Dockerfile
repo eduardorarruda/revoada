@@ -4,7 +4,7 @@
 #   docker build -t revoada-painel .
 #
 # 1) interface (React/Vite) → web/dist
-FROM node:22-alpine AS web
+FROM node:26-alpine AS web
 WORKDIR /web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci --no-audit --no-fund
