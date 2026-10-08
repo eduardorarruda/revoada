@@ -58,9 +58,9 @@ conteúdo e spans que aparecem em Traces mas não em Agentes de IA.
 - **Recurso:** `service.name` (ou `OTEL_SERVICE_NAME`) vira a coluna **service**; defina
   sempre — sem ele a aplicação aparece como `unknown_service`. `host.name` liga a
   aplicação ao servidor.
-- **Reconhecimento:** o gateway lê três dialetos — a convenção GenAI atual do
-  OpenTelemetry, o legado dela (OpenLLMetry antigo, `traceloop.*`) e o OpenInference
-  (Arize/Phoenix) — e grava uma linha normalizada por span de IA (modelo, tokens com
+- **Reconhecimento:** o gateway lê quatro dialetos — a convenção GenAI atual do
+  OpenTelemetry, o legado dela (OpenLLMetry antigo, `traceloop.*`), o OpenInference
+  (Arize/Phoenix) e a integração antiga do Vercel AI SDK (`ai.*`) — e grava uma linha normalizada por span de IA (modelo, tokens com
   cache, agente, ferramenta, conversa, erro, custo informado). A tabela completa de
   atributos está na §9. Só ter **alguma** chave `gen_ai.*` não basta: frameworks
   propagam `gen_ai.conversation.id` para spans HTTP, que não são chamadas de IA.
