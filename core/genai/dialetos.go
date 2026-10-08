@@ -22,6 +22,9 @@ func Dialeto(a map[string]string) string {
 	if a["openinference.span.kind"] != "" {
 		return ConvOpenInference
 	}
+	if strings.HasPrefix(a["ai.operationId"], "ai.") {
+		return ConvVercel
+	}
 	for _, k := range sinaisOTel {
 		if a[k] == "" {
 			continue
@@ -66,6 +69,9 @@ var tiposOpenInference = map[string]string{
 }
 
 func operacao(conv string, a map[string]string) string {
+	if conv == ConvVercel {
+		return operacaoVercel(a["ai.operationId"])
+	}
 	if conv == ConvOpenInference {
 		if op, ok := tiposOpenInference[strings.ToUpper(a["openinference.span.kind"])]; ok {
 			return op
@@ -104,11 +110,43 @@ func operacao(conv string, a map[string]string) string {
 	return OpOutro
 }
 
+// operacaoVercel: no Vercel AI SDK, ai.generateText (e irmãos) é a orquestração com
+// vários passos — o equivalente a um agente —, ai.*.doGenerate/doStream é a chamada ao
+// modelo e ai.toolCall é a ferramenta.
+func operacaoVercel(id string) string {
+	switch {
+	case id == "ai.toolCall":
+		return OpFerramenta
+	case strings.HasSuffix(id, ".doGenerate"), strings.HasSuffix(id, ".doStream"):
+		return OpChat
+	case strings.HasPrefix(id, "ai.embed"):
+		return OpEmbeddings
+	case id == "ai.generateText", id == "ai.streamText", id == "ai.generateObject", id == "ai.streamObject":
+		return OpAgente
+	}
+	return OpOutro
+}
+
+// provedor: o Vercel AI SDK grava "openai.chat", "anthropic.messages"; o que importa
+// para preço e agrupamento é a parte antes do ponto.
+func provedor(conv string, a map[string]string) string {
+	p := strings.ToLower(curto(primeiro(a, "gen_ai.provider.name", "gen_ai.system", "llm.provider", "llm.system", "ai.model.provider")))
+	if conv == ConvVercel {
+		if antes, _, ok := strings.Cut(p, "."); ok {
+			return antes
+		}
+	}
+	return p
+}
+
 // nomes devolve o agente e a ferramenta do span. No OpenInference e no Traceloop o
 // nome mora em chaves diferentes (ou no nome do próprio span).
 func nomes(conv, op, nomeSpan string, a map[string]string) (agente, ferramenta string) {
 	agente = primeiro(a, "gen_ai.agent.name", "agent.name")
-	ferramenta = primeiro(a, "gen_ai.tool.name", "tool.name")
+	ferramenta = primeiro(a, "gen_ai.tool.name", "tool.name", "ai.toolCall.name")
+	if agente == "" && op == OpAgente && conv == ConvVercel {
+		agente = a["ai.telemetry.functionId"]
+	}
 	entidade := a["traceloop.entity.name"]
 	switch {
 	case agente == "" && op == OpAgente && entidade != "":
@@ -136,7 +174,7 @@ func motivosFim(a map[string]string) []string {
 		}
 		return limitarMotivos(strings.Split(v, ","))
 	}
-	if v := primeiro(a, "llm.finish_reason", "gen_ai.completion.0.finish_reason"); v != "" {
+	if v := primeiro(a, "llm.finish_reason", "gen_ai.completion.0.finish_reason", "ai.response.finishReason"); v != "" {
 		return []string{curto(v)}
 	}
 	return nil

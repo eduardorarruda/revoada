@@ -108,6 +108,9 @@ services:
       REVOADA_PG_DSN: "postgres://revoada:revoada@postgres:5432/revoada?sslmode=disable"
       REVOADA_NATS_URL: "nats://nats:4222"
       REVOADA_NATS_MON_URL: "http://nats:8222/healthz"
+      # Conteúdo das chamadas de IA: desligado | redigido | completo. Para testar o
+      # replay com texto: REVOADA_GENAI_CONTEUDO=redigido docker compose … up gateway
+      REVOADA_GENAI_CONTEUDO: ${REVOADA_GENAI_CONTEUDO:-desligado}
     depends_on:
       clickhouse:
         condition: service_healthy

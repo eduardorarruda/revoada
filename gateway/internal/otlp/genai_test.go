@@ -21,7 +21,7 @@ import (
 // devolve os spans convertidos, ordenados pelo nome do arquivo (a ordem de envio).
 func fixtureSpans(t *testing.T, prefixo string) []model.Span {
 	t.Helper()
-	arqs, err := filepath.Glob(filepath.Join("testdata", "genai", prefixo+"-*.pb"))
+	arqs, err := filepath.Glob(filepath.Join("testdata", "genai", prefixo+"-[0-9][0-9].pb"))
 	if err != nil || len(arqs) == 0 {
 		t.Fatalf("fixtures %s: %v (%d arquivos)", prefixo, err, len(arqs))
 	}
@@ -124,10 +124,53 @@ func TestFixturesReais(t *testing.T) {
 	})
 }
 
+// Vercel AI SDK: a integração nova (@ai-sdk/otel) emite a semconv; a antiga, ai.*.
+func TestFixturesVercel(t *testing.T) {
+	t.Run("integração nova", func(t *testing.T) {
+		cs := chamadas(fixtureSpans(t, "vercel"))
+		var ops []string
+		for _, c := range cs {
+			ops = append(ops, c.Operacao)
+		}
+		if strings.Join(ops, ",") != "chat,execute_tool,chat,agent_step,agent_step,invoke_agent" {
+			t.Fatalf("operações: %v", ops)
+		}
+		if cs[5].Agente != "Meteorologista" || cs[1].Ferramenta != "clima" || tokens(cs[0].TokensCacheLeitura) != 100 {
+			t.Fatalf("chamadas: %+v", cs)
+		}
+	})
+	t.Run("integração antiga (ai.*)", func(t *testing.T) {
+		spans := fixtureSpans(t, "vercel-legado")
+		cs := chamadas(spans)
+		if len(cs) != 4 {
+			t.Fatalf("%d chamadas reconhecidas", len(cs))
+		}
+		ferr, chat, ag := cs[0], cs[1], cs[3]
+		if ferr.Convencao != genai.ConvVercel || ferr.Operacao != genai.OpFerramenta || ferr.Ferramenta != "clima" ||
+			ferr.ChamadaID != "call_1" || len(ferr.Mensagens) != 2 {
+			t.Fatalf("ferramenta: %+v", ferr)
+		}
+		if chat.Operacao != genai.OpChat || chat.Provedor != "openai" || tokens(chat.TokensEntrada) != 120 ||
+			tokens(chat.TokensCacheLeitura) != 100 || chat.MotivosFim[0] != "tool-calls" || len(chat.Mensagens) != 2 {
+			t.Fatalf("chat: %+v", chat)
+		}
+		if ag.Operacao != genai.OpAgente || ag.Agente != "Meteorologista" {
+			t.Fatalf("agente: %+v", ag)
+		}
+		for _, s := range spans {
+			for k := range s.Labels {
+				if strings.HasPrefix(k, "ai.prompt") || strings.HasPrefix(k, "ai.response.text") || strings.HasPrefix(k, "ai.toolCall.args") {
+					t.Fatalf("conteúdo do Vercel ficou no rótulo %s", k)
+				}
+			}
+		}
+	})
+}
+
 // O conteúdo nunca sobra nos rótulos do span: com o modo desligado, o prompt não pode
 // ir parar em spans.labels por outro caminho.
 func TestConteudoSaiDosRotulos(t *testing.T) {
-	for _, pref := range []string{"otel-oficial", "openllmetry", "openinference"} {
+	for _, pref := range []string{"otel-oficial", "openllmetry", "openinference", "vercel", "vercel-legado"} {
 		for _, s := range fixtureSpans(t, pref) {
 			if s.GenAI == nil {
 				continue

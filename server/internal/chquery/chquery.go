@@ -222,10 +222,17 @@ type MetricPoint struct {
 
 // InsertMetrics grava pontos na tabela metrics (usado pelas sondas sintéticas).
 func (c *Client) InsertMetrics(ctx context.Context, tenant string, points []MetricPoint) error {
+	return c.InsertMetricsAt(ctx, tenant, time.Now(), points)
+}
+
+// InsertMetricsAt grava pontos com um instante explícito. O runner das chamadas de IA
+// precisa disso: ele fecha o minuto de 5 minutos atrás (espera os spans de agentes
+// longos chegarem), e o ponto tem de cair nesse minuto, não no "agora" do insert.
+func (c *Client) InsertMetricsAt(ctx context.Context, tenant string, quando time.Time, points []MetricPoint) error {
 	if len(points) == 0 {
 		return nil
 	}
-	ts := time.Now().UTC().Format("2006-01-02 15:04:05.000")
+	ts := quando.UTC().Format("2006-01-02 15:04:05.000")
 	var sb strings.Builder
 	for _, p := range points {
 		labels := p.Labels

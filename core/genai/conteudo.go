@@ -27,6 +27,16 @@ var chavesDeConteudo = map[string]bool{
 	"traceloop.entity.output":      true,
 	"tool.parameters":              true,
 	"llm.prompt_template.template": true,
+	"ai.response.text":             true,
+	"ai.response.toolCalls":        true,
+	"ai.response.object":           true,
+	"ai.response.reasoning":        true,
+	"ai.toolCall.args":             true,
+	"ai.toolCall.result":           true,
+	"ai.value":                     true,
+	"ai.values":                    true,
+	"ai.embedding":                 true,
+	"ai.embeddings":                true,
 }
 
 var prefixosDeConteudo = []string{
@@ -34,6 +44,7 @@ var prefixosDeConteudo = []string{
 	"llm.input_messages.", "llm.output_messages.",
 	"llm.prompts.", "llm.completions.",
 	"llm.tools.", "llm.prompt_template.",
+	"ai.prompt", // ai.prompt, ai.prompt.messages, ai.prompt.tools…
 }
 
 // EhChaveDeConteudo diz se a chave carrega conteúdo de prompt/resposta.
@@ -56,6 +67,8 @@ func mensagens(conv, op string, a map[string]string, eventos []Evento) []Mensage
 	switch conv {
 	case ConvOpenInference:
 		ms = mensagensOpenInference(op, a)
+	case ConvVercel:
+		ms = mensagensVercel(a)
 	default:
 		ms = mensagensOTel(a)
 		if len(ms) == 0 {
@@ -313,4 +326,92 @@ func numerar(ms []Mensagem) []Mensagem {
 		ms[i].Ordem = i
 	}
 	return ms
+}
+
+// mensagensVercel lê o formato da integração antiga do Vercel AI SDK: ai.prompt.messages
+// (lista {role, content}), ou ai.prompt ({"messages": …} / {"prompt": "…"}), mais
+// ai.response.text; na ferramenta, ai.toolCall.args/result.
+func mensagensVercel(a map[string]string) []Mensagem {
+	ms := soltas(a, "ai.toolCall.args", "ai.toolCall.result", papelFerramenta)
+	if len(ms) > 0 {
+		return ms
+	}
+	ms = listaVercel(a["ai.prompt.messages"])
+	if len(ms) == 0 && a["ai.prompt"] != "" {
+		var p struct {
+			Messages json.RawMessage `json:"messages"`
+			Prompt   string          `json:"prompt"`
+			System   string          `json:"system"`
+		}
+		if json.Unmarshal([]byte(a["ai.prompt"]), &p) != nil {
+			ms = []Mensagem{{Lado: ladoEntrada, Texto: a["ai.prompt"]}}
+		} else {
+			if p.System != "" {
+				ms = append(ms, Mensagem{Lado: ladoEntrada, Papel: papelSistema, Texto: p.System})
+			}
+			ms = append(ms, listaVercel(string(p.Messages))...)
+			if p.Prompt != "" {
+				ms = append(ms, Mensagem{Lado: ladoEntrada, Papel: "user", Texto: p.Prompt})
+			}
+		}
+	}
+	if t := a["ai.response.text"]; t != "" {
+		ms = append(ms, Mensagem{Lado: ladoSaida, Papel: "assistant", Texto: t})
+	}
+	if t := a["ai.response.toolCalls"]; t != "" {
+		ms = append(ms, Mensagem{Lado: ladoSaida, Papel: "assistant", Texto: t})
+	}
+	return ms
+}
+
+// listaVercel: [{role, content}] em que content é texto ou lista de partes
+// ({type: text, text} | {type: tool-call, toolName, input} | {type: tool-result, output}).
+func listaVercel(bruto string) []Mensagem {
+	if bruto == "" || bruto == "null" {
+		return nil
+	}
+	var lista []struct {
+		Role    string          `json:"role"`
+		Content json.RawMessage `json:"content"`
+	}
+	if json.Unmarshal([]byte(bruto), &lista) != nil {
+		return []Mensagem{{Lado: ladoEntrada, Texto: bruto}}
+	}
+	out := make([]Mensagem, 0, len(lista))
+	for _, m := range lista {
+		out = append(out, Mensagem{Lado: ladoEntrada, Papel: m.Role, Texto: textoVercel(m.Content)})
+	}
+	return out
+}
+
+func textoVercel(c json.RawMessage) string {
+	var s string
+	if json.Unmarshal(c, &s) == nil {
+		return s
+	}
+	var partes []struct {
+		Type     string          `json:"type"`
+		Text     string          `json:"text"`
+		ToolName string          `json:"toolName"`
+		Input    json.RawMessage `json:"input"`
+		Output   json.RawMessage `json:"output"`
+	}
+	if json.Unmarshal(c, &partes) != nil {
+		return string(c)
+	}
+	out := make([]string, 0, len(partes))
+	for _, p := range partes {
+		switch p.Type {
+		case "text", "reasoning":
+			out = append(out, p.Text)
+		case "tool-call":
+			out = append(out, "→ "+p.ToolName+"("+string(p.Input)+")")
+		case "tool-result":
+			out = append(out, "← "+string(p.Output))
+		default:
+			b, _ := json.Marshal(p)
+			out = append(out, string(b))
+		}
+	}
+	return strings.Join(out, "\n")
 }

@@ -27,3 +27,20 @@ biblioteca, regrave, rode `go test ./internal/otlp/...` no gateway e ajuste o
 normalizador (`core/genai`) se algum nome de atributo mudou.
 
 `dump.py` imprime os atributos de cada `.pb` em texto, para inspeção.
+
+## Vercel AI SDK
+
+`vercel/gravar.mjs` grava o `generateText` com ferramenta contra um LLM falso embutido
+no próprio script, nas duas integrações de telemetria do SDK 7:
+
+- `@ai-sdk/otel` → `OpenTelemetry` (semconv GenAI: chat, execute_tool, invoke_agent);
+- `@ai-sdk/otel` → `LegacyOpenTelemetry` (atributos `ai.*`, dialeto `vercel-ai`).
+
+No SDK 7, `experimental_telemetry` sozinho **não emite span nenhum**: é preciso
+registrar a integração com `registerTelemetry(new OpenTelemetry())`.
+
+```bash
+cd tests/genai-fixtures/vercel
+docker run --rm -v "$PWD/..":/w -w /w/vercel --user "$(id -u):$(id -g)" -e HOME=/tmp \
+  node:22-slim bash -c 'mkdir -p ../out && npm install --no-audit --no-fund && node gravar.mjs && VARIANTE=legado node gravar.mjs'
+```

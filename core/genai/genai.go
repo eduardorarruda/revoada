@@ -10,6 +10,8 @@
 //     gen_ai.usage.prompt_tokens, gen_ai.prompt.N.content, traceloop.*).
 //   - openinference: o padrão da Arize/Phoenix (openinference.span.kind,
 //     llm.token_count.prompt, llm.input_messages.N.message.content).
+//   - vercel-ai: a integração antiga do Vercel AI SDK (ai.operationId, ai.toolCall.*,
+//     ai.prompt.messages). A integração nova (@ai-sdk/otel) já emite a semconv.
 //
 // A convenção do OpenTelemetry ainda não é estável — já mudou nomes uma vez e vai
 // mudar de novo. Por isso cada chamada guarda o dialeto que chegou (Convencao) e os
@@ -28,6 +30,7 @@ const (
 	ConvOTel          = "otel-genai"
 	ConvLegado        = "otel-genai-legado"
 	ConvOpenInference = "openinference"
+	ConvVercel        = "vercel-ai"
 )
 
 // Operações normalizadas (valores de gen_ai.operation.name, mais os tipos de span do
@@ -125,17 +128,21 @@ func Normalizar(s Span) (Chamada, bool) {
 	}
 	c := Chamada{Convencao: conv}
 	c.Operacao = operacao(conv, a)
-	c.Provedor = strings.ToLower(curto(primeiro(a, "gen_ai.provider.name", "gen_ai.system", "llm.provider", "llm.system")))
-	c.Modelo = curto(primeiro(a, "gen_ai.response.model", "gen_ai.request.model", "llm.model_name", "llm.response.model", "llm.request.model"))
+	c.Provedor = provedor(conv, a)
+	c.Modelo = curto(primeiro(a, "gen_ai.response.model", "gen_ai.request.model", "llm.model_name", "llm.response.model",
+		"llm.request.model", "ai.response.model", "ai.model.id"))
 	c.Agente, c.Ferramenta = nomes(conv, c.Operacao, s.Nome, a)
 	c.AgenteID = curto(primeiro(a, "gen_ai.agent.id", "agent.id"))
 	c.ConversaID = curto(primeiro(a, "gen_ai.conversation.id", "session.id",
 		"traceloop.association.properties.conversation_id", "traceloop.association.properties.session_id"))
-	c.ChamadaID = curto(primeiro(a, "gen_ai.tool.call.id", "tool_call.id", "tool.call.id"))
+	c.ChamadaID = curto(primeiro(a, "gen_ai.tool.call.id", "tool_call.id", "tool.call.id", "ai.toolCall.id"))
 
-	c.TokensEntrada = inteiro(a, "gen_ai.usage.input_tokens", "gen_ai.usage.prompt_tokens", "llm.usage.prompt_tokens", "llm.token_count.prompt")
-	c.TokensSaida = inteiro(a, "gen_ai.usage.output_tokens", "gen_ai.usage.completion_tokens", "llm.usage.completion_tokens", "llm.token_count.completion")
-	c.TokensCacheLeitura = inteiro(a, "gen_ai.usage.cache_read.input_tokens", "gen_ai.usage.cache_read_input_tokens", "llm.token_count.prompt_details.cache_read")
+	c.TokensEntrada = inteiro(a, "gen_ai.usage.input_tokens", "gen_ai.usage.prompt_tokens", "llm.usage.prompt_tokens",
+		"llm.token_count.prompt", "ai.usage.inputTokens", "ai.usage.promptTokens")
+	c.TokensSaida = inteiro(a, "gen_ai.usage.output_tokens", "gen_ai.usage.completion_tokens", "llm.usage.completion_tokens",
+		"llm.token_count.completion", "ai.usage.outputTokens", "ai.usage.completionTokens")
+	c.TokensCacheLeitura = inteiro(a, "gen_ai.usage.cache_read.input_tokens", "gen_ai.usage.cache_read_input_tokens",
+		"llm.token_count.prompt_details.cache_read", "ai.usage.inputTokenDetails.cacheReadTokens", "ai.usage.cachedInputTokens")
 	c.TokensCacheEscrita = inteiro(a, "gen_ai.usage.cache_creation.input_tokens", "gen_ai.usage.cache_creation_input_tokens", "llm.token_count.prompt_details.cache_write")
 	normalizarCache(&c)
 	c.CustoInformadoUSD = decimal(a, "gen_ai.usage.cost", "llm.cost.total", "gen_ai.cost")

@@ -93,6 +93,7 @@ sem systemd (cPanel)? Veja [docs/agente-cpanel.md](docs/agente-cpanel.md).
 **Investigar**
 - Logs com busca, histograma, padrões, contexto e *live tail*
 - Traces OTLP com *waterfall*, mapa de serviços e correlação métrica → trace → log
+- **Agentes de IA**: custo, tokens, erros e o replay passo a passo de cada execução, a partir do OpenTelemetry que a aplicação já emite
 - Redação de segredos na origem: senha, token, JWT, URL com senha, cartão de crédito
 
 </td>
@@ -121,6 +122,19 @@ sem systemd (cPanel)? Veja [docs/agente-cpanel.md](docs/agente-cpanel.md).
   <img src="docs/imagens/mural.png" alt="Mural de Saúde com o semáforo de cada servidor" width="49%">
   <img src="docs/imagens/sites.png" alt="Checagem de sites e jornadas" width="49%">
 </p>
+
+## 🤖 Agentes de IA
+
+Se a sua aplicação chama LLM — chatbot, agente com ferramentas, RAG —, mande os traces
+OpenTelemetry dela para o gateway. O Revoada reconhece a convenção GenAI do
+OpenTelemetry, o OpenLLMetry, o OpenInference e o Vercel AI SDK e mostra quanto custa, quanto demora,
+onde falha e o que o agente fez em cada passo, ao lado da CPU e dos logs do mesmo
+servidor. Custo é estimativa por uma tabela de preços com data (e "sem preço" quando
+falta, nunca zero); prompt e resposta ficam **desligados** por padrão. O Revoada observa
+IA, mas não usa: nada nele chama um modelo ([ADR 008](docs/adr/008-observar-agentes-de-ia.md)).
+
+Guia por biblioteca (Python, Node.js, Go): [docs/instrumentacao-ia.md](docs/instrumentacao-ia.md).
+Para ver a tela sem chave de API: [exemplos/agente-demo](exemplos/agente-demo).
 
 ## 🛡️ Migração que se prova certa
 
@@ -216,6 +230,9 @@ Revoada is a self-hosted, open-source platform for **server monitoring** (metric
 traces, uptime checks, alerting, status pages) and **database migration** (Firebird/PostgreSQL
 → PostgreSQL, Firebird 2.x → 5 upgrades) whose migrations are verified in three independent
 layers — including having both databases render every value as text and comparing them.
+It also observes **AI agents** from their OpenTelemetry traces (GenAI semantic conventions, Vercel AI SDK,
+OpenLLMetry, OpenInference): cost, tokens, errors and a step-by-step replay — without
+calling any model itself.
 Start it with `./scripts/iniciar.sh` (Docker Compose) and open `http://localhost:8080`.
 The codebase and UI are in Brazilian Portuguese. Licensed under AGPL-3.0.
 

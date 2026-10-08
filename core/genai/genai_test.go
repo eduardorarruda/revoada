@@ -303,3 +303,38 @@ func TestEhChamadaDeModelo(t *testing.T) {
 		}
 	}
 }
+
+func TestVercelLegado(t *testing.T) {
+	ops := map[string]string{"ai.toolCall": OpFerramenta, "ai.streamText.doStream": OpChat, "ai.embedMany": OpEmbeddings,
+		"ai.generateObject": OpAgente, "ai.algoNovo": OpOutro}
+	for id, quer := range ops {
+		c, ok := Normalizar(Span{Atributos: map[string]string{"ai.operationId": id}})
+		if !ok || c.Convencao != ConvVercel || c.Operacao != quer {
+			t.Errorf("%s → %q (ok=%v), quer %q", id, c.Operacao, ok, quer)
+		}
+	}
+	c, _ := Normalizar(Span{Atributos: map[string]string{
+		"ai.operationId": "ai.generateText", "ai.telemetry.functionId": "Atendente",
+		"ai.prompt":        `{"system":"Seja breve.","prompt":"oi"}`,
+		"ai.response.text": "olá",
+	}})
+	if c.Agente != "Atendente" || len(c.Mensagens) != 3 || c.Mensagens[0].Papel != papelSistema || c.Mensagens[2].Lado != ladoSaida {
+		t.Fatalf("generateText: %+v", c)
+	}
+	d, _ := Normalizar(Span{Atributos: map[string]string{
+		"ai.operationId": "ai.generateText.doGenerate", "ai.model.provider": "anthropic.messages", "ai.model.id": "claude-x",
+		"ai.usage.promptTokens": "10", "ai.usage.completionTokens": "5",
+		"ai.prompt.messages": `[{"role":"user","content":"oi"},{"role":"assistant","content":[{"type":"tool-call","toolName":"t","input":{"a":1}}]},{"role":"tool","content":[{"type":"tool-result","output":{"ok":true}}]}]`,
+	}})
+	if d.Provedor != "anthropic" || d.Modelo != "claude-x" || val(d.TokensEntrada) != int64(10) || val(d.TokensSaida) != int64(5) {
+		t.Fatalf("doGenerate: %+v", d)
+	}
+	if len(d.Mensagens) != 3 || d.Mensagens[1].Texto != `→ t({"a":1})` || d.Mensagens[2].Texto != `← {"ok":true}` {
+		t.Fatalf("mensagens: %+v", d.Mensagens)
+	}
+	for _, k := range []string{"ai.prompt", "ai.prompt.messages", "ai.response.text", "ai.toolCall.result"} {
+		if !EhChaveDeConteudo(k) {
+			t.Errorf("%s deveria ser conteúdo", k)
+		}
+	}
+}

@@ -16,6 +16,7 @@ import (
 	"github.com/eduardorarruda/revoada/core/migracao/plano"
 	"github.com/eduardorarruda/revoada/server/internal/audit"
 	"github.com/eduardorarruda/revoada/server/internal/canal"
+	"github.com/eduardorarruda/revoada/server/internal/ia"
 	"github.com/eduardorarruda/revoada/server/internal/migracao"
 	"github.com/eduardorarruda/revoada/server/internal/store"
 	mcpauth "github.com/modelcontextprotocol/go-sdk/auth"
@@ -33,6 +34,7 @@ type Servidor struct {
 	st    *store.Store
 	canal *canal.Servico
 	mig   *migracao.Handler
+	ia    *ia.Handler
 	audit *audit.Recorder
 	log   *slog.Logger
 	srv   *mcp.Server
@@ -49,13 +51,14 @@ type contador struct {
 }
 
 // Novo monta o servidor MCP com todas as ferramentas.
-func Novo(st *store.Store, c *canal.Servico, m *migracao.Handler, a *audit.Recorder, log *slog.Logger) *Servidor {
-	s := &Servidor{st: st, canal: c, mig: m, audit: a, log: log, janela: map[string]*contador{}}
+func Novo(st *store.Store, c *canal.Servico, m *migracao.Handler, iah *ia.Handler, a *audit.Recorder, log *slog.Logger) *Servidor {
+	s := &Servidor{st: st, canal: c, mig: m, ia: iah, audit: a, log: log, janela: map[string]*contador{}}
 	s.verificar = s.verificador
 	s.srv = mcp.NewServer(&mcp.Implementation{Name: "revoada", Title: "Revoada", Version: Versao}, &mcp.ServerOptions{
 		Instructions: "Painel Revoada: monitoramento de servidores e migração de bancos. Você lê estado e estrutura " +
 			"(nunca linhas de dado nem credenciais), pode gravar RASCUNHOS de mapeamento e pedir simulação (dry-run). " +
-			"Aprovar, executar e reverter são só para pessoas, na interface.",
+			"Aprovar, executar e reverter são só para pessoas, na interface. Também lê custo, latência, erros e o passo a passo " +
+			"das execuções de agentes de IA monitorados (o texto das conversas só com o escopo ia_conteudo).",
 	})
 	s.registrar()
 	return s
@@ -234,6 +237,9 @@ func saidaVersao(p store.ProjetoMigracao, v store.VersaoMapeamento) (mapeamentoS
 }
 
 func (s *Servidor) registrar() {
+	if s.ia != nil {
+		s.registrarIA()
+	}
 	ferramenta(s, "listar_agentes", EscopoLeitura,
 		"Lista os agentes do Revoada (um por servidor): estado online/instável/offline e os tipos de tarefa que cada um aceita.", true,
 		func(ctx context.Context, _ string, _ semArgs) (Lista[store.Agente], error) {

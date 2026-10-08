@@ -38,6 +38,7 @@ import (
 	"github.com/eduardorarruda/revoada/server/internal/discovery"
 	"github.com/eduardorarruda/revoada/server/internal/hostadmin"
 	"github.com/eduardorarruda/revoada/server/internal/httpapi"
+	"github.com/eduardorarruda/revoada/server/internal/ia"
 	"github.com/eduardorarruda/revoada/server/internal/installer"
 	"github.com/eduardorarruda/revoada/server/internal/inventory"
 	"github.com/eduardorarruda/revoada/server/internal/journey"
@@ -219,6 +220,16 @@ func painel() {
 		}
 	}()
 
+	// Agentes de IA: semeia a tabela de preços de referência (uma vez por origem) e
+	// fecha por minuto as séries llm.* que os alertas comuns observam.
+	iaH := ia.New(ch, st, gravadorAuditoria)
+	if n, err := iaH.SemearReferencia(ctx); err != nil {
+		log.Warn("ia: semeando tabela de preços de referência", "err", err)
+	} else if n > 0 {
+		log.Info("ia: tabela de preços de referência importada", "precos", n)
+	}
+	go ia.NewRunner(iaH, log).Run(ctx)
+
 	handler := httpapi.New(httpapi.Deps{
 		Log:        log,
 		Auth:       authHandler,
@@ -232,6 +243,7 @@ func painel() {
 		SiteCheck:  sitecheck.NewHandler(st),
 		Logs:       logsH,
 		Traces:     traces.NewHandler(ch),
+		IA:         iaH,
 		Discovery:  discovery.NewHandler(st),
 		Journey:    journey.NewHandler(st),
 		Status:     statuspage.NewHandler(st),
@@ -249,7 +261,7 @@ func painel() {
 		UserAdmin:   useradmin.NewHandler(st, log, authzResolver.Invalidate),
 		Audit:       gravadorAuditoria,
 		Deploys:     deploys.NovoHandler(canalSvc),
-		MCP:         mcpsrv.Novo(st, canalSvc, migHandler, gravadorAuditoria, log),
+		MCP:         mcpsrv.Novo(st, canalSvc, migHandler, iaH, gravadorAuditoria, log),
 		AuditAPI:    audit.NewHandler(st),
 		Canal:       canal.NovoHandler(canalSvc, config.CanalEnderecoPublico()),
 		Migracao:    migHandler,

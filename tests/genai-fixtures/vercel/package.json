@@ -1,0 +1,17 @@
+{
+  "name": "fixture-vercel-ai",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@ai-sdk/openai": "latest",
+    "@ai-sdk/otel": "latest",
+    "@ai-sdk/otel": "^1.0.132",
+    "@opentelemetry/api": "latest",
+    "@opentelemetry/exporter-trace-otlp-proto": "latest",
+    "@opentelemetry/resources": "latest",
+    "@opentelemetry/sdk-trace-base": "latest",
+    "@opentelemetry/sdk-trace-node": "latest",
+    "ai": "latest",
+    "zod": "latest"
+  }
+}

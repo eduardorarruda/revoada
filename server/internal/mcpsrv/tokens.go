@@ -33,9 +33,13 @@ const (
 	EscopoLeitura    = "leitura"
 	EscopoMapeamento = "mapeamento"
 	EscopoSimulacao  = "simulacao"
+	// EscopoIAConteudo lê o texto gravado das conversas dos agentes de IA (prompt e
+	// resposta). Fica separado de leitura: custo e erro qualquer token vê; o conteúdo,
+	// só quem recebeu este escopo de propósito.
+	EscopoIAConteudo = "ia_conteudo"
 )
 
-var escopos = []string{EscopoLeitura, EscopoMapeamento, EscopoSimulacao}
+var escopos = []string{EscopoLeitura, EscopoMapeamento, EscopoSimulacao, EscopoIAConteudo}
 
 const prefixoToken = "rvm_"
 

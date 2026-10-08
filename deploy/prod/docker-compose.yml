@@ -144,6 +144,10 @@ services:
       # Traces com erro ou acima de REVOADA_TRACE_SAMPLE_SLOW_MS são sempre mantidos.
       # Baixe para 0.2 (20%) se o volume crescer a ponto de pesar no ClickHouse.
       REVOADA_TRACE_SAMPLE: ${REVOADA_TRACE_SAMPLE:-1.0}
+      # Conteúdo das chamadas de IA (prompt/resposta): desligado | redigido | completo.
+      # Desligado por padrão: prompt costuma ser dado pessoal. Traces com IA nunca são
+      # amostrados, qualquer que seja REVOADA_TRACE_SAMPLE. Ver docs/instrumentacao-ia.md.
+      REVOADA_GENAI_CONTEUDO: ${REVOADA_GENAI_CONTEUDO:-desligado}
       # Amarração serverkey↔hostname (anti-spoofing). Com "off" (o valor de hoje),
       # quem tem UMA serverkey válida grava métrica, log e heartbeat rotulados com o
       # host de QUALQUER outra máquina do tenant. Provado em dev: com a chave de um
