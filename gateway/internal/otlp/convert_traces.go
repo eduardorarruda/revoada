@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/eduardorarruda/revoada/core/genai"
+	"github.com/eduardorarruda/revoada/core/redacao"
 	"github.com/eduardorarruda/revoada/gateway/internal/model"
 	tpb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
@@ -75,7 +77,7 @@ func statusCode(c tpb.Status_StatusCode) string {
 func FromResourceSpans(tenant string, rss []*tpb.ResourceSpans) []model.Span {
 	var out []model.Span
 	for _, rs := range rss {
-		resAttrs := attrsToLabels(nil, rs.GetResource().GetAttributes())
+		resAttrs := attrsToLabelsTexto(nil, rs.GetResource().GetAttributes())
 		service := resAttrs["service.name"]
 		for _, ss := range rs.GetScopeSpans() {
 			for _, sp := range ss.GetSpans() {
@@ -89,9 +91,10 @@ func FromResourceSpans(tenant string, rss []*tpb.ResourceSpans) []model.Span {
 				if end >= start && start != 0 {
 					durMs = float64(end-start) / 1e6
 				}
-				labels := attrsToLabels(resAttrs, sp.GetAttributes())
+				labels := attrsToLabelsTexto(resAttrs, sp.GetAttributes())
 				ensureHostLabel(labels)
 				applySpanEvents(labels, sp.GetEvents())
+				chamada := reconhecerIA(sp, labels)
 				out = append(out, model.Span{
 					TenantID:   tenant,
 					TS:         when,
@@ -105,9 +108,55 @@ func FromResourceSpans(tenant string, rss []*tpb.ResourceSpans) []model.Span {
 					StatusCode: statusCode(sp.GetStatus().GetCode()),
 					StatusMsg:  sp.GetStatus().GetMessage(),
 					Labels:     labels,
+					GenAI:      chamada,
 				})
 			}
 		}
+	}
+	return out
+}
+
+// reconhecerIA normaliza o span quando ele é uma chamada de IA (core/genai) e TIRA dos
+// rótulos as chaves de conteúdo (prompt, resposta, argumentos, documentos) de QUALQUER
+// span — reconhecido ou não. O conteúdo segue só dentro da Chamada; se e como ele é
+// gravado é decisão do modo de conteúdo (genai.go). Consequências deliberadas:
+//   - com o conteúdo desligado, o prompt não sobra em spans.labels, que todo leitor vê
+//     por 15 dias — nem quando a instrumentação esqueceu o marcador de IA;
+//   - o span do OpenInference, que achata cada mensagem em várias chaves, não estoura
+//     mais o teto de rótulos e deixa de ser recusado inteiro;
+//   - a mensagem de exceção de um span de IA passa pela redação: provedor costuma
+//     ecoar trecho do pedido (e às vezes a chave) no corpo do erro 4xx.
+func reconhecerIA(sp *tpb.Span, labels map[string]string) *genai.Chamada {
+	ch, ok := genai.Normalizar(genai.Span{
+		Nome:      sp.GetName(),
+		Erro:      sp.GetStatus().GetCode() == tpb.Status_STATUS_CODE_ERROR,
+		Atributos: labels,
+		Eventos:   eventosIA(sp.GetEvents()),
+	})
+	for k := range labels {
+		if genai.EhChaveDeConteudo(k) {
+			delete(labels, k)
+		}
+	}
+	if !ok {
+		return nil
+	}
+	for _, k := range []string{"exception.message", "exception.stacktrace"} {
+		if v, tem := labels[k]; tem {
+			labels[k] = redacao.Texto(v)
+		}
+	}
+	return &ch
+}
+
+// eventosIA converte só os eventos que podem carregar conteúdo de IA.
+func eventosIA(evs []*tpb.Span_Event) []genai.Evento {
+	var out []genai.Evento
+	for _, ev := range evs {
+		if len(ev.GetName()) < 7 || ev.GetName()[:7] != "gen_ai." {
+			continue
+		}
+		out = append(out, genai.Evento{Nome: ev.GetName(), Atributos: attrsToLabelsTexto(nil, ev.GetAttributes())})
 	}
 	return out
 }

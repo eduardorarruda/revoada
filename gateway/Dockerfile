@@ -2,12 +2,15 @@
 FROM golang:1.26-bookworm AS build
 WORKDIR /src
 
-# O gateway é um módulo dentro do monorepo; copiamos só o que ele precisa.
+# O gateway é um módulo dentro do monorepo; copiamos só o que ele precisa (o core
+# traz a normalização dos spans de IA e a redação de segredos).
+COPY core/go.mod core/go.sum ./core/
 COPY gateway/go.mod gateway/go.sum* ./gateway/
 WORKDIR /src/gateway
 RUN go mod download || true
 
 WORKDIR /src
+COPY core/ ./core/
 COPY gateway/ ./gateway/
 COPY deploy/migrations ./deploy/migrations
 WORKDIR /src/gateway

@@ -1,0 +1,51 @@
+/* JanelaTempo (components/JanelaTempo.tsx): controle segmentado no desktop,
+   <select> nativo no celular. Só tokens de styles/tokens.css. */
+.janela-seg {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+}
+.janela-seg__opcao {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  min-height: calc(var(--btn-h) - 6px);
+  padding: 0 var(--sp-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-13);
+  font-weight: 550;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--dur-1) ease;
+}
+.janela-seg__opcao:hover {
+  color: var(--text-1);
+}
+.janela-seg__opcao--ativa {
+  color: var(--text-1);
+}
+/* A pílula da opção ativa: desliza de uma opção para a outra (layoutId). */
+.janela-seg__pilula {
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border: 1px solid var(--accent-line);
+  border-radius: inherit;
+  background: var(--accent-soft);
+}
+.janela-seg__rotulo {
+  position: relative;
+}
+.janela-select {
+  width: auto;
+  min-width: 0;
+}

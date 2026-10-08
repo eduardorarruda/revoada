@@ -2,6 +2,8 @@
 package otlp
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"strconv"
 	"time"
 
@@ -158,6 +160,64 @@ func attrsToLabels(base map[string]string, attrs []*cmnpb.KeyValue) map[string]s
 		l[kv.GetKey()] = anyValueToString(kv.GetValue())
 	}
 	return l
+}
+
+// attrsToLabelsTexto é attrsToLabels para spans e logs: listas e mapas viram JSON em
+// vez de "". Não vale para métricas de propósito: lá o mapa de rótulos é a IDENTIDADE
+// da série (ver hostInventoryAttrs), e um rótulo que até ontem chegava vazio e hoje
+// chega em JSON partiria a série no meio. Em span e log, o "" era só perda de dado —
+// gen_ai.response.finish_reasons, por exemplo, é uma lista.
+func attrsToLabelsTexto(base map[string]string, attrs []*cmnpb.KeyValue) map[string]string {
+	l := make(map[string]string, len(base)+len(attrs))
+	for k, v := range base {
+		l[k] = v
+	}
+	for _, kv := range attrs {
+		l[kv.GetKey()] = anyValueToText(kv.GetValue())
+	}
+	return l
+}
+
+// anyValueToText é anyValueToString com listas, mapas e bytes em JSON.
+func anyValueToText(v *cmnpb.AnyValue) string {
+	switch v.GetValue().(type) {
+	case *cmnpb.AnyValue_ArrayValue, *cmnpb.AnyValue_KvlistValue, *cmnpb.AnyValue_BytesValue:
+		b, err := json.Marshal(anyValueNative(v))
+		if err != nil {
+			return ""
+		}
+		return string(b)
+	}
+	return anyValueToString(v)
+}
+
+// anyValueNative converte o AnyValue no valor Go equivalente, para virar JSON.
+func anyValueNative(v *cmnpb.AnyValue) any {
+	switch x := v.GetValue().(type) {
+	case *cmnpb.AnyValue_StringValue:
+		return x.StringValue
+	case *cmnpb.AnyValue_BoolValue:
+		return x.BoolValue
+	case *cmnpb.AnyValue_IntValue:
+		return x.IntValue
+	case *cmnpb.AnyValue_DoubleValue:
+		return x.DoubleValue
+	case *cmnpb.AnyValue_BytesValue:
+		return base64.StdEncoding.EncodeToString(x.BytesValue)
+	case *cmnpb.AnyValue_ArrayValue:
+		out := make([]any, 0, len(x.ArrayValue.GetValues()))
+		for _, e := range x.ArrayValue.GetValues() {
+			out = append(out, anyValueNative(e))
+		}
+		return out
+	case *cmnpb.AnyValue_KvlistValue:
+		out := make(map[string]any, len(x.KvlistValue.GetValues()))
+		for _, kv := range x.KvlistValue.GetValues() {
+			out[kv.GetKey()] = anyValueNative(kv.GetValue())
+		}
+		return out
+	}
+	return nil
 }
 
 func anyValueToString(v *cmnpb.AnyValue) string {

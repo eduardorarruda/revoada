@@ -1,0 +1,12 @@
+anthropic==1.12.0
+openai==2.54.0
+openinference-instrumentation==0.1.71
+openinference-instrumentation-openai==0.1.64
+openinference-semantic-conventions==0.1.41
+opentelemetry-instrumentation==0.66b1
+opentelemetry-instrumentation-anthropic==0.62.4
+opentelemetry-instrumentation-openai==0.62.4
+opentelemetry-instrumentation-openai-v2==2.4b0
+ai==7.0.132 (npm)
+@ai-sdk/openai==4.0.88 (npm)
+@ai-sdk/otel==1.0.132 (npm)

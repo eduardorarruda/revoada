@@ -7,8 +7,8 @@ info:
     health/readiness e métricas internas do pipeline.
 
     Nota de porta: o OTLP/gRPC roda em :4317 (padrão). O OTLP/HTTP é servido NESTE
-    listener em POST /v1/metrics (não numa porta :4318 dedicada) — configure o exporter
-    com o endpoint http://<gateway>:8090. Mover para :4318 é trivial se necessário.
+    listener em POST /v1/metrics, /v1/logs e /v1/traces (não numa porta :4318
+    dedicada) — configure o exporter com o endpoint http://<gateway>:8090.
 servers:
   - url: http://localhost:8090
 paths:
@@ -67,3 +67,55 @@ paths:
         "403": { description: Chave revogada }
         "400": { description: Payload OTLP inválido }
         "503": { description: Falha ao publicar no NATS }
+  /v1/logs:
+    post:
+      summary: Ingestão OTLP de logs (OTLP/HTTP).
+      description: |
+        Aceita application/x-protobuf (padrão) ou application/json (ExportLogsServiceRequest),
+        com ou sem Content-Encoding gzip (limite de 16 MiB descomprimido). Autentica pelo
+        header X-Revoada-Key. A gravação é assíncrona (lote no ClickHouse).
+      parameters:
+        - in: header
+          name: X-Revoada-Key
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/x-protobuf: {}
+          application/json: {}
+      responses:
+        "200": { description: ExportLogsServiceResponse (partial_success quando houve recusa) }
+        "400": { description: Payload OTLP inválido }
+        "401": { description: Chave ausente/desconhecida }
+        "403": { description: Chave revogada }
+        "429": { description: Fila de gravação cheia — retente com backoff }
+  /v1/traces:
+    post:
+      summary: Ingestão OTLP de traces (OTLP/HTTP), inclusive chamadas de IA.
+      description: |
+        Aceita application/x-protobuf (padrão) ou application/json (ExportTraceServiceRequest),
+        com ou sem gzip (limite de 16 MiB descomprimido). Autentica pelo header X-Revoada-Key.
+
+        Spans de IA (convenção GenAI do OpenTelemetry, legado do OpenLLMetry ou
+        OpenInference) são reconhecidos e gravados também em genai_spans, com as colunas
+        normalizadas (modelo, tokens, agente, ferramenta). Esses traces nunca são
+        amostrados. O conteúdo (prompt/resposta) sai dos rótulos do span e só é gravado
+        quando REVOADA_GENAI_CONTEUDO = redigido ou completo. Ver docs/instrumentacao-ia.md.
+      parameters:
+        - in: header
+          name: X-Revoada-Key
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/x-protobuf: {}
+          application/json: {}
+      responses:
+        "200": { description: ExportTraceServiceResponse (partial_success quando houve recusa) }
+        "400": { description: Payload OTLP inválido }
+        "401": { description: Chave ausente/desconhecida }
+        "403": { description: Chave revogada }
+        "429": { description: Fila de gravação cheia — retente com backoff }
+        "503": { description: Ingestão de traces desabilitada ou ClickHouse indisponível }

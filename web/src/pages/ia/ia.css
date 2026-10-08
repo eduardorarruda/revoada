@@ -1,0 +1,272 @@
+/* Telas de Agentes de IA (#/ia/*). Só tokens de styles/tokens.css; cor semântica
+   apenas para estado (erro, atenção, repetição). */
+
+/* Ações do cabeçalho: janela de tempo, frescor e Atualizar. */
+.ia-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}
+/* Atualizar: o ícone gira enquanto a consulta está no ar (e só enquanto). */
+.ia-atualizar[aria-busy="true"] svg {
+  animation: ia-girar 0.9s linear infinite;
+}
+@keyframes ia-girar {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ia-atualizar[aria-busy="true"] svg {
+    animation: none;
+  }
+}
+
+/* Abas: o sublinhado é uma peça só que desliza de uma aba para a outra
+   (layoutId "ia-aba"); o ::after padrão da aba ativa sai só nesta tela. */
+.ia-abas .tab {
+  text-decoration: none;
+}
+.ia-abas .tab--active::after {
+  display: none;
+}
+.ia-aba__indicador {
+  position: absolute;
+  left: var(--sp-3);
+  right: var(--sp-3);
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--accent);
+}
+.ia-aba__curto {
+  display: none;
+}
+@media (max-width: 479px) {
+  .ia-aba__longo {
+    display: none;
+  }
+  .ia-aba__curto {
+    display: inline;
+  }
+}
+
+/* A vista da aba: entra em cascata (só quando muda de aba, não a cada
+   atualização) e esmaece o dado velho enquanto o novo carrega. */
+.ia-vista {
+  margin-top: var(--sp-4);
+}
+/* A cascata é dos filhos: a vista em si não sobe junto (seriam dois
+   deslocamentos somados na primeira carga). O seletor pesa mais que o da
+   cascata de .page em ui.css, para vencê-lo. */
+.page > .ia-vista:not(.drawer):not(.drawer__backdrop) {
+  animation: none;
+}
+.ia-vista > * {
+  animation: surgir var(--dur-4) var(--ease-out) backwards;
+}
+.ia-vista > :nth-child(2) { animation-delay: 40ms; }
+.ia-vista > :nth-child(3) { animation-delay: 80ms; }
+.ia-vista > :nth-child(4) { animation-delay: 120ms; }
+.ia-vista > :nth-child(5) { animation-delay: 160ms; }
+.ia-vista > :nth-child(n + 6) { animation-delay: 200ms; }
+/* O ritmo vertical é o gap do .stack; as margens próprias somariam. */
+.ia-vista > .veredito,
+.ia-vista > .kpi-grid {
+  margin-bottom: 0;
+}
+.ia-vista > .veredito,
+.ia-recarregavel {
+  transition: opacity var(--dur-2) ease;
+}
+.ia-vista[aria-busy="true"] > .veredito,
+.ia-vista[aria-busy="true"] .ia-recarregavel {
+  opacity: 0.55;
+}
+
+.ia-sub {
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+.ia-texto {
+  color: var(--text-2);
+  margin: 0;
+  line-height: var(--lh-body);
+}
+.ia-mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+}
+
+/* Aviso (callout): faixa à esquerda na cor do estado, fundo discreto. */
+.ia-aviso {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: flex-start;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--text-3);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  color: var(--text-1);
+}
+/* Neutro dentro de cartão: o poço (--bg-sunken) separa a nota do fundo do cartão. */
+.card .ia-aviso--neutro {
+  background: var(--bg-sunken);
+}
+.ia-aviso > svg {
+  flex: none;
+  margin-top: 2px;
+}
+.ia-aviso__corpo {
+  display: grid;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+.ia-aviso__corpo p {
+  margin: 0;
+  color: var(--text-2);
+}
+.ia-aviso--warn {
+  border-color: var(--warn-line);
+  border-left-color: var(--warn);
+  background: var(--warn-bg);
+}
+.ia-aviso--warn > svg { color: var(--warn); }
+.ia-aviso--crit {
+  border-color: var(--crit-line);
+  border-left-color: var(--crit);
+  background: var(--crit-bg);
+}
+.ia-aviso--crit > svg { color: var(--crit); }
+.ia-aviso--info {
+  border-color: var(--info-line);
+  border-left-color: var(--info);
+  background: var(--info-bg);
+}
+.ia-aviso--info > svg { color: var(--info); }
+
+.ia-parcial {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+/* Execuções e Ferramentas: introdução, filtros e listas internas. */
+.ia-filtros-bloco {
+  display: grid;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+.ia-filtros-bloco .field {
+  width: 100%;
+  min-width: 0;
+}
+.ia-lista-erros {
+  margin: 0;
+  padding-left: var(--sp-4);
+}
+.ia-cartao-titulo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+/* Conversa (o replay e a lista da conversa estão em replay.css) */
+.ia-msg {
+  display: grid;
+  gap: var(--sp-1);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+}
+.ia-msg__cabeca {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+}
+.ia-msg__texto {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--text-1);
+  font-size: var(--fs-13);
+  line-height: var(--lh-body);
+}
+.ia-msg__texto.ia-mono {
+  font-size: var(--fs-12);
+}
+.ia-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--sp-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text-2);
+  font-size: var(--fs-11);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+/* Formulário de preço */
+.ia-form-preco {
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: start;
+}
+.ia-form-preco .field {
+  width: 100%;
+  min-width: 0;
+}
+.ia-form-preco__acoes {
+  margin-top: var(--sp-3);
+}
+
+/* Modelos e preços */
+.ia-precos__resumo {
+  display: grid;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+.ia-precos__resumo p {
+  margin: 0;
+}
+.ia-lista-sem-preco {
+  display: grid;
+  gap: var(--sp-2);
+  margin: var(--sp-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Dados e privacidade (admin): três pedidos de remoção, um embaixo do outro. */
+.ia-purge__bloco {
+  display: grid;
+  gap: var(--sp-2);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+}
+.ia-purge__titulo {
+  margin: 0;
+  font-size: var(--fs-14);
+  font-weight: 600;
+  color: var(--text-1);
+}
+.ia-purge__linha {
+  display: grid;
+  gap: var(--sp-2);
+  max-width: 560px;
+}
+.ia-purge__linha .form-field {
+  margin-bottom: 0;
+}
+.ia-purge__linha .field {
+  width: 100%;
+  min-width: 0;
+}
+.ia-purge__linha > .btn {
+  justify-self: start;
+}

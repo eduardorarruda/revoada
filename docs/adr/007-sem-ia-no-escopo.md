@@ -1,6 +1,6 @@
 # ADR 007 — Sem IA no escopo
 
-- **Status:** aceito
+- **Status:** aceito — esclarecido pelo [ADR 008](008-observar-agentes-de-ia.md): observar aplicações de IA dos usuários é escopo; usar IA dentro do Revoada continua fora.
 - **Referência:** decisão de produto (ver [ARQUITETURA.md §5](../ARQUITETURA.md))
 
 ## Contexto

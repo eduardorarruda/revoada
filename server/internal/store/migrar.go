@@ -43,7 +43,9 @@ type EstadoMigracao struct {
 	AplicadaEm *time.Time `json:"aplicada_em,omitempty"`
 }
 
-// travaMigracoes serializa painéis subindo ao mesmo tempo.
+// travaMigracoes serializa painéis subindo ao mesmo tempo — e o gateway, que cria
+// agents/hosts no próprio boot com a MESMA trava (gateway/internal/pg, ensureSchema).
+// Mudou o valor aqui? Mude lá.
 const travaMigracoes = 0x52_45_56_4D_49_47 // "REVMIG"
 
 func carregarMigracoes() ([]Migracao, error) {

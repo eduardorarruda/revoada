@@ -32,7 +32,7 @@ func (c comToken) RoundTrip(r *http.Request) (*http.Response, error) {
 // servidor de teste: sem banco; o verificador aceita "rvm_leitura" (só leitura).
 func conectar(t *testing.T, token string) *mcp.ClientSession {
 	t.Helper()
-	s := Novo(nil, nil, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	s := Novo(nil, nil, nil, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	s.verificar = func(_ context.Context, tok string, _ *http.Request) (*mcpauth.TokenInfo, error) {
 		if tok != "rvm_leitura" {
 			return nil, mcpauth.ErrInvalidToken
@@ -90,7 +90,7 @@ func TestEscopoBarraEscrita(t *testing.T) {
 }
 
 func TestTokenInvalidoNaoEntra(t *testing.T) {
-	s := Novo(nil, nil, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	s := Novo(nil, nil, nil, nil, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	s.verificar = func(context.Context, string, *http.Request) (*mcpauth.TokenInfo, error) {
 		return nil, mcpauth.ErrInvalidToken
 	}

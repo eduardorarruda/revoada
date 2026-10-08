@@ -1021,6 +1021,11 @@ a.kpi:hover {
   letter-spacing: -0.01em;
   color: var(--text-3);
 }
+/* Moeda antes do número ("US$ 12,40"): menor, colada ao número pela direita. */
+.kpi__unidade--antes {
+  margin-left: 0;
+  margin-right: 0.14em;
+}
 .kpi__valor--warn .kpi__unidade,
 .kpi__valor--crit .kpi__unidade {
   color: inherit;

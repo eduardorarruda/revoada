@@ -234,7 +234,9 @@ function SamplingNote() {
   );
 }
 
-export function Traces() {
+// `initialTrace` abre direto o waterfall de um trace (#/traces?trace=<id>), usado
+// pelo replay de Agentes de IA ("Ver no waterfall").
+export function Traces({ initialTrace = "" }: { initialTrace?: string } = {}) {
   // Visão ativa: spans OTLP distribuídos (real, exige instrumentação) ou stack
   // traces de erro extraídos dos logs (sem instrumentação). Preserva 100% a
   // mecânica de spans; a visão de erros é aditiva.
@@ -247,7 +249,7 @@ export function Traces() {
   const [traces, setTraces] = useState<TraceSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(initialTrace || null);
   const [showMap, setShowMap] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   // Botão "Instrumentar PHP (cPanel)" só para admin — a lista de chaves de

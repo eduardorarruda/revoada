@@ -19,6 +19,7 @@ export type Unit =
   | "days" // dias inteiros (ex.: validade restante de certificado)
   | "cores" // núcleos de CPU
   | "bool" // 0/1 (estado)
+  | "usd" // dólar americano (custo das chamadas de IA)
   | "none"; // número puro, sem unidade
 
 export interface MetricMeta {
@@ -35,6 +36,33 @@ export interface MetricMeta {
 // (conferidos no código do agente/gateway). Ao adicionar métrica nova no agente,
 // adicione aqui — o teste `dict.test.ts` falha se uma métrica real ficar de fora.
 const KNOWN: Record<string, Omit<MetricMeta, "known">> = {
+  // Agentes de IA — séries gravadas pelo painel a cada minuto, com 5 min de atraso
+  // (server/internal/ia/runner.go). Os rótulos espelham notify/message.go.
+  "llm.custo_usd": {
+    label: "Gasto com IA (US$)",
+    unit: "usd",
+    description:
+      "Custo das chamadas de modelo no minuto: o que a biblioteca informou, mais a estimativa pela tabela de preços (Agentes de IA → Modelos e preços). Chamada sem preço cadastrado fica de fora e aparece em “Chamadas de IA sem preço”. Para um orçamento por hora, use Soma numa janela de 3600 s.",
+  },
+  "llm.chamadas": { label: "Chamadas de IA", unit: "count", description: "Chamadas de modelo (chat, completion, embeddings) no minuto, por serviço, agente e modelo." },
+  "llm.erros": { label: "Chamadas de IA com erro", unit: "count", description: "Chamadas de modelo que terminaram com erro no minuto (error.type ou status de erro do span)." },
+  "llm.tokens.entrada": { label: "Tokens de entrada da IA", unit: "count", description: "Tokens de entrada no minuto, cache incluso. Chamada sem tokens informados não entra (não vira zero)." },
+  "llm.tokens.saida": { label: "Tokens de saída da IA", unit: "count", description: "Tokens de saída no minuto." },
+  "llm.latencia_p95_ms": {
+    label: "Latência p95 da IA",
+    unit: "duration_ms",
+    description: "p95 da duração das chamadas de modelo DENTRO de cada minuto. Não se soma nem se faz média entre minutos: para olhar períodos longos, use Máximo.",
+  },
+  "llm.execucao.passos_max": {
+    label: "Chamadas numa execução do agente",
+    unit: "count",
+    description: "Maior número de chamadas de modelo numa execução que terminou no minuto. Um salto (de 4 para 40) costuma ser agente preso num loop.",
+  },
+  "llm.sem_preco": {
+    label: "Chamadas de IA sem preço cadastrado",
+    unit: "count",
+    description: "Chamadas com tokens cujo modelo não tem linha na tabela de preços: o custo delas não entra em “Gasto com IA”. Cadastre o preço em Agentes de IA → Modelos e preços.",
+  },
   // Sistema
   "system.cpu.utilization": {
     label: "CPU consumida (%)",

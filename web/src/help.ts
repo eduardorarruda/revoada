@@ -305,6 +305,50 @@ export const help: {
           q: "Preciso instalar o agente para enviar traces?",
           a: "Não. O agente coleta o servidor inteiro, CPU, memória e disco, mas também os containers Docker (uso e estado) e os logs do sistema (journald, syslog, containers e kernel/dmesg). Os traces, por outro lado, vêm direto da aplicação instrumentada com OpenTelemetry, exportando em OTLP para o gateway. Agente e instrumentação são complementares e independentes.",
         },
+        {
+          q: "E uma aplicação de IA (chatbot, agente com ferramentas, RAG)?",
+          a: "É o mesmo endpoint e a mesma chave. Basta a aplicação usar uma instrumentação de IA do OpenTelemetry: a oficial (convenção GenAI), OpenLLMetry, OpenInference (LangChain, LlamaIndex) ou a telemetria do Vercel AI SDK. O gateway reconhece as chamadas de modelo e de ferramenta sozinho, e elas aparecem em Investigar → Agentes de IA sem deixar de aparecer em Traces. O passo a passo por biblioteca está em docs/instrumentacao-ia.md; para ver a tela funcionando sem chave de provedor, rode o agente de demonstração em exemplos/agente-demo.",
+        },
+      ],
+    },
+    ia: {
+      title: "Agentes de IA",
+      what: "Custo, tokens, latência e erros das suas aplicações de IA (chatbots, automações com ferramentas, pipelines que chamam LLM), e o passo a passo de cada execução. Os dados vêm dos spans OpenTelemetry que essas aplicações já mandam. O Revoada só observa: não chama nenhum modelo nem guarda chave de provedor.",
+      how: [
+        "Instrumente a aplicação para mandar traces de IA ao gateway, com a mesma chave de ingestão dos servidores (veja Instrumentação / Enviar traces). Sem isso, a tela fica vazia.",
+        "Escolha a janela de tempo no canto do cabeçalho; ela vale para todas as abas e fica no endereço, então um link copiado abre a mesma visão. Os dados se atualizam sozinhos a cada minuto; o botão de atualizar busca na hora.",
+        "Visão geral: a frase do topo diz se está tudo em ordem; abaixo, os números da janela, o custo no tempo, quanto cada modelo e cada agente gastou e as ferramentas que mais falham.",
+        "Execuções: filtre por agente, modelo, status ou custo mínimo e clique numa execução para ver o replay.",
+        "Replay: cada passo (modelo, ferramenta, agente) com tokens, custo e duração, navegável pelo teclado. Repetições da mesma ferramenta aparecem como possível loop. Com a conversa visível, \"Copiar como requisição\" copia as mensagens do passo no formato da OpenAI, para você reproduzir a chamada onde quiser.",
+        "Ferramentas: taxa de erro, latência típica (p50) e dos casos lentos (p95) e os erros mais frequentes de cada ferramenta que os agentes chamam.",
+        "Modelos e preços: o custo é tokens × preço vigente na data da chamada. Administradores cadastram o preço dos modelos marcados \"sem preço\" pelo botão \"Cadastrar preço\".",
+        "Para ser avisado, em Alertas use \"+ Agentes de IA\": modelos prontos para gasto por hora, chamadas com erro, IA lenta, agente em loop e modelo sem preço.",
+      ],
+      faq: [
+        {
+          q: "Por que o custo aparece como \"parcial\"?",
+          a: "Porque parte das chamadas não entrou na soma: o modelo não tem preço cadastrado ou a biblioteca não informou os tokens. O valor real é maior. O Revoada mostra \"sem preço\" em vez de inventar zero.",
+        },
+        {
+          q: "Por que não vejo a conversa?",
+          a: "A gravação de prompts e respostas vem desligada (é dado pessoal), e o replay mostra todo o resto sem o texto. Para gravar, ligue REVOADA_GENAI_CONTEUDO no gateway (redigido tira chaves, tokens, senhas e cartões; completo grava como chegou) e a captura de conteúdo na própria aplicação. O texto fica 7 dias. Só administradores e operadores leem, e \"Mostrar conversa\" pede para confirmar que é você com o código do autenticador (a confirmação vale por alguns minutos). Cada leitura entra na auditoria.",
+        },
+        {
+          q: "Como apago os dados de uma pessoa ou de uma execução?",
+          a: "Em Modelos e preços, a seção \"Dados e privacidade\" (só administradores) apaga uma conversa ou uma execução inteira (chamadas e conteúdo) ou todo o conteúdo gravado (só o texto: custo e tokens continuam). O replay também tem \"Apagar esta execução\". É irreversível, por isso o painel pede para confirmar que é você com o código do autenticador antes de apagar. Cada pedido fica na auditoria, e a remoção leva alguns segundos para sumir das telas.",
+        },
+        {
+          q: "Por que o alerta de gasto chega alguns minutos depois?",
+          a: "Porque as séries de IA (llm.custo_usd, llm.erros, llm.execucao.passos_max e as demais) são gravadas com 5 minutos de atraso, para esperar os spans de agentes que demoram a terminar. E cada combinação de serviço, agente e modelo é avaliada sozinha: \"gasto acima de US$ 5\" vale por agente e modelo, não pelo total. Use os filtros da regra para mirar um agente.",
+        },
+        {
+          q: "Um assistente de IA consegue consultar estes dados?",
+          a: "Sim, pelo servidor MCP do painel (tela MCP): ia_resumo, listar_execucoes e ver_execucao. O texto das mensagens só vem para tokens com o escopo ia_conteudo, e cada leitura entra na auditoria como as feitas pela tela.",
+        },
+        {
+          q: "Por que o veredito fala de uma janela diferente da que escolhi?",
+          a: "Enquanto a janela nova carrega, a tela continua mostrando o dado da anterior, um pouco apagado, e o veredito diz a janela desse dado. Quando o novo chega, tudo troca junto.",
+        },
       ],
     },
     alerts: {
@@ -766,6 +810,18 @@ export const help: {
     exemplar: {
       title: "Exemplar",
       body: "Um ponto de uma métrica que carrega o id de um trace representativo daquele instante. Serve de ponte: ao ver um pico no gráfico, você pula direto para um trace real que exemplifica aquele momento. Consequência: investigar \"por que ficou lento às 14h\" vira um clique da métrica para o trace, sem caçar na mão.",
+    },
+    token: {
+      title: "Token (IA)",
+      body: "A unidade em que os modelos de IA leem e escrevem texto, um pedaço de palavra (em português, uma palavra dá em média um ou dois tokens). Os provedores cobram por token: os de ENTRADA (o prompt, com o histórico da conversa e o resultado das ferramentas) e os de SAÍDA (a resposta). Tokens lidos do cache saem mais baratos quando o provedor oferece. Consequência: uma conversa longa fica mais cara a cada volta, porque o histórico inteiro é reenviado como entrada.",
+    },
+    "execucao-ia": {
+      title: "Execução (agente de IA)",
+      body: "Tudo o que um agente fez para atender um pedido: as chamadas ao modelo, as ferramentas que ele usou e os subagentes, na ordem em que aconteceram. Tecnicamente é um trace com pelo menos uma chamada de IA, e o agente da execução é o mais alto da árvore. O replay mostra uma execução passo a passo, e a mesma ferramenta chamada várias vezes seguidas aparece como possível loop, porque cada volta custa uma nova chamada ao modelo.",
+    },
+    "custo-estimado": {
+      title: "Custo estimado, parcial e sem preço",
+      body: "O custo de IA no Revoada é ESTIMADO: tokens × preço do modelo vigente na data da chamada, pela tabela de Modelos e preços (desconto de contrato, lote e região não entram). Quando a biblioteca já manda o custo pronto, ele é usado no lugar da estimativa. \"Sem preço\" é o modelo que não está na tabela; \"não informado\" é a chamada que veio sem tokens. Nos dois casos o total vira PARCIAL: o valor real é maior que o mostrado, e o painel prefere dizer isso a inventar zero.",
     },
     "onboarding-ssh": {
       title: "Onboarding por SSH (Adicionar servidor)",

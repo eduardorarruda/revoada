@@ -1,0 +1,30 @@
+{
+  "origem": "referencia-2025-10",
+  "coletada_em": "2025-10-01",
+  "aviso": "Preços públicos de tabela (US$ por 1 milhão de tokens) coletados em 2025-10, sem descontos de volume, lote ou região. Confira a página de preços de cada provedor antes de confiar no custo estimado; corrija pela tela Agentes de IA > Modelos e preços.",
+  "vigente_desde": "2025-01-01T00:00:00Z",
+  "precos": [
+    { "provedor": "openai", "modelo": "gpt-4o*", "entrada": 2.50, "saida": 10.00, "cache_leitura": 1.25 },
+    { "provedor": "openai", "modelo": "gpt-4o-mini*", "entrada": 0.15, "saida": 0.60, "cache_leitura": 0.075 },
+    { "provedor": "openai", "modelo": "gpt-4.1*", "entrada": 2.00, "saida": 8.00, "cache_leitura": 0.50 },
+    { "provedor": "openai", "modelo": "gpt-4.1-mini*", "entrada": 0.40, "saida": 1.60, "cache_leitura": 0.10 },
+    { "provedor": "openai", "modelo": "gpt-4.1-nano*", "entrada": 0.10, "saida": 0.40, "cache_leitura": 0.025 },
+    { "provedor": "openai", "modelo": "gpt-5*", "entrada": 1.25, "saida": 10.00, "cache_leitura": 0.125 },
+    { "provedor": "openai", "modelo": "gpt-5-mini*", "entrada": 0.25, "saida": 2.00, "cache_leitura": 0.025 },
+    { "provedor": "openai", "modelo": "gpt-5-nano*", "entrada": 0.05, "saida": 0.40, "cache_leitura": 0.005 },
+    { "provedor": "openai", "modelo": "o3*", "entrada": 2.00, "saida": 8.00, "cache_leitura": 0.50 },
+    { "provedor": "openai", "modelo": "o4-mini*", "entrada": 1.10, "saida": 4.40, "cache_leitura": 0.275 },
+    { "provedor": "openai", "modelo": "text-embedding-3-small*", "entrada": 0.02, "saida": 0 },
+    { "provedor": "openai", "modelo": "text-embedding-3-large*", "entrada": 0.13, "saida": 0 },
+    { "provedor": "anthropic", "modelo": "claude-opus-4*", "entrada": 15.00, "saida": 75.00, "cache_leitura": 1.50, "cache_escrita": 18.75 },
+    { "provedor": "anthropic", "modelo": "claude-opus-4-5*", "entrada": 5.00, "saida": 25.00, "cache_leitura": 0.50, "cache_escrita": 6.25 },
+    { "provedor": "anthropic", "modelo": "claude-sonnet-4*", "entrada": 3.00, "saida": 15.00, "cache_leitura": 0.30, "cache_escrita": 3.75 },
+    { "provedor": "anthropic", "modelo": "claude-3-7-sonnet*", "entrada": 3.00, "saida": 15.00, "cache_leitura": 0.30, "cache_escrita": 3.75 },
+    { "provedor": "anthropic", "modelo": "claude-haiku-4-5*", "entrada": 1.00, "saida": 5.00, "cache_leitura": 0.10, "cache_escrita": 1.25 },
+    { "provedor": "anthropic", "modelo": "claude-3-5-haiku*", "entrada": 0.80, "saida": 4.00, "cache_leitura": 0.08, "cache_escrita": 1.00 },
+    { "provedor": "", "modelo": "gemini-2.5-pro*", "entrada": 1.25, "saida": 10.00 },
+    { "provedor": "", "modelo": "gemini-2.5-flash*", "entrada": 0.30, "saida": 2.50 },
+    { "provedor": "", "modelo": "gemini-2.5-flash-lite*", "entrada": 0.10, "saida": 0.40 },
+    { "provedor": "", "modelo": "gemini-2.0-flash*", "entrada": 0.10, "saida": 0.40 }
+  ]
+}

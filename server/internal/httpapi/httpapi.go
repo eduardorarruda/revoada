@@ -23,6 +23,7 @@ import (
 	"github.com/eduardorarruda/revoada/server/internal/deploys"
 	"github.com/eduardorarruda/revoada/server/internal/discovery"
 	"github.com/eduardorarruda/revoada/server/internal/hostadmin"
+	"github.com/eduardorarruda/revoada/server/internal/ia"
 	"github.com/eduardorarruda/revoada/server/internal/installer"
 	"github.com/eduardorarruda/revoada/server/internal/inventory"
 	"github.com/eduardorarruda/revoada/server/internal/journey"
@@ -57,6 +58,7 @@ type Deps struct {
 	SiteCheck  *sitecheck.Handler
 	Logs       *logs.Handler
 	Traces     *traces.Handler
+	IA         *ia.Handler
 	Discovery  *discovery.Handler
 	Journey    *journey.Handler
 	Status     *statuspage.Handler
@@ -523,6 +525,20 @@ func New(d Deps) http.Handler {
 		mux.Handle("GET /api/traces/{trace_id}/logs", protected(d.Traces.Logs))
 		// Expurgo total de traces (TRUNCATE spans). Destrutivo → admin-only.
 		mux.Handle("POST /api/traces/purge", admin(d.Traces.Purge))
+	}
+
+	// Agentes de IA (ADR 008): custo, replay, ferramentas e tabela de preços. Ler o
+	// conteúdo (prompt/resposta) tem permissão própria — leitor vê custo, não o texto.
+	if d.IA != nil {
+		mux.Handle("GET /api/ia/resumo", protected(d.IA.ResumoHTTP))
+		mux.Handle("GET /api/ia/execucoes", protected(d.IA.ExecucoesHTTP))
+		mux.Handle("GET /api/ia/execucoes/{trace_id}", protected(d.IA.ExecucaoHTTP))
+		mux.Handle("GET /api/ia/execucoes/{trace_id}/conteudo", exige(auth.PermVerConteudoIA, d.IA.ConteudoHTTP))
+		mux.Handle("GET /api/ia/ferramentas", protected(d.IA.FerramentasHTTP))
+		mux.Handle("GET /api/ia/precos", protected(d.IA.PrecosHTTP))
+		mux.Handle("POST /api/ia/precos", admin(d.IA.CriarPrecoHTTP))
+		mux.Handle("DELETE /api/ia/precos/{id}", admin(d.IA.ApagarPrecoHTTP))
+		mux.Handle("POST /api/ia/purge", exige(auth.PermApagarDadosIA, d.IA.PurgeHTTP))
 	}
 
 	// Status page pública (P6.4): sem autenticação, cache curto.

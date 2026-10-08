@@ -60,6 +60,16 @@ const EMITTED = [
   "synthetic.http.tls_ms",
   "synthetic.http.cert_days_left",
   "synthetic.http.up",
+  // server/internal/ia/runner.go (pontosDoMinuto, passosMaximos) — séries das chamadas
+  // de IA, gravadas pelo SERVIDOR a cada minuto com 5 min de atraso.
+  "llm.custo_usd",
+  "llm.chamadas",
+  "llm.erros",
+  "llm.tokens.entrada",
+  "llm.tokens.saida",
+  "llm.latencia_p95_ms",
+  "llm.execucao.passos_max",
+  "llm.sem_preco",
 ];
 
 // Chaves do dicionário que NÃO são métricas do agente e por isso não entram em

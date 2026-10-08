@@ -1,0 +1,358 @@
+/* Replay de uma execução e a conversa dela (#/ia/execucoes/<trace_id>).
+   Só tokens de styles/tokens.css; cor semântica apenas para estado (erro,
+   repetição). Entradas em CSS (surgir, uma vez, na montagem); o Motion entra só
+   na pílula da seleção (layoutId) e nas alturas (detalhe no celular, "Mostrar
+   tudo"). A regra global de prefers-reduced-motion zera tudo o que está aqui. */
+
+/* ---- Cabeçalho ---- */
+.ia-voltar {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: var(--sp-1);
+  color: var(--text-2);
+  font-size: var(--fs-12);
+  text-decoration: none;
+}
+.ia-voltar:hover {
+  color: var(--text-1);
+  text-decoration: underline;
+}
+.ia-cabecalho__titulo {
+  margin: var(--sp-1) 0;
+  font-size: var(--fs-20);
+  font-weight: 650;
+  color: var(--text-1);
+  overflow-wrap: anywhere;
+}
+.ia-cabecalho__acoes {
+  margin-top: var(--sp-3);
+}
+
+/* ---- Esqueleto com a forma da tela ---- */
+.ia-esqueleto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+/* ---- Aviso de possível loop: orbe com três ondas (como o Veredito) ---- */
+.ia-loop__orbe {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--warn-line);
+  border-radius: 50%;
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+.ia-loop__anel {
+  position: absolute;
+  inset: -1px;
+  border: 1px solid var(--warn);
+  border-radius: 50%;
+  opacity: 0;
+  /* Três ondas ao aparecer; onda eterna seria movimento sem fim. */
+  animation: veredito-onda 2.6s var(--ease-out) 3;
+}
+.ia-loop__anel--2 {
+  animation-delay: 1.3s;
+}
+
+/* ---- Replay: linha do tempo + painel do passo escolhido ---- */
+.ia-replay {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: minmax(0, 1fr);
+}
+/* Mesmo corte de CONSULTA_LARGA (ReplayPassos.tsx): abaixo dele o detalhe abre dentro do passo. */
+@media (min-width: 1100px) {
+  .ia-replay {
+    grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
+    align-items: start;
+  }
+  /* Fica à vista enquanto a lista rola, abaixo da barra fixa do topo, e rola
+     sozinho quando o detalhe é mais alto que a tela. */
+  .ia-replay__detalhe {
+    position: sticky;
+    top: calc(var(--topbar-h) + var(--sp-4));
+    max-height: calc(100vh - var(--topbar-h) - var(--sp-8));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: var(--radius);
+  }
+}
+
+.ia-passos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-1);
+}
+/* Cascata só na montagem (30 ms por passo, teto no 12º). */
+.ia-passos > li {
+  animation: surgir var(--dur-3) var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 12) * 30ms);
+}
+
+.ia-passo {
+  --recuo: var(--sp-4);
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  gap: var(--sp-1);
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  /* Recuo pelo nível na árvore, com teto: uma árvore funda não espreme o texto. */
+  padding-left: calc(var(--sp-3) + min(var(--nivel, 0), 4) * var(--recuo));
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-1) ease,
+    border-color var(--dur-1) ease;
+}
+@media (max-width: 479px) {
+  .ia-passo {
+    --recuo: var(--sp-2);
+  }
+}
+/* Trilho da árvore: uma linha na altura do nível do pai. */
+.ia-passo--filho::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--sp-3) + (min(var(--nivel, 0), 4) - 0.5) * var(--recuo));
+  border-left: 1px solid var(--border);
+}
+.ia-passo__linha,
+.ia-passo__nums,
+.ia-passo__erro,
+.ia-barra {
+  position: relative;
+  z-index: 1;
+}
+.ia-passo:hover:not(.ia-passo--sel):not(.ia-passo--erro) {
+  background: var(--bg-3);
+}
+/* Seleção: a pílula desliza de um passo para o outro (layoutId) e fica POR CIMA
+   do fundo de erro, então o passo escolhido nunca some. */
+.ia-passo__sel {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+  pointer-events: none;
+}
+.ia-passo--repeticao {
+  border-left: 3px solid var(--warn);
+}
+/* Erro não mexe na borda esquerda: ela é da repetição. */
+.ia-passo--erro {
+  border-top-color: var(--crit-line);
+  border-right-color: var(--crit-line);
+  border-bottom-color: var(--crit-line);
+  background: var(--crit-bg);
+}
+/* "Ir para a primeira chamada": os passos da repetição acendem um depois do outro. */
+.ia-passo__destaque {
+  position: absolute;
+  inset: -1px;
+  z-index: 2;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: ia-destaque 1.2s var(--ease-out) forwards;
+  animation-delay: calc(var(--n, 0) * 80ms);
+}
+@keyframes ia-destaque {
+  from { box-shadow: 0 0 0 2px var(--warn); }
+  to { box-shadow: 0 0 0 0 transparent; }
+}
+
+.ia-passo__linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+.ia-passo__titulo {
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+.ia-passo__tipo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+.ia-passo__nums {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-3);
+  color: var(--text-2);
+  font-size: var(--fs-12);
+}
+.ia-passo__erro {
+  color: var(--crit);
+  font-size: var(--fs-12);
+  overflow-wrap: anywhere;
+}
+
+.ia-barra {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-4);
+  overflow: hidden;
+}
+.ia-barra__trecho {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--inicio, 0);
+  width: var(--largura, 100%);
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  transform-origin: left center;
+  animation: ia-barra-cresce var(--dur-4) var(--ease-out) backwards;
+  animation-delay: calc(120ms + min(var(--i, 0), 12) * 30ms);
+}
+@keyframes ia-barra-cresce {
+  from { transform: scaleX(0); }
+}
+.ia-passo--erro .ia-barra__trecho {
+  background: var(--crit);
+}
+
+/* Detalhe dentro do passo (abaixo de 1100px). A altura é do Motion. */
+.ia-passo__detalhe {
+  overflow: hidden;
+}
+.ia-detalhe-embutido {
+  margin: var(--sp-1) 0 var(--sp-2);
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+}
+
+/* Troca do detalhe no desktop: entra do lado para onde a pessoa andou. */
+.ia-detalhe-troca {
+  --dx: 6px;
+  animation: ia-troca var(--dur-2) var(--ease-out) backwards;
+}
+.ia-detalhe-troca[data-dir="tras"] {
+  --dx: -6px;
+}
+@keyframes ia-troca {
+  from { opacity: 0; transform: translateX(var(--dx, 6px)); }
+}
+
+.ia-detalhe-corpo {
+  display: grid;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+.ia-detalhe__titulo {
+  margin: 0;
+  font-size: var(--fs-18);
+  font-weight: 650;
+  color: var(--text-1);
+  overflow-wrap: anywhere;
+}
+.ia-detalhe {
+  display: grid;
+  gap: var(--sp-2) var(--sp-3);
+  grid-template-columns: max-content minmax(0, 1fr);
+  margin: 0;
+}
+.ia-detalhe__linha {
+  display: contents;
+}
+.ia-detalhe dt {
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+.ia-detalhe dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.ia-detalhe__cru {
+  color: var(--text-3);
+}
+.ia-copiar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+/* ---- Conversa ---- */
+.ia-titulo-dica {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+.ia-conversa {
+  display: grid;
+  gap: var(--sp-4);
+}
+.ia-conversa__passo {
+  display: grid;
+  gap: var(--sp-2);
+  animation: surgir var(--dur-3) var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 8) * 40ms);
+}
+.ia-conversa__titulo {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-1);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.ia-conversa__titulo:hover {
+  color: var(--accent);
+  text-decoration-color: currentColor;
+}
+.ia-msg--saida {
+  border-left: 2px solid var(--accent-line);
+}
+.ia-msg__recorte {
+  position: relative;
+  overflow: hidden;
+}
+/* Recolhida: o fim some aos poucos, para não parecer texto cortado por engano. */
+.ia-msg__recorte--fechado {
+  -webkit-mask-image: linear-gradient(to bottom, var(--bg-0) 65%, transparent);
+  mask-image: linear-gradient(to bottom, var(--bg-0) 65%, transparent);
+}
+.ia-conversa-carregando {
+  display: grid;
+  gap: var(--sp-2);
+}
+.ia-conversa-carregando > .bando {
+  justify-self: center;
+}
+.ia-conversa-pedir {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}

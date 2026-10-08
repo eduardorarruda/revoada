@@ -105,13 +105,31 @@ func main() {
 		Name: "spans", Insert: ch.InsertSpans,
 		MaxRows: batchMaxRows, Interval: batchInterval, QueueLen: batchQueue, Log: log,
 	})
+	// Chamadas de IA: uma linha normalizada por span de IA (genai_spans) e, se o
+	// operador ligou, o conteúdo (genai_conteudo). Batchers próprios: um retry de
+	// genai_spans não pode duplicar os spans, e vice-versa.
+	genaiBatch := chbatch.New(chbatch.Config[model.GenAISpan]{
+		Name: "genai_spans", Insert: ch.InsertGenAISpans,
+		MaxRows: batchMaxRows, Interval: batchInterval, QueueLen: batchQueue, Log: log,
+	})
+	conteudoBatch := chbatch.New(chbatch.Config[model.GenAIConteudo]{
+		Name: "genai_conteudo", Insert: ch.InsertGenAIConteudo,
+		MaxRows: batchMaxRows, Interval: batchInterval, QueueLen: batchQueue, Log: log,
+	})
 	logBatch.Start(ctx)
 	spanBatch.Start(ctx)
+	genaiBatch.Start(ctx)
+	conteudoBatch.Start(ctx)
 	// Stop drena e faz flush do que restou (registrado após store/NATS: roda antes deles).
 	defer logBatch.Stop()
 	defer spanBatch.Stop()
+	defer genaiBatch.Stop()
+	defer conteudoBatch.Stop()
 	otlpRc.SetLogBatcher(logBatch)
 	otlpRc.SetSpanBatcher(spanBatch)
+	modoConteudo := otlp.ParseConteudoIA(config.GenAIConteudo())
+	otlpRc.SetGenAI(ch, genaiBatch, conteudoBatch, modoConteudo)
+	log.Info("chamadas de IA", "conteudo", string(modoConteudo))
 
 	// Rate limiting por chave (serverkey/IP) nos endpoints públicos de ingestão.
 	rps, burst := config.RateLimit()

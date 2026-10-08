@@ -236,6 +236,11 @@ export function formatValue(
       return num(value, 0);
     case "bool":
       return value >= 0.5 ? "sim" : "não";
+    // Custo de chamada de IA costuma ser fração de centavo: abaixo de US$ 0,01 ganha
+    // casas, senão "US$ 0,00" diria que não custou nada (também no eixo do gráfico,
+    // onde 2 casas punham "US$ 0" em todas as marcas).
+    case "usd":
+      return `US$ ${num(value, value !== 0 && Math.abs(value) < 0.01 ? 4 : 2)}`;
     default:
       return num(value, opts.compact ? 1 : 2);
   }
@@ -284,6 +289,12 @@ export function rotulosEixo(splits: (number | null)[], unit: Unit): string[] {
     r = splits.map((v) => formatValue(v, unit, { percentFrac: casas }));
   }
   return r;
+}
+
+/** Largura do eixo Y (px) que cabe o rótulo mais longo a 11 px; nunca menos que 56. */
+export function larguraEixoY(rotulos: (string | null)[] | undefined): number {
+  const maior = Math.max(0, ...(rotulos ?? []).map((r) => (r ?? "").length));
+  return Math.max(56, Math.ceil(maior * 6.6) + 18);
 }
 
 export function unitFormatter(unit: Unit, compact = false): (v: number | null | undefined) => string {

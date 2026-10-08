@@ -52,6 +52,12 @@ const (
 	PermGerenciarAgentes  Permissao = "gerenciar_agentes"  // inscrever/revogar agentes
 	PermGerenciarUsuarios Permissao = "gerenciar_usuarios" // usuários, papéis, tokens, MCP
 	PermVerCredencial     Permissao = "ver_credencial"     // nunca devolve a senha; só troca/teste
+	// PermVerConteudoIA lê prompt e resposta gravados das chamadas de IA. Leitor vê
+	// custo, tokens e erro, mas não o conteúdo: prompt costuma trazer dado pessoal.
+	PermVerConteudoIA Permissao = "ver_conteudo_ia"
+	// PermApagarDadosIA apaga chamadas e conteúdo de IA (purge). É irreversível —
+	// inclusive "todo o conteúdo" —, então pede papel de admin, 2FA e reautenticação.
+	PermApagarDadosIA Permissao = "apagar_dados_ia"
 )
 
 // matriz é a tabela da ARQUITETURA §14: quem pode o quê.
@@ -64,6 +70,8 @@ var matriz = map[Permissao]map[string]bool{
 	PermGerenciarAgentes:  {PapelAdmin: true},
 	PermGerenciarUsuarios: {PapelAdmin: true},
 	PermVerCredencial:     {PapelAdmin: true},
+	PermVerConteudoIA:     {PapelAdmin: true, PapelOperador: true},
+	PermApagarDadosIA:     {PapelAdmin: true},
 }
 
 // criticas exigem reautenticação recente (senha/2FA de novo nos últimos minutos).
@@ -73,6 +81,10 @@ var criticas = map[Permissao]bool{
 	PermGerenciarConexoes: true,
 	PermGerenciarUsuarios: true,
 	PermVerCredencial:     true,
+	// Prompt de cliente é dado pessoal: ler o conteúdo das conversas pede a mesma
+	// confirmação de identidade que ver credencial.
+	PermVerConteudoIA: true,
+	PermApagarDadosIA: true,
 }
 
 // Pode diz se o papel tem a permissão.

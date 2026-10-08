@@ -105,11 +105,11 @@ var severityUnclassified = metrics.NewCounter(
 func FromResourceLogs(tenant string, rls []*lpb.ResourceLogs) []model.LogRecord {
 	var out []model.LogRecord
 	for _, rl := range rls {
-		resAttrs := attrsToLabels(nil, rl.GetResource().GetAttributes())
+		resAttrs := attrsToLabelsTexto(nil, rl.GetResource().GetAttributes())
 		service := resAttrs["service.name"]
 		for _, sl := range rl.GetScopeLogs() {
 			for _, lr := range sl.GetLogRecords() {
-				labels := attrsToLabels(resAttrs, lr.GetAttributes())
+				labels := attrsToLabelsTexto(resAttrs, lr.GetAttributes())
 				ensureHostLabel(labels)
 				ts := lr.GetTimeUnixNano()
 				if ts == 0 {

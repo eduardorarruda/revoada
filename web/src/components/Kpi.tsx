@@ -66,22 +66,32 @@ export function Kpi({ rotulo, valor, sub, tone, href, title, loading }: KpiProps
  * Número com a unidade menor ao lado ("223,6" grande, "KB/s" menor), na mesma
  * linha: junto e do mesmo tamanho, "223,6 KB/s" quebrava em duas linhas no cartão
  * estreito e a unidade disputava atenção com o número. Mesmo desenho da TV.
+ *
+ * A unidade pode vir ANTES ("US$ 12,40"): ela também fica menor e fora do número,
+ * para o cartão de 400px não estourar e o CountUp animar só os dígitos.
  */
+/** Símbolo de moeda que pode vir antes do número ("US$", "R$", "€"). */
+const MOEDA_ANTES = /^[A-Z]{0,3}[$€£]$/;
+
 function ValorKpi({ texto }: { texto: string }) {
   // Mesma estrutura com ou sem número (ver NumeroTV): o CountUp não pode ser
-  // remontado quando o valor vira "—", senão perde o último valor medido.
+  // remontado quando o valor vira "—", senão perde o último valor medido. Por isso
+  // as unidades entram como `cond && <span/>`: a posição do CountUp não muda.
   const p = separar(texto);
-  const unidade = p?.depois.trim();
-  const numero = p && unidade ? texto.slice(0, texto.length - p.depois.length) : texto;
+  const antes = p && MOEDA_ANTES.test(p.antes.trim()) ? p.antes.trim() : "";
+  const depois = p?.depois.trim() ?? "";
+  const inicio = p && antes ? p.antes.length : 0;
+  const fim = p && depois ? texto.length - p.depois.length : texto.length;
   return (
     <>
-      <CountUp texto={numero} />
-      {unidade && <span className="kpi__unidade">{unidade}</span>}
+      {antes && <span className="kpi__unidade kpi__unidade--antes">{antes}</span>}
+      <CountUp texto={texto.slice(inicio, fim)} />
+      {depois && <span className="kpi__unidade">{depois}</span>}
     </>
   );
 }
 
 /** Faixa de indicadores. Mobile-first: 2 colunas no celular, 3 no tablet, 6 no desktop. */
-export function KpiGrid({ children }: { children: ReactNode }) {
-  return <div className="kpi-grid">{children}</div>;
+export function KpiGrid({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={className ? `kpi-grid ${className}` : "kpi-grid"}>{children}</div>;
 }

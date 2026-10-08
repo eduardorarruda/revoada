@@ -508,3 +508,28 @@ func TestRenderAssuntoDizOServidor(t *testing.T) {
 		}
 	}
 }
+
+func TestFmtValueSeriesDeIA(t *testing.T) {
+	casos := []struct {
+		metrica string
+		v       float64
+		quer    string
+	}{
+		{"llm.custo_usd", 18.2, "US$ 18,20"},
+		{"llm.custo_usd", 0.0042, "US$ 0,0042"},
+		{"llm.custo_usd", 0, "US$ 0,00"},
+		{"llm.latencia_p95_ms", 820, "820 ms"},
+		{"llm.latencia_p95_ms", 4200, "4,2 s"},
+		{"llm.tokens.entrada", 1840000, "1.840.000"},
+		{"llm.tokens.saida", 999, "999"},
+		{"llm.chamadas", 12, "12"},
+	}
+	for _, c := range casos {
+		if got := fmtValue(c.metrica, c.v); got != c.quer {
+			t.Errorf("%s %v → %q, quer %q", c.metrica, c.v, got, c.quer)
+		}
+	}
+	if friendlyMetric("llm.custo_usd") != "Gasto com IA" {
+		t.Fatal("nome da série de custo")
+	}
+}

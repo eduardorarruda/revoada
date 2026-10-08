@@ -49,7 +49,9 @@ func (rc *Receiver) sampleSpans(spans []model.Span) []model.Span {
 	seen := map[string]bool{}
 	for _, s := range spans {
 		seen[s.TraceID] = true
-		if s.StatusCode == "ERROR" || s.DurationMs >= slow {
+		// Trace com chamada de IA nunca é amostrado: custo e tokens são SOMAS, e somar
+		// sobre 20% das chamadas daria um gasto cinco vezes menor que a fatura.
+		if s.StatusCode == "ERROR" || s.DurationMs >= slow || s.GenAI != nil {
 			interesting[s.TraceID] = true
 		}
 	}
@@ -218,6 +220,7 @@ func (rc *Receiver) TracesHTTPHandler() http.HandlerFunc {
 			http.Error(w, "erro gravando traces", code)
 			return
 		}
+		rc.ingestGenAI(r.Context(), spans)
 		resp := &ctpb.ExportTraceServiceResponse{}
 		if total, msg := rejectionSummary(rejected); total > 0 {
 			resp.PartialSuccess = &ctpb.ExportTracePartialSuccess{
@@ -260,6 +263,7 @@ func (g *grpcTracesServer) Export(ctx context.Context, req *ctpb.ExportTraceServ
 	case http.StatusServiceUnavailable:
 		return nil, status.Error(codes.Unavailable, err.Error())
 	}
+	g.rc.ingestGenAI(ctx, spans)
 	resp := &ctpb.ExportTraceServiceResponse{}
 	if total, msg := rejectionSummary(rejected); total > 0 {
 		resp.PartialSuccess = &ctpb.ExportTracePartialSuccess{

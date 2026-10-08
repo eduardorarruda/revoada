@@ -91,10 +91,12 @@ function sevState(sev: string): State {
   }
 }
 
-export function HostDetail({ hostname }: { hostname: string }) {
+// `initialWindow` (#/hosts/<host>?janela=24h) abre numa janela escolhida por quem
+// linkou, como o replay de Agentes de IA ("Ver host nesta hora"). Id desconhecido = 6h.
+export function HostDetail({ hostname, initialWindow = "" }: { hostname: string; initialWindow?: string }) {
   const { hostLabel } = useHostNames();
   const [tab, setTab] = useState<TabId>("overview");
-  const [windowId, setWindowId] = useState("6h");
+  const [windowId, setWindowId] = useState(() => (WINDOWS.some((w) => w.id === initialWindow) ? initialWindow : "6h"));
   const win = WINDOWS.find((w) => w.id === windowId) ?? WINDOWS[1];
 
   // Inventário do host (dados "de placa": SO, kernel, CPU, uptime…).
