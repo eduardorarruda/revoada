@@ -40,6 +40,14 @@ func TestMatrizDePapeis(t *testing.T) {
 		{PapelAdmin, PermGerenciarConexoes, true},
 		{PapelAdmin, PermGerenciarUsuarios, true},
 		{"desconhecido", PermExecutarMigracao, false},
+		// Conteúdo das conversas de IA: leitor vê custo e erro, nunca o prompt.
+		{PapelLeitor, PermVerConteudoIA, false},
+		{PapelOperador, PermVerConteudoIA, true},
+		{PapelAdmin, PermVerConteudoIA, true},
+		{PapelLeitor, PermApagarDadosIA, false},
+		{PapelOperador, PermApagarDadosIA, false},
+		{PapelAdmin, PermApagarDadosIA, true},
+		{"desconhecido", PermVerConteudoIA, false},
 	}
 	for _, c := range casos {
 		if got := Pode(c.papel, c.p); got != c.pode {
@@ -86,5 +94,41 @@ func TestExigeRespondeJSON403(t *testing.T) {
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/x", nil)) // sem claims
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("sem claims: %d", rec.Code)
+	}
+}
+
+// TestVerConteudoIAECritica: prompt de cliente é dado pessoal — ler o conteúdo pede a
+// mesma confirmação de identidade (2FA + reautenticação) que ver credencial.
+func TestVerConteudoIAECritica(t *testing.T) {
+	if !criticas[PermVerConteudoIA] {
+		t.Fatal("PermVerConteudoIA tem de ser crítica")
+	}
+	agora := time.Unix(1_800_000_000, 0)
+	futuro := agora.Add(time.Minute).Unix()
+	casos := []struct {
+		nome string
+		c    Claims
+		quer string
+	}{
+		{"leitor nunca", Claims{Role: PapelLeitor, MFA: true, Reauth: futuro}, CodigoSemPermissao},
+		{"operador sem 2FA", Claims{Role: PapelOperador, Reauth: futuro}, CodigoMFANecessario},
+		{"operador sem reauth", Claims{Role: PapelOperador, MFA: true}, CodigoReautenticacao},
+		{"operador com reauth vencida", Claims{Role: PapelOperador, MFA: true, Reauth: agora.Add(-time.Second).Unix()}, CodigoReautenticacao},
+		{"operador completo", Claims{Role: PapelOperador, MFA: true, Reauth: futuro}, ""},
+		{"admin sem reauth", Claims{Role: PapelAdmin, MFA: true}, CodigoReautenticacao},
+		{"admin completo", Claims{Role: PapelAdmin, MFA: true, Reauth: futuro}, ""},
+	}
+	for _, c := range casos {
+		t.Run(c.nome, func(t *testing.T) {
+			if _, cod := avaliar(c.c, PermVerConteudoIA, agora); cod != c.quer {
+				t.Fatalf("código %q, quer %q", cod, c.quer)
+			}
+		})
+	}
+}
+
+func TestApagarDadosIAECritica(t *testing.T) {
+	if !criticas[PermApagarDadosIA] {
+		t.Fatal("apagar dados de IA é irreversível: tem de pedir 2FA e reautenticação")
 	}
 }

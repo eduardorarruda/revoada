@@ -6,11 +6,14 @@ import { validarPreco, camposIniciais } from "./PrecoForm";
 const listIaPrecos = vi.fn();
 const criarIaPreco = vi.fn();
 const apagarIaPreco = vi.fn();
+const purgeIa = vi.fn();
 const isAdmin = vi.fn(() => true);
 vi.mock("../../api.ia", () => ({
   listIaPrecos: (...a: unknown[]) => listIaPrecos(...a),
   criarIaPreco: (...a: unknown[]) => criarIaPreco(...a),
   apagarIaPreco: (...a: unknown[]) => apagarIaPreco(...a),
+  purgeIa: (...a: unknown[]) => purgeIa(...a),
+  FRASE_PURGE_TODO_CONTEUDO: "APAGAR TODO O CONTEÚDO DE IA",
 }));
 vi.mock("../../api", () => ({ isAdmin: () => isAdmin() }));
 
@@ -36,6 +39,7 @@ const resposta: IaPrecosResposta = {
 };
 
 beforeEach(() => {
+  purgeIa.mockReset().mockResolvedValue(undefined);
   listIaPrecos.mockReset().mockResolvedValue(resposta);
   criarIaPreco.mockReset().mockResolvedValue(undefined);
   apagarIaPreco.mockReset().mockResolvedValue(undefined);
@@ -56,38 +60,52 @@ describe("Modelos e preços", () => {
     expect(await screen.findByText("gpt-4o-mini*")).toBeInTheDocument();
     expect(screen.getByText("prefixo")).toBeInTheDocument();
     expect(screen.getByText("não cadastrado")).toBeInTheDocument(); // cache de escrita nulo
-    expect(screen.getByRole("region", { name: "Tabela de referência desatualizada" })).toHaveTextContent("370 dias");
+    const aviso = screen.getByRole("note", { name: "Tabela de referência desatualizada" });
+    expect(aviso).toHaveTextContent("370 dias");
+    expect(aviso).toHaveTextContent("out/2025");
+    // Origem dita como gente lê, não o código cru.
+    expect(screen.getByText("tabela de referência (out/2025)")).toBeInTheDocument();
+    expect(screen.queryByText("referencia-2025-10")).not.toBeInTheDocument();
+    expect(screen.getByText(/acme · 42 chamadas/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mais informações sobre tabela de preços" })).toBeInTheDocument();
   });
 
-  it("leitor vê a tabela, mas não o formulário, os botões de cadastrar nem os de apagar", async () => {
+  it("leitor vê a tabela e uma linha explicando, mas não os botões de cadastrar, apagar nem a seção de dados", async () => {
     isAdmin.mockReturnValue(false);
     renderizar();
     await screen.findByText("gpt-4o-mini*");
-    expect(screen.queryByRole("form", { name: "Cadastrar preço" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Cadastrar preço" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Cadastrar preço/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Apagar preço/ })).not.toBeInTheDocument();
+    expect(screen.queryByText("Dados e privacidade")).not.toBeInTheDocument();
     expect(screen.getByText(/Só administradores cadastram e apagam preços/)).toBeInTheDocument();
   });
 
-  it("'Cadastrar preço' de um modelo sem preço preenche o formulário", async () => {
+  it("'Cadastrar preço' de um modelo sem preço abre o modal já preenchido", async () => {
     renderizar();
     const lista = (await screen.findByText("acme-large")).closest("li") as HTMLElement;
-    fireEvent.click(within(lista).getByRole("button", { name: "Cadastrar preço" }));
-    const form = screen.getByRole("form", { name: "Cadastrar preço" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.click(within(lista).getByRole("button", { name: "Cadastrar preço de acme-large" }));
+    const dialogo = screen.getByRole("dialog", { name: "Cadastrar preço de acme-large" });
+    const form = within(dialogo).getByRole("form", { name: "Cadastrar preço" });
     expect(within(form).getByLabelText(/Provedor/)).toHaveValue("acme");
     expect(within(form).getByLabelText(/^Modelo/)).toHaveValue("acme-large");
+    fireEvent.click(within(form).getByRole("button", { name: "Cancelar" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("admin cadastra um preço com o corpo do contrato", async () => {
+  it("admin cadastra um preço pelo modal, com o corpo do contrato, e o modal fecha", async () => {
     renderizar();
-    const form = await screen.findByRole("form", { name: "Cadastrar preço" });
+    await screen.findByText("gpt-4o-mini*");
+    expect(screen.queryByRole("form", { name: "Cadastrar preço" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cadastrar preço" }));
+    const form = screen.getByRole("form", { name: "Cadastrar preço" });
     const preencher = (rotulo: RegExp, valor: string) => fireEvent.change(within(form).getByLabelText(rotulo), { target: { value: valor } });
     preencher(/Provedor/, "openai");
     preencher(/^Modelo/, "gpt-5*");
     preencher(/^Entrada/, "1,25");
     preencher(/^Saída/, "10");
     preencher(/Vale a partir de/, "2026-10-01");
-    fireEvent.click(within(form).getByRole("button", { name: "Cadastrar preço" }));
+    fireEvent.click(within(form).getByRole("button", { name: "Salvar preço" }));
     await waitFor(() => expect(criarIaPreco).toHaveBeenCalledTimes(1));
     expect(criarIaPreco).toHaveBeenCalledWith({
       provedor: "openai",
@@ -100,6 +118,16 @@ describe("Modelos e preços", () => {
       vigente_desde: "2026-10-01T00:00:00Z",
     });
     await waitFor(() => expect(listIaPrecos).toHaveBeenCalledTimes(2)); // recarrega a tabela
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("tabela vazia vira guia com 'Cadastrar preço' (admin)", async () => {
+    listIaPrecos.mockResolvedValue({ ...resposta, precos: [], modelos_sem_preco: [] });
+    renderizar();
+    const titulo = await screen.findByRole("heading", { name: "Nenhum preço cadastrado" });
+    const estado = titulo.closest(".empty-state") as HTMLElement;
+    fireEvent.click(within(estado).getByRole("button", { name: "Cadastrar preço" }));
+    expect(screen.getByRole("dialog", { name: "Cadastrar preço" })).toBeInTheDocument();
   });
 
   it("apagar pede confirmação nomeada antes de chamar a API", async () => {
@@ -109,6 +137,14 @@ describe("Modelos e preços", () => {
     const dialogo = screen.getByRole("dialog");
     fireEvent.click(within(dialogo).getByRole("button", { name: "Apagar o preço de gpt-4o-mini*" }));
     await waitFor(() => expect(apagarIaPreco).toHaveBeenCalledWith(1));
+  });
+
+  it("admin vê a seção discreta 'Dados e privacidade', fechada", async () => {
+    renderizar();
+    await screen.findByText("gpt-4o-mini*");
+    const secao = screen.getByText("Dados e privacidade").closest("details") as HTMLDetailsElement;
+    expect(secao.open).toBe(false);
+    expect(purgeIa).not.toHaveBeenCalled();
   });
 });
 

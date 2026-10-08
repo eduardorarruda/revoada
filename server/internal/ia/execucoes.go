@@ -106,7 +106,8 @@ func lerExecucao(r map[string]any) Execucao {
 	return e
 }
 
-// custearExecucoes calcula o custo de cada execução com o preço vigente no início dela.
+// custearExecucoes calcula o custo de cada execução com o preço vigente no início dela
+// (ou no começo do trecho, se o preço mudou durante a execução).
 func (h *Handler) custearExecucoes(ctx context.Context, f Filtros, ex []Execucao) error {
 	if len(ex) == 0 {
 		return nil
@@ -117,20 +118,22 @@ func (h *Handler) custearExecucoes(ctx context.Context, f Filtros, ex []Execucao
 		ids[i] = quote(e.TraceID)
 		idx[e.TraceID] = i
 	}
-	tab, _, err := h.tabela(ctx)
+	tab, ps, err := h.tabela(ctx)
 	if err != nil {
 		return err
 	}
-	rows, err := h.ch.QueryJSON(ctx, fmt.Sprintf(`SELECT trace_id, provedor, modelo, %s FROM genai_spans
-		WHERE %s AND operacao IN %s AND trace_id IN (%s) GROUP BY trace_id, provedor, modelo`,
-		colunasUso(""), f.onde(""), opsDeModelo, strings.Join(ids, ",")))
+	fs := fronteiras(ps, f.De, f.Ate)
+	rows, err := h.ch.QueryJSON(ctx, fmt.Sprintf(`SELECT trace_id, %s AS trecho, provedor, modelo, %s FROM genai_spans
+		WHERE %s AND operacao IN %s AND trace_id IN (%s) GROUP BY trace_id, trecho, provedor, modelo`,
+		exprTrecho("ts", fs, false), colunasUso(""), f.onde(""), opsDeModelo, strings.Join(ids, ",")))
 	if err != nil {
 		return err
 	}
 	custos := make([]custo, len(ex))
 	for _, r := range rows {
 		i := idx[texto(r["trace_id"])]
-		custos[i].somar(calcular(tab, lerUso(r, time.UnixMilli(ex[i].InicioMs))))
+		quando := inicioDoTrecho(time.UnixMilli(ex[i].InicioMs), inteiro(r["trecho"]), fs)
+		custos[i].somar(calcular(tab, lerUso(r, quando)))
 	}
 	for i := range ex {
 		ex[i].CustoUSD, ex[i].CustoParcial = custos[i].usdOuNulo(), custos[i].parcial()

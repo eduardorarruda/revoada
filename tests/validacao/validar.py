@@ -52,6 +52,9 @@ def args_cli():
                    help="chave de ingestão de um servidor (X-Revoada-Key) para o grupo ia (ou RV_CHAVE)")
     p.add_argument("--duracao-ia", type=int, default=480,
                    help="segundos esperando a série llm.* (o runner fecha cada minuto com 5 min de atraso)")
+    p.add_argument("--ia-sem-descartaveis", action="store_true",
+                   help="grupo ia: não cria usuários (leitor/operador) nem tokens MCP descartáveis "
+                        "(pula os casos de permissões e de MCP)")
     a = p.parse_args()
     a.saida_dir = os.path.dirname(a.relatorio) if a.relatorio else tempfile.mkdtemp(prefix="revoada-validacao-")
     if not a.relatorio:

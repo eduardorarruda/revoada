@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { fmtCustoPasso, fmtInteiro, fmtMs, fmtPct, fmtTokens, fmtUsd, NAO_INFORMADO, SEM_PRECO } from "./formato";
+import {
+  fmtCustoPasso,
+  fmtInteiro,
+  fmtMs,
+  fmtOrigemPreco,
+  fmtPct,
+  fmtReferencia,
+  fmtTokens,
+  fmtUsd,
+  NAO_INFORMADO,
+  SEM_PRECO,
+} from "./formato";
 
 describe("fmtUsd", () => {
   it("dólar com vírgula decimal e duas casas", () => {
@@ -76,5 +87,15 @@ describe("fmtCustoPasso", () => {
       origem: "o modelo não tem preço cadastrado",
     });
     expect(fmtCustoPasso({ custo_usd: null, custo_origem: "sem_tokens", preco_data: "" }).valor).toBe("sem tokens");
+  });
+});
+
+describe("origem do preço", () => {
+  it("referência vira texto de gente; vazio é 'não informada'", () => {
+    expect(fmtReferencia("2025-10")).toBe("out/2025");
+    expect(fmtReferencia("v3")).toBe("v3");
+    expect(fmtOrigemPreco("referencia-2025-10")).toBe("tabela de referência (out/2025)");
+    expect(fmtOrigemPreco("")).toBe("não informada");
+    expect(fmtOrigemPreco("manual")).toBe("manual");
   });
 });

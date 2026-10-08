@@ -60,6 +60,23 @@ export function fmtDataPreco(iso: string): string {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
 }
 
+const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"] as const;
+
+/** Versão da tabela de referência ("2025-10") como gente lê: "out/2025". Fora do formato, volta como veio. */
+export function fmtReferencia(ref: string): string {
+  const m = /^(\d{4})-(\d{2})$/.exec(ref.trim());
+  const mes = m ? MESES[Number(m[2]) - 1] : undefined;
+  return m && mes ? `${mes}/${m[1]}` : ref;
+}
+
+/** Origem de uma linha de preço: "referencia-2025-10" → "tabela de referência (out/2025)"; vazia → "não informada". */
+export function fmtOrigemPreco(origem: string): string {
+  const o = origem.trim();
+  if (!o) return "não informada";
+  const ref = /^referencia-(.+)$/.exec(o);
+  return ref ? `tabela de referência (${fmtReferencia(ref[1])})` : o;
+}
+
 /** Custo de um passo e a origem dele, dita com honestidade. */
 export function fmtCustoPasso(p: {
   custo_usd: number | null;

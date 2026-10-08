@@ -1,5 +1,5 @@
 // Peças compartilhadas pelas telas de Agentes de IA.
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { CircleAlert, Info, TriangleAlert } from "lucide-react";
 import { InfoTip } from "../../components";
 import { mensagemDeErro } from "../../format";
@@ -9,8 +9,12 @@ export interface Carga<T> {
   dados: T | null;
   erro: string | null;
   carregando: boolean;
+  /** Quando chegou o último dado bom (epoch ms); null antes do primeiro. */
+  atualizadoEm: number | null;
   recarregar: () => void;
 }
+
+type EstadoCarga<T> = Omit<Carga<T>, "recarregar">;
 
 /**
  * Busca dados e guarda o último resultado. Uma resposta atrasada de uma busca antiga
@@ -18,10 +22,11 @@ export interface Carga<T> {
  * na tela e diz o que falhou. `buscar` deve vir de useCallback: é a dependência.
  */
 export function useCarga<T>(buscar: () => Promise<T>, alternativaErro = "Não foi possível carregar os dados."): Carga<T> {
-  const [estado, setEstado] = useState<{ dados: T | null; erro: string | null; carregando: boolean }>({
+  const [estado, setEstado] = useState<EstadoCarga<T>>({
     dados: null,
     erro: null,
     carregando: true,
+    atualizadoEm: null,
   });
   const seq = useRef(0);
 
@@ -30,10 +35,10 @@ export function useCarga<T>(buscar: () => Promise<T>, alternativaErro = "Não fo
     setEstado((e) => ({ ...e, carregando: true }));
     buscar().then(
       (dados) => {
-        if (id === seq.current) setEstado({ dados, erro: null, carregando: false });
+        if (id === seq.current) setEstado({ dados, erro: null, carregando: false, atualizadoEm: Date.now() });
       },
       (e: unknown) => {
-        if (id === seq.current) setEstado((ant) => ({ dados: ant.dados, erro: mensagemDeErro(e, alternativaErro), carregando: false }));
+        if (id === seq.current) setEstado((ant) => ({ ...ant, erro: mensagemDeErro(e, alternativaErro), carregando: false }));
       },
     );
   }, [buscar, alternativaErro]);
@@ -48,6 +53,35 @@ export function useCarga<T>(buscar: () => Promise<T>, alternativaErro = "Não fo
   return { ...estado, recarregar };
 }
 
+/** O que a vista conta para a casca: se está buscando e de quando é o dado na tela. */
+export interface SinalCarga {
+  carregando: boolean;
+  temDados: boolean;
+  atualizadoEm: number | null;
+}
+
+export const SINAL_VAZIO: SinalCarga = { carregando: false, temDados: false, atualizadoEm: null };
+
+const CargaDaVista = createContext<(s: SinalCarga) => void>(() => {});
+
+/** A casca (Ia.tsx) recebe aqui o estado de carga da vista aberta. */
+export const ProvedorCargaDaVista = CargaDaVista.Provider;
+
+/**
+ * A vista avisa a casca do estado da sua carga principal: é o que gira o botão
+ * Atualizar, esmaece o dado velho durante a recarga e escreve "atualizado há X".
+ * Fora da casca (testes, outra tela) não faz nada.
+ */
+export function useSinalizarCarga(c: Pick<Carga<unknown>, "carregando" | "dados" | "atualizadoEm">): void {
+  const sinalizar = useContext(CargaDaVista);
+  const temDados = c.dados != null;
+  useEffect(() => {
+    sinalizar({ carregando: c.carregando, temDados, atualizadoEm: c.atualizadoEm });
+  }, [sinalizar, c.carregando, temDados, c.atualizadoEm]);
+  // Saiu da tela: a próxima vista começa sem herdar o estado desta.
+  useEffect(() => () => sinalizar(SINAL_VAZIO), [sinalizar]);
+}
+
 /** Código HTTP de um erro do cliente da API (403 de autorização ou "404: …"). */
 export function statusDoErro(e: unknown): number | null {
   if (typeof e === "object" && e !== null && "codigo" in e) return 403;
@@ -58,24 +92,38 @@ export function statusDoErro(e: unknown): number | null {
 type TomAviso = "warn" | "crit" | "info" | "neutro";
 const ICONE_AVISO = { warn: TriangleAlert, crit: CircleAlert, info: Info, neutro: Info } as const;
 
-/** Aviso em faixa: a cor diz o estado e o ícone repete a informação (não só cor). */
-export function Aviso({ tom, titulo, children }: { tom: TomAviso; titulo: string; children?: ReactNode }) {
+/**
+ * Aviso em faixa: a cor diz o estado e o ícone repete a informação (não só cor).
+ * É uma nota (role="note") e não uma região: região é marco de navegação, e uma
+ * tela com cinco avisos virava cinco marcos. Falha de carga usa `papel="alert"`.
+ */
+export function Aviso({
+  tom,
+  titulo,
+  papel = "note",
+  children,
+}: {
+  tom: TomAviso;
+  titulo: string;
+  papel?: "note" | "alert";
+  children?: ReactNode;
+}) {
   const Icone = ICONE_AVISO[tom];
   return (
-    <section className={`ia-aviso ia-aviso--${tom}`} aria-label={titulo}>
+    <div className={`ia-aviso ia-aviso--${tom}`} role={papel} aria-label={titulo}>
       <Icone size={18} aria-hidden={true} />
       <div className="ia-aviso__corpo">
         <strong>{titulo}</strong>
         {children}
       </div>
-    </section>
+    </div>
   );
 }
 
 /** Mensagem de falha de carga, com o motivo e o que acontece a seguir. */
 export function FalhaCarga({ erro, onTentar }: { erro: string; onTentar: () => void }) {
   return (
-    <Aviso tom="crit" titulo="A consulta falhou">
+    <Aviso tom="crit" titulo="A consulta falhou" papel="alert">
       <p>{erro}</p>
       <p>
         <button type="button" className="btn btn--ghost" onClick={onTentar}>

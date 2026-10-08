@@ -538,7 +538,7 @@ func New(d Deps) http.Handler {
 		mux.Handle("GET /api/ia/precos", protected(d.IA.PrecosHTTP))
 		mux.Handle("POST /api/ia/precos", admin(d.IA.CriarPrecoHTTP))
 		mux.Handle("DELETE /api/ia/precos/{id}", admin(d.IA.ApagarPrecoHTTP))
-		mux.Handle("POST /api/ia/purge", admin(d.IA.PurgeHTTP))
+		mux.Handle("POST /api/ia/purge", exige(auth.PermApagarDadosIA, d.IA.PurgeHTTP))
 	}
 
 	// Status page pública (P6.4): sem autenticação, cache curto.

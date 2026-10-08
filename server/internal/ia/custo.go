@@ -2,9 +2,12 @@ package ia
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/eduardorarruda/revoada/core/genai"
+	"github.com/eduardorarruda/revoada/server/internal/store"
 )
 
 // linhaUso é o consumo de um grupo de chamadas de modelo (um modelo num intervalo,
@@ -127,4 +130,57 @@ func (t *totaisUso) somar(l linhaUso, c custo) {
 	t.Uso.CacheEscrita += l.Uso.CacheEscrita
 	t.CustoInformado += l.CustoInformado
 	t.Custo.somar(c)
+}
+
+// Preço que muda no meio de um intervalo. As linhas vêm agrupadas por intervalo do
+// gráfico (1 min a 1 dia) e o preço é escolhido pelo instante da linha; sem cuidado, um
+// intervalo de 15 min que atravessa uma troca de preço seria cobrado inteiro pelo
+// preço antigo. Por isso cada intervalo é partido nas FRONTEIRAS de vigência que caem
+// dentro da janela: o SQL agrupa também por "trecho" (entre duas fronteiras) e cada
+// trecho é cobrado pelo preço que valia no começo dele. Sem troca de preço na janela,
+// trecho é a constante 0 e o agrupamento é o de sempre.
+
+// fronteiras devolve, em ordem, os instantes de vigência estritamente dentro da janela.
+func fronteiras(ps []store.PrecoLLM, de, ate time.Time) []time.Time {
+	vistos := map[int64]bool{}
+	var out []time.Time
+	for _, p := range ps {
+		t := p.VigenteDesde
+		if t.After(de) && t.Before(ate) && !vistos[t.UnixMilli()] {
+			vistos[t.UnixMilli()] = true
+			out = append(out, t)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Before(out[j]) })
+	return out
+}
+
+// exprTrecho é a expressão SQL do trecho da linha: 0 antes da primeira fronteira, 1
+// entre a primeira e a segunda… agregado=true compara com a coluna DateTime de genai_1m.
+func exprTrecho(col string, fs []time.Time, agregado bool) string {
+	if len(fs) == 0 {
+		return "0"
+	}
+	partes := make([]string, 0, 2*len(fs)+1)
+	for i, t := range fs {
+		lim := fmt.Sprintf("fromUnixTimestamp64Milli(%d)", t.UnixMilli())
+		if agregado {
+			lim = fmt.Sprintf("toDateTime(%d)", t.Unix())
+		}
+		partes = append(partes, fmt.Sprintf("%s < %s", col, lim), fmt.Sprint(i))
+	}
+	partes = append(partes, fmt.Sprint(len(fs)))
+	return "multiIf(" + strings.Join(partes, ", ") + ")"
+}
+
+// inicioDoTrecho é o instante que decide o preço da linha: o começo do intervalo, ou a
+// fronteira de vigência que abriu o trecho, se ela vier depois.
+func inicioDoTrecho(inicio time.Time, trecho int64, fs []time.Time) time.Time {
+	if trecho <= 0 || int(trecho) > len(fs) {
+		return inicio
+	}
+	if f := fs[trecho-1]; f.After(inicio) {
+		return f
+	}
+	return inicio
 }

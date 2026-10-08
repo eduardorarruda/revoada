@@ -40,3 +40,7 @@ server/internal/webui/dist/*
 
 # configuração local do Claude Code (de cada desenvolvedor)
 .claude/
+
+# Python
+__pycache__/
+*.pyc

@@ -3,7 +3,7 @@
 // regras.
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { HEARTBEAT_METRIC } from "./tv/valorAlerta";
-import { Bell, Bot, Layers } from "lucide-react";
+import { Bell, Layers } from "lucide-react";
 import { usePolling } from "../hooks/usePolling";
 import {
   AdvancedSection,
@@ -809,7 +809,7 @@ export function Alerts() {
                 onClick={() => setModelosIA(true)}
                 title="Modelos prontos para agentes de IA: gasto por hora, erros, latência, loop e modelo sem preço."
               >
-                <Bot size={16} aria-hidden /> Agentes de IA
+                + Agentes de IA
               </Button>
               <Button variant="primary" onClick={() => setWizard({ mode: "new" })}>
                 Nova regra

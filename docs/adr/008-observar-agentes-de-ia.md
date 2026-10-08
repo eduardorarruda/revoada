@@ -48,5 +48,7 @@ parte do Revoada chama um modelo, guarda chave de provedor ou manda telemetria p
 - (−) Custo é **estimativa** pela tabela de preços (com vigência); a tela sempre diz a
   data do preço usado e mostra "sem preço" em vez de inventar zero.
 - (−) Conteúdo de prompt é dado pessoal. Fica desligado por padrão, com redação, prazo
-  de 7 dias, permissão própria e leitura auditada.
+  de 7 dias, permissão própria (crítica: 2FA e reautenticação recente) e leitura
+  auditada. Pelo MCP, o escopo `ia_conteudo` não tem recorte por servidor (ver
+  docs/SEGURANCA.md).
 - O ADR 007 continua valendo para tudo que **usa** IA dentro do Revoada.

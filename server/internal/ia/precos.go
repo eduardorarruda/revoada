@@ -89,7 +89,7 @@ func (h *Handler) CriarPrecoHTTP(w http.ResponseWriter, r *http.Request) {
 	// provedor/modelo vão crus: o store normaliza (minúsculas), num lugar só.
 	p := store.PrecoLLM{Provedor: n.Provedor, Modelo: n.Modelo,
 		EntradaPor1M: *n.EntradaPor1M, SaidaPor1M: *n.SaidaPor1M, CacheLeituraPor1M: n.CacheLeituraPor1M,
-		CacheEscritaPor1M: n.CacheEscritaPor1M, VigenteDesde: h.agora().UTC().Truncate(time.Second), Origem: "manual"}
+		CacheEscritaPor1M: n.CacheEscritaPor1M, VigenteDesde: h.agora().UTC(), Origem: "manual"}
 	if n.VigenteDesde != nil {
 		p.VigenteDesde = n.VigenteDesde.UTC()
 	}

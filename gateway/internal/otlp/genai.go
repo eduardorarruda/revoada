@@ -88,12 +88,17 @@ func (rc *Receiver) ingestGenAI(ctx context.Context, spans []model.Span) {
 	if len(conteudo) == 0 {
 		return
 	}
-	if rc.conteudoBatch != nil {
+	switch {
+	case rc.conteudoBatch != nil:
 		if !rc.conteudoBatch.Enqueue(conteudo) {
 			rc.log.Warn("otlp: fila de conteúdo de IA cheia; conteúdo descartado", "linhas", len(conteudo))
 		}
-	} else if err := rc.genaiSink.InsertGenAIConteudo(ctx, conteudo); err != nil {
-		rc.log.Warn("otlp: gravando conteúdo de IA", "err", err)
+	case rc.genaiSink != nil:
+		if err := rc.genaiSink.InsertGenAIConteudo(ctx, conteudo); err != nil {
+			rc.log.Warn("otlp: gravando conteúdo de IA", "err", err)
+		}
+	default:
+		rc.log.Warn("otlp: conteúdo de IA sem destino configurado; descartado", "linhas", len(conteudo))
 	}
 }
 

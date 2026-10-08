@@ -22,15 +22,15 @@ func agentePorTrace(f Filtros) string {
 }
 
 // porAgente soma uso e custo por agente (execuções sem agente aparecem pelo service).
-func (h *Handler) porAgente(ctx context.Context, f Filtros, tab *genai.Tabela) ([]PorAgente, error) {
+func (h *Handler) porAgente(ctx context.Context, f Filtros, tab *genai.Tabela, fs []time.Time) ([]PorAgente, error) {
 	passo := escolherPasso(f.Ate.Sub(f.De))
 	rows, err := h.ch.QueryJSON(ctx, fmt.Sprintf(`SELECT ex.ag AS agente, s.service AS service,
 		s.provedor AS provedor, s.modelo AS modelo,
-		toUnixTimestamp(toStartOfInterval(s.ts, INTERVAL %d SECOND)) AS b, %s
+		toUnixTimestamp(toStartOfInterval(s.ts, INTERVAL %d SECOND)) AS b, %s AS trecho, %s
 		FROM genai_spans AS s INNER JOIN (%s) AS ex ON s.trace_id = ex.trace_id
 		WHERE %s AND s.operacao IN %s
-		GROUP BY agente, service, provedor, modelo, b`,
-		passo, colunasUso("s."), agentePorTrace(f), f.onde("s."), opsDeModelo))
+		GROUP BY agente, service, provedor, modelo, b, trecho`,
+		passo, exprTrecho("s.ts", fs, false), colunasUso("s."), agentePorTrace(f), f.onde("s."), opsDeModelo))
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func (h *Handler) porAgente(ctx context.Context, f Filtros, tab *genai.Tabela) (
 		if grupos[k] == nil {
 			grupos[k] = &totaisUso{}
 		}
-		l := lerUso(r, time.Unix(inteiro(r["b"]), 0))
+		l := lerUso(r, inicioDoTrecho(time.Unix(inteiro(r["b"]), 0), inteiro(r["trecho"]), fs))
 		grupos[k].somar(l, calcular(tab, l))
 	}
 	out := make([]PorAgente, 0, len(grupos))

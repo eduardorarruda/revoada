@@ -13,11 +13,19 @@ export type VistaIa =
 
 export type AbaIa = "visao" | "execucoes" | "ferramentas" | "precos";
 
-export const ABAS_IA: readonly { id: AbaIa; rotulo: string; caminho: string }[] = [
+export interface AbaInfo {
+  id: AbaIa;
+  rotulo: string;
+  /** Rótulo da tela estreita (abaixo de 480px), quando o completo não cabe. */
+  curto?: string;
+  caminho: string;
+}
+
+export const ABAS_IA: readonly AbaInfo[] = [
   { id: "visao", rotulo: "Visão geral", caminho: "/ia" },
   { id: "execucoes", rotulo: "Execuções", caminho: "/ia/execucoes" },
   { id: "ferramentas", rotulo: "Ferramentas", caminho: "/ia/ferramentas" },
-  { id: "precos", rotulo: "Modelos e preços", caminho: "/ia/precos" },
+  { id: "precos", rotulo: "Modelos e preços", curto: "Preços", caminho: "/ia/precos" },
 ];
 
 const PREFIXO_REPLAY = "/ia/execucoes/";

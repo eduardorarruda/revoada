@@ -15,7 +15,22 @@ describe("ModelosIA", () => {
   it("escolher um modelo entrega o preset ao assistente", () => {
     const escolher = vi.fn();
     render(<ModelosIA aberto onFechar={() => {}} onEscolher={escolher} />);
-    fireEvent.click(screen.getByText("Gasto com IA na última hora"));
+    fireEvent.click(screen.getByRole("button", { name: "Gasto com IA na última hora" }));
     expect(escolher).toHaveBeenCalledWith(expect.objectContaining({ metric: "llm.custo_usd", window_seconds: 3600 }));
+  });
+
+  it("cada modelo é um cartão de escolha .opcao: nome = título, explicação como descrição", () => {
+    render(<ModelosIA aberto onFechar={() => {}} onEscolher={() => {}} />);
+    const botoes = screen.getAllByRole("button").filter((b) => b.classList.contains("opcao"));
+    expect(botoes).toHaveLength(MODELOS_IA.length);
+    const loop = screen.getByRole("button", { name: "Agente em loop" });
+    expect(loop).toHaveClass("opcao");
+    expect(loop).toHaveAccessibleDescription(/fez mais de N chamadas de modelo/);
+    expect(loop.querySelector(".opcao__icone")).not.toBeNull();
+    // Sem estilo inline nem classes inexistentes.
+    expect(document.querySelector("[style]")).toBeNull();
+    expect(document.querySelector(".muted, .modelos-ia")).toBeNull();
+    // Sem travessão no texto da interface.
+    expect(document.body.textContent).not.toContain("—");
   });
 });

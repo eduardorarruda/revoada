@@ -130,7 +130,7 @@ func (h *Handler) Resumo(ctx context.Context, f Filtros) (Resumo, error) {
 	passo := escolherPasso(f.Ate.Sub(f.De))
 	res := Resumo{Janela: Janela{DeMs: f.De.UnixMilli(), AteMs: f.Ate.UnixMilli(), PassoS: passo},
 		Precos: infoReferencia(ps, h.agora())}
-	if err := h.preencherUso(ctx, f, passo, tab, &res); err != nil {
+	if err := h.preencherUso(ctx, f, passo, tab, fronteiras(ps, f.De, f.Ate), &res); err != nil {
 		return res, err
 	}
 	if err := h.preencherLatencias(ctx, f, &res); err != nil {
@@ -140,7 +140,7 @@ func (h *Handler) Resumo(ctx context.Context, f Filtros) (Resumo, error) {
 	if res.Totais.Execucoes, err = h.contarExecucoes(ctx, fb); err != nil {
 		return res, err
 	}
-	if res.PorAgente, err = h.porAgente(ctx, fb, tab); err != nil {
+	if res.PorAgente, err = h.porAgente(ctx, fb, tab, fronteiras(ps, fb.De, fb.Ate)); err != nil {
 		return res, err
 	}
 	fs, err := h.ferramentas(ctx, fb, 5)
@@ -153,21 +153,21 @@ func (h *Handler) Resumo(ctx context.Context, f Filtros) (Resumo, error) {
 	return res, nil
 }
 
-// linhasPorOperacao devolve o uso por (intervalo, provedor, modelo, operação).
-func (h *Handler) linhasPorOperacao(ctx context.Context, f Filtros, passo int64) ([]map[string]any, error) {
+// linhasPorOperacao devolve o uso por (intervalo, trecho de preço, provedor, modelo, operação).
+func (h *Handler) linhasPorOperacao(ctx context.Context, f Filtros, passo int64, fs []time.Time) ([]map[string]any, error) {
 	if f.usaBruto() {
 		return h.ch.QueryJSON(ctx, fmt.Sprintf(`SELECT toUnixTimestamp(toStartOfInterval(ts, INTERVAL %d SECOND)) AS b,
-			provedor, modelo, operacao, %s FROM genai_spans WHERE %s
-			GROUP BY b, provedor, modelo, operacao`, passo, colunasUso(""), f.onde("")))
+			%s AS trecho, provedor, modelo, operacao, %s FROM genai_spans WHERE %s
+			GROUP BY b, trecho, provedor, modelo, operacao`, passo, exprTrecho("ts", fs, false), colunasUso(""), f.onde("")))
 	}
 	return h.ch.QueryJSON(ctx, fmt.Sprintf(`SELECT toUnixTimestamp(toStartOfInterval(ts, INTERVAL %d SECOND)) AS b,
-		provedor, modelo, operacao, %s FROM genai_1m WHERE %s
-		GROUP BY b, provedor, modelo, operacao`, passo, colunasUsoAgregado, f.ondeAgregado()))
+		%s AS trecho, provedor, modelo, operacao, %s FROM genai_1m WHERE %s
+		GROUP BY b, trecho, provedor, modelo, operacao`, passo, exprTrecho("ts", fs, true), colunasUsoAgregado, f.ondeAgregado()))
 }
 
 // preencherUso calcula totais, série e o quadro por modelo a partir das mesmas linhas.
-func (h *Handler) preencherUso(ctx context.Context, f Filtros, passo int64, tab *genai.Tabela, res *Resumo) error {
-	rows, err := h.linhasPorOperacao(ctx, f, passo)
+func (h *Handler) preencherUso(ctx context.Context, f Filtros, passo int64, tab *genai.Tabela, fs []time.Time, res *Resumo) error {
+	rows, err := h.linhasPorOperacao(ctx, f, passo, fs)
 	if err != nil {
 		return err
 	}
@@ -184,7 +184,7 @@ func (h *Handler) preencherUso(ctx context.Context, f Filtros, passo int64, tab 
 		if !genai.EhChamadaDeModelo(texto(r["operacao"])) {
 			continue
 		}
-		l := lerUso(r, time.Unix(b, 0))
+		l := lerUso(r, inicioDoTrecho(time.Unix(b, 0), inteiro(r["trecho"]), fs))
 		c := calcular(tab, l)
 		tot.somar(l, c)
 		chave := [2]string{l.Provedor, l.Modelo}

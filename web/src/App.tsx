@@ -4,6 +4,7 @@ import { Bando } from "./motion";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { PageTransition } from "./motion";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { chaveDaTela } from "./chaveTela";
 // Rotas leves e a tela de Login permanecem estáticas (entram no bundle inicial).
 import { DevKit } from "./pages/DevKit";
 import { Dashboards } from "./pages/Dashboards";
@@ -257,14 +258,17 @@ export function App() {
     );
   }
 
+  // Abas de uma mesma seção (#/ia/*) não remontam a página: ver chaveTela.ts.
+  const chaveTela = chaveDaTela(routePath);
+
   // ToastProvider envolve tudo para que useToast() das páginas funcione.
   return (
     <ToastProvider>
       <AppShell route={routePath}>
-        {/* A barreira é por rota (key): trocar de tela limpa o erro da anterior. */}
-        <ErrorBoundary key={routePath}>
+        {/* A barreira é por tela (key): trocar de tela limpa o erro da anterior. */}
+        <ErrorBoundary key={chaveTela}>
           <Suspense fallback={<PageLoading />}>
-            <PageTransition rota={routePath}>{renderPage(routePath, routeQuery)}</PageTransition>
+            <PageTransition rota={chaveTela}>{renderPage(routePath, routeQuery)}</PageTransition>
           </Suspense>
         </ErrorBoundary>
       </AppShell>

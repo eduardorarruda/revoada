@@ -114,7 +114,16 @@ function CamposDoPreco({ campo, erros }: { campo: PropsCampo; erros: ErrosPreco 
   );
 }
 
-export function PrecoForm({ prefill, onSalvo }: { prefill?: { provedor: string; modelo: string }; onSalvo: () => void }) {
+export function PrecoForm({
+  prefill,
+  onSalvo,
+  onCancelar,
+}: {
+  prefill?: { provedor: string; modelo: string };
+  onSalvo: () => void;
+  /** Com ele, o formulário ganha um "Cancelar" (uso dentro do modal). */
+  onCancelar?: () => void;
+}) {
   const toast = useToast();
   const [c, setC] = useState<CamposPreco>(() => camposIniciais(prefill));
   const [erros, setErros] = useState<ErrosPreco>({});
@@ -146,9 +155,14 @@ export function PrecoForm({ prefill, onSalvo }: { prefill?: { provedor: string; 
   return (
     <form onSubmit={enviar} noValidate aria-label="Cadastrar preço">
       <CamposDoPreco campo={campo} erros={erros} />
-      <div className="row row--end" style={{ marginTop: "var(--sp-3)" }}>
+      <div className="row row--end ia-form-preco__acoes">
+        {onCancelar && (
+          <Button type="button" variant="ghost" onClick={onCancelar}>
+            Cancelar
+          </Button>
+        )}
         <Button type="submit" variant="primary" disabled={salvando}>
-          {salvando ? "Salvando…" : "Cadastrar preço"}
+          {salvando ? "Salvando…" : "Salvar preço"}
         </Button>
       </div>
     </form>

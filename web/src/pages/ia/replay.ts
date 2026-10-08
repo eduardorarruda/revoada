@@ -1,6 +1,7 @@
 // Lógica pura do replay de uma execução: que tipo de passo é, onde ele cai na
 // linha do tempo, quais passos formam uma repetição e a requisição "copiável".
 import type { IaMensagem, IaPasso, IaRepeticao } from "../../api.ia";
+import { fmtTokens, NAO_INFORMADO } from "./formato";
 
 export type TipoPasso = "modelo" | "ferramenta" | "agente" | "outro";
 
@@ -21,7 +22,7 @@ export function tipoDoPasso(p: Pick<IaPasso, "operacao" | "ferramenta" | "agente
 }
 
 export const ROTULO_TIPO: Record<TipoPasso, string> = {
-  modelo: "chamou modelo",
+  modelo: "modelo",
   ferramenta: "ferramenta",
   agente: "agente",
   outro: "passo",
@@ -83,7 +84,74 @@ export function passosRepetidos(passos: IaPasso[], repeticoes: IaRepeticao[]): M
 }
 
 export function fraseRepeticao(r: IaRepeticao): string {
-  return `${r.ferramenta} chamada ${r.vezes} vezes seguidas — possível loop`;
+  return `${r.ferramenta} chamada ${r.vezes} vezes seguidas: possível loop`;
+}
+
+// Termos da convenção GenAI do OpenTelemetry, ditos em português. O valor cru
+// continua visível ao lado (ou no title): é o que a pessoa procura no código dela.
+// Valor que não está aqui aparece cru, nunca some.
+const ROTULO_OPERACAO: Record<string, string> = {
+  chat: "conversa com o modelo",
+  text_completion: "completar texto",
+  generate_content: "gerar conteúdo",
+  embeddings: "gerar embeddings",
+  execute_tool: "executar ferramenta",
+  invoke_agent: "acionar agente",
+  create_agent: "criar agente",
+  agent_step: "passo do agente",
+};
+
+const ROTULO_MOTIVO_FIM: Record<string, string> = {
+  stop: "terminou a resposta",
+  length: "cortado no limite de tokens",
+  tool_calls: "pediu para usar ferramenta",
+  "tool-calls": "pediu para usar ferramenta",
+  tool_call: "pediu para usar ferramenta",
+  content_filter: "bloqueado pelo filtro de conteúdo",
+};
+
+const ROTULO_PAPEL: Record<string, string> = {
+  user: "pessoa",
+  assistant: "modelo",
+  system: "instruções do sistema",
+  tool: "ferramenta",
+};
+
+/** Rótulo em português de um valor conhecido; desconhecido volta cru. */
+function traduzir(tabela: Record<string, string>, cru: string): string {
+  return Object.hasOwn(tabela, cru) ? tabela[cru] : cru;
+}
+
+/** Operação do passo: `rotulo` em português e `cru` só quando a tradução difere. */
+export function rotuloOperacao(operacao: string): { rotulo: string; cru: string } {
+  if (!operacao) return { rotulo: "não informada", cru: "" };
+  const rotulo = traduzir(ROTULO_OPERACAO, operacao);
+  return { rotulo, cru: rotulo === operacao ? "" : operacao };
+}
+
+/** Motivos do fim da resposta ("stop" → "terminou a resposta"), sem repetir. */
+export function rotuloMotivosFim(motivos: string[]): string {
+  if (motivos.length === 0) return NAO_INFORMADO;
+  return [...new Set(motivos.map((m) => traduzir(ROTULO_MOTIVO_FIM, m)))].join(", ");
+}
+
+/** Papel da mensagem ("user" → "pessoa"). */
+export function rotuloPapel(papel: string): string {
+  return papel ? traduzir(ROTULO_PAPEL, papel) : "papel não informado";
+}
+
+/**
+ * Tokens do passo em texto honesto: os dois lados nulos viram uma frase só
+ * ("tokens não informados"), e não "não informado → não informado tokens".
+ */
+export function textoTokens(
+  p: Pick<IaPasso, "tokens_entrada" | "tokens_saida" | "tokens_cache_leitura">,
+  comCache = false,
+): string {
+  if (p.tokens_entrada == null && p.tokens_saida == null) return "tokens não informados";
+  const partes = [`entrada ${fmtTokens(p.tokens_entrada)}`, `saída ${fmtTokens(p.tokens_saida)}`];
+  if (comCache) partes.push(`cache ${fmtTokens(p.tokens_cache_leitura)}`);
+  return partes.join(" · ");
 }
 
 export function mensagensDoPasso(mensagens: IaMensagem[], spanId: string, lado?: IaMensagem["lado"]): IaMensagem[] {
@@ -100,7 +168,7 @@ export interface RequisicaoOpenAI {
 /**
  * Requisição no formato OpenAI (chat completions) com as mensagens de ENTRADA do
  * passo. O Revoada não chama o modelo (ADR 008): entrega o JSON para a pessoa rodar
- * onde quiser. Trechos redigidos vão como estão — o aviso fica por conta da tela.
+ * onde quiser. Trechos redigidos vão como estão; o aviso fica por conta da tela.
  */
 export function requisicaoOpenAI(passo: Pick<IaPasso, "span_id" | "modelo">, mensagens: IaMensagem[]): RequisicaoOpenAI {
   return {

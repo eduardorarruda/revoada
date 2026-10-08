@@ -562,10 +562,11 @@ export const help: {
       title: "Agentes de IA",
       what: "Custo, tokens, latência e erros das suas aplicações de IA (chatbots, automações com ferramentas, pipelines que chamam LLM), e o passo a passo de cada execução. Os dados vêm dos spans OpenTelemetry que essas aplicações já mandam. O Revoada só observa: não chama nenhum modelo nem guarda chave de provedor.",
       how: [
-        "Visão geral: a frase do topo resume a janela; abaixo, o custo no tempo, quanto cada modelo e cada agente gastou e as ferramentas que mais falham.",
+        "Escolha a janela de tempo no canto do cabeçalho; ela vale para todas as abas e fica no endereço, então um link copiado abre a mesma visão. Os dados se atualizam sozinhos a cada minuto; o botão de atualizar busca na hora.",
+        "Visão geral: a frase do topo diz se está tudo em ordem; abaixo, os números da janela, o custo no tempo, quanto cada modelo e cada agente gastou e as ferramentas que mais falham.",
         "Execuções: filtre por agente, modelo, status ou custo mínimo e clique numa execução para ver o replay.",
-        "Replay: cada passo (modelo, ferramenta, agente) com tokens, custo e duração. Use ← → para andar; repetições da mesma ferramenta aparecem como possível loop.",
-        "Modelos e preços: o custo é tokens × preço vigente na data da chamada. Cadastre o preço dos modelos marcados \"sem preço\".",
+        "Replay: cada passo (modelo, ferramenta, agente) com tokens, custo e duração, navegável pelo teclado. Repetições da mesma ferramenta aparecem como possível loop.",
+        "Modelos e preços: o custo é tokens × preço vigente na data da chamada. Administradores cadastram o preço dos modelos marcados \"sem preço\" pelo botão \"Cadastrar preço\".",
       ],
       faq: [
         {
@@ -575,6 +576,14 @@ export const help: {
         {
           q: "Por que não vejo a conversa?",
           a: "A gravação de prompts e respostas vem desligada (é dado pessoal). Quando ligada (REVOADA_GENAI_CONTEUDO no gateway), o conteúdo é redigido, guardado por 7 dias e só administradores e operadores leem, com cada leitura na auditoria.",
+        },
+        {
+          q: "Como apago os dados de uma pessoa ou de uma execução?",
+          a: "Em Modelos e preços, a seção \"Dados e privacidade\" (só administradores) apaga uma conversa ou uma execução inteira (chamadas e conteúdo) ou todo o conteúdo gravado (só o texto: custo e tokens continuam). Cada pedido fica na auditoria, e a remoção leva alguns segundos para sumir das telas.",
+        },
+        {
+          q: "Por que o veredito fala de uma janela diferente da que escolhi?",
+          a: "Enquanto a janela nova carrega, a tela continua mostrando o dado da anterior, um pouco apagado, e o veredito diz a janela desse dado. Quando o novo chega, tudo troca junto.",
         },
       ],
     },

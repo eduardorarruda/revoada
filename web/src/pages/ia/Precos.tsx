@@ -1,13 +1,32 @@
 // Modelos e preços (#/ia/precos): a tabela que transforma tokens em dólar. Todos
 // veem; só administradores cadastram e apagam (o servidor também barra).
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
+import { Plus, Tags } from "lucide-react";
 import { isAdmin } from "../../api";
 import { apagarIaPreco, listIaPrecos, type IaModeloSemPreco, type IaPreco, type IaReferenciaPrecos } from "../../api.ia";
-import { ActionIcons, Badge, Button, Card, ConfirmDialog, DataTable, IconButton, Skeleton, useToast, type Column } from "../../components";
+import {
+  ActionIcons,
+  Badge,
+  Button,
+  Card,
+  ConfirmDialog,
+  DataTable,
+  EmptyState,
+  IconButton,
+  InfoTip,
+  Modal,
+  Skeleton,
+  useToast,
+  type Column,
+} from "../../components";
 import { mensagemDeErro } from "../../format";
-import { Aviso, FalhaCarga, useCarga } from "./comum";
-import { fmtDataPreco, fmtInteiro, fmtUsd } from "./formato";
+import { Aviso, FalhaCarga, useCarga, useSinalizarCarga } from "./comum";
+import { DadosPrivacidade } from "./DadosPrivacidade";
+import { fmtDataPreco, fmtOrigemPreco, fmtReferencia, fmtUsd } from "./formato";
 import { PrecoForm } from "./PrecoForm";
+import { plural } from "./veredito";
+
+const NAO_CADASTRADO = "não cadastrado";
 
 const COLUNAS: Column<IaPreco>[] = [
   { key: "provedor", label: "Provedor", sortable: true },
@@ -21,26 +40,60 @@ const COLUNAS: Column<IaPreco>[] = [
       </span>
     ),
   },
-  { key: "entrada", label: "Entrada / 1 mi", align: "right", render: (p) => fmtUsd(p.entrada_por_1m, "não cadastrado") },
-  { key: "saida", label: "Saída / 1 mi", align: "right", render: (p) => fmtUsd(p.saida_por_1m, "não cadastrado") },
-  { key: "cache_l", label: "Cache leitura", align: "right", hideOnMobile: true, render: (p) => fmtUsd(p.cache_leitura_por_1m, "não cadastrado") },
-  { key: "cache_e", label: "Cache escrita", align: "right", hideOnMobile: true, render: (p) => fmtUsd(p.cache_escrita_por_1m, "não cadastrado") },
+  { key: "entrada", label: "Entrada / 1 mi", align: "right", render: (p) => fmtUsd(p.entrada_por_1m, NAO_CADASTRADO) },
+  { key: "saida", label: "Saída / 1 mi", align: "right", render: (p) => fmtUsd(p.saida_por_1m, NAO_CADASTRADO) },
+  { key: "cache_l", label: "Cache leitura", align: "right", hideOnMobile: true, render: (p) => fmtUsd(p.cache_leitura_por_1m, NAO_CADASTRADO) },
+  { key: "cache_e", label: "Cache escrita", align: "right", hideOnMobile: true, render: (p) => fmtUsd(p.cache_escrita_por_1m, NAO_CADASTRADO) },
   { key: "vigente_desde", label: "Vale desde", sortable: true, render: (p) => fmtDataPreco(p.vigente_desde) },
-  { key: "origem", label: "Origem", hideOnMobile: true, render: (p) => <span className="ia-sub">{p.origem || "manual"}</span> },
+  { key: "origem", label: "Origem", hideOnMobile: true, render: (p) => <span className="ia-sub">{fmtOrigemPreco(p.origem)}</span> },
 ];
 
+const EXPLICA_TABELA =
+  "Valores em dólar por 1 milhão de tokens. Modelo terminado em * é prefixo: gpt-4o-mini* vale para qualquer versão que comece igual. Cada linha vale a partir da data em “Vale desde”: uma troca de preço é uma linha nova, e o custo do passado continua calculado com o preço da época.";
+
+/** O formulário aberto: vazio (botão do topo) ou já com o modelo (lista "sem preço"). */
+interface FormAberto {
+  prefill?: { provedor: string; modelo: string };
+  /** Remonta o formulário a cada abertura. */
+  n: number;
+}
+
+function idadeDaReferencia(r: IaReferenciaPrecos): string {
+  return r.dias_desde_atualizacao == null
+    ? "idade desconhecida"
+    : `atualizada há ${plural(r.dias_desde_atualizacao, "dia", "dias")}`;
+}
+
 function AvisoReferencia({ r }: { r: IaReferenciaPrecos }) {
-  const idade = r.dias_desde_atualizacao == null ? "idade desconhecida" : `atualizada há ${fmtInteiro(r.dias_desde_atualizacao)} dias`;
-  if (!r.desatualizada) {
-    return <p className="ia-sub">Tabela de referência {r.referencia || "não informada"}, {idade}.</p>;
-  }
+  if (!r.desatualizada) return null;
   return (
     <Aviso tom="warn" titulo="Tabela de referência desatualizada">
       <p>
-        Os preços de referência que vêm com o Revoada são de {r.referencia || "data não informada"} ({idade}). Provedores mudam
-        preços: confira os modelos que você usa e cadastre o valor atual. O custo do passado não muda.
+        Os preços de referência que vêm com o Revoada são de {fmtReferencia(r.referencia) || "data não informada"} (
+        {idadeDaReferencia(r)}). Provedores mudam preços: confira os modelos que você usa e cadastre o valor atual. O custo
+        do passado não muda.
       </p>
     </Aviso>
+  );
+}
+
+function Topo({ r, admin, onCadastrar }: { r: IaReferenciaPrecos; admin: boolean; onCadastrar: () => void }) {
+  return (
+    <div className="toolbar">
+      <div className="ia-precos__resumo">
+        {!r.desatualizada && (
+          <p className="ia-sub">
+            Tabela de referência {fmtReferencia(r.referencia) || "não informada"}, {idadeDaReferencia(r)}.
+          </p>
+        )}
+        {!admin && <p className="ia-sub">Só administradores cadastram e apagam preços. Você pode consultar a tabela abaixo.</p>}
+      </div>
+      {admin && (
+        <Button variant="primary" onClick={onCadastrar}>
+          <Plus size={16} aria-hidden /> Cadastrar preço
+        </Button>
+      )}
+    </div>
   );
 }
 
@@ -60,15 +113,19 @@ function SemPreco({
         Estes modelos foram chamados mas não casam com nenhuma linha da tabela, então o custo deles fica fora da soma (e o
         total aparece como parcial).{admin ? "" : " Peça a um administrador para cadastrar o preço."}
       </p>
-      <ul className="stack" style={{ gap: "var(--sp-2)", listStyle: "none", padding: 0, margin: "var(--sp-3) 0 0" }}>
+      <ul className="ia-lista-sem-preco">
         {modelos.map((m) => (
           <li key={`${m.provedor}/${m.modelo}`} className="row">
             <Badge state="warn">sem preço</Badge>
             <span className="ia-mono">{m.modelo}</span>
             <span className="ia-sub tabular">
-              {m.provedor || "provedor não informado"} · {fmtInteiro(m.chamadas)} chamadas
+              {m.provedor || "provedor não informado"} · {plural(m.chamadas, "chamada", "chamadas")}
             </span>
-            {admin && <Button onClick={() => onCadastrar(m)}>Cadastrar preço</Button>}
+            {admin && (
+              <Button onClick={() => onCadastrar(m)} aria-label={`Cadastrar preço de ${m.modelo}`}>
+                Cadastrar preço
+              </Button>
+            )}
           </li>
         ))}
       </ul>
@@ -76,36 +133,25 @@ function SemPreco({
   );
 }
 
-function CartaoCadastro({
+function TabelaPrecos({
+  precos,
   admin,
-  prefill,
-  onSalvo,
+  onApagar,
+  onCadastrar,
 }: {
+  precos: IaPreco[];
   admin: boolean;
-  prefill?: { provedor: string; modelo: string; n: number };
-  onSalvo: () => void;
+  onApagar: (p: IaPreco) => void;
+  onCadastrar: () => void;
 }) {
   return (
-    <Card title="Cadastrar preço">
-      {admin ? (
-        <>
-          <p className="ia-texto">
-            Para trocar um preço, cadastre uma linha nova com a data em que ele passou a valer: o custo do passado continua
-            calculado com o preço antigo. Valores em dólar por 1 milhão de tokens.
-          </p>
-          {/* key: um novo "Cadastrar preço" da lista remonta o formulário já preenchido */}
-          <PrecoForm key={prefill?.n ?? 0} prefill={prefill} onSalvo={onSalvo} />
-        </>
-      ) : (
-        <p className="ia-texto">Só administradores cadastram e apagam preços. Você pode consultar a tabela abaixo.</p>
-      )}
-    </Card>
-  );
-}
-
-function TabelaPrecos({ precos, admin, onApagar }: { precos: IaPreco[]; admin: boolean; onApagar: (p: IaPreco) => void }) {
-  return (
-    <Card title="Tabela de preços">
+    <Card
+      title={
+        <span className="ia-cartao-titulo">
+          Tabela de preços <InfoTip title="tabela de preços" text={EXPLICA_TABELA} />
+        </span>
+      }
+    >
       <DataTable
         columns={COLUNAS}
         rows={precos}
@@ -117,53 +163,99 @@ function TabelaPrecos({ precos, admin, onApagar }: { precos: IaPreco[]; admin: b
         rowActions={
           admin ? (p) => <IconButton icon={ActionIcons.delete} label={`Apagar preço de ${p.modelo}`} onClick={() => onApagar(p)} /> : undefined
         }
-        empty={<p className="ia-texto">Nenhum preço cadastrado. Sem preço, o custo aparece como “sem preço”, nunca como zero.</p>}
+        empty={
+          <EmptyState
+            icon={<Tags size={32} strokeWidth={1.5} />}
+            title="Nenhum preço cadastrado"
+            body="Sem preço, o custo das chamadas aparece como “sem preço”, nunca como zero."
+            action={admin ? { label: "Cadastrar preço", onClick: onCadastrar } : undefined}
+          />
+        }
       />
     </Card>
   );
 }
 
-export function Precos({ versao }: { versao: number }) {
-  const admin = isAdmin();
-  const toast = useToast();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- `versao`: o botão Atualizar refaz a busca
-  const buscar = useCallback(() => listIaPrecos(), [versao]);
-  const { dados, erro, recarregar } = useCarga(buscar, "Não foi possível carregar a tabela de preços.");
-  const [prefill, setPrefill] = useState<{ provedor: string; modelo: string; n: number }>();
-  const [apagando, setApagando] = useState<IaPreco | null>(null);
-  const formRef = useRef<HTMLDivElement>(null);
+function ModalPreco({ aberto, onFechar, onSalvo }: { aberto: FormAberto | null; onFechar: () => void; onSalvo: () => void }) {
+  const modelo = aberto?.prefill?.modelo;
+  return (
+    <Modal open={aberto !== null} onClose={onFechar} title={modelo ? `Cadastrar preço de ${modelo}` : "Cadastrar preço"} wide>
+      <div className="stack">
+        <p className="ia-texto">
+          Para trocar um preço, cadastre uma linha nova com a data em que ele passou a valer: o custo do passado continua
+          calculado com o preço antigo. Valores em dólar por 1 milhão de tokens.
+        </p>
+        {aberto && <PrecoForm key={aberto.n} prefill={aberto.prefill} onSalvo={onSalvo} onCancelar={onFechar} />}
+      </div>
+    </Modal>
+  );
+}
 
-  const cadastrar = (m: IaModeloSemPreco) => {
-    setPrefill({ provedor: m.provedor, modelo: m.modelo, n: Date.now() });
-    formRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" }); // ausente em alguns ambientes (jsdom)
-  };
-  const confirmarApagar = async () => {
+function EsqueletoPrecos() {
+  return (
+    <>
+      <p className="so-leitor" role="status">
+        Carregando a tabela de preços…
+      </p>
+      <Skeleton height={36} />
+      <Card>
+        <Skeleton height={220} />
+      </Card>
+    </>
+  );
+}
+
+/** Apagar uma linha de preço, com confirmação nomeada. */
+function useApagarPreco(depois: () => void) {
+  const toast = useToast();
+  const [apagando, setApagando] = useState<IaPreco | null>(null);
+  const confirmar = async () => {
     const alvo = apagando;
     setApagando(null);
     if (!alvo) return;
     try {
       await apagarIaPreco(alvo.id);
       toast.success(`Preço de ${alvo.modelo} apagado.`);
-      recarregar();
+      depois();
     } catch (e) {
       toast.error(mensagemDeErro(e, "Não foi possível apagar o preço."));
     }
   };
+  return { apagando, setApagando, confirmar };
+}
 
-  if (!dados) return erro ? <FalhaCarga erro={erro} onTentar={recarregar} /> : <Skeleton height={200} />;
+export function Precos({ versao }: { versao: number }) {
+  const admin = isAdmin();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `versao`: o botão Atualizar refaz a busca
+  const buscar = useCallback(() => listIaPrecos(), [versao]);
+  const carga = useCarga(buscar, "Não foi possível carregar a tabela de preços.");
+  useSinalizarCarga(carga);
+  const { dados, erro, recarregar } = carga;
+  const [form, setForm] = useState<FormAberto | null>(null);
+  const { apagando, setApagando, confirmar } = useApagarPreco(recarregar);
+  const abrir = (m?: IaModeloSemPreco) =>
+    setForm({ prefill: m ? { provedor: m.provedor, modelo: m.modelo } : undefined, n: Date.now() });
+  const salvo = () => {
+    setForm(null);
+    recarregar();
+  };
+
+  if (!dados) return erro ? <FalhaCarga erro={erro} onTentar={recarregar} /> : <EsqueletoPrecos />;
   return (
     <>
       {erro && <FalhaCarga erro={erro} onTentar={recarregar} />}
+      <Topo r={dados.referencia} admin={admin} onCadastrar={() => abrir()} />
       <AvisoReferencia r={dados.referencia} />
-      <SemPreco modelos={dados.modelos_sem_preco} admin={admin} onCadastrar={cadastrar} />
-      <div ref={formRef}>
-        <CartaoCadastro admin={admin} prefill={prefill} onSalvo={recarregar} />
+      <SemPreco modelos={dados.modelos_sem_preco} admin={admin} onCadastrar={abrir} />
+      <div className="ia-recarregavel">
+        <TabelaPrecos precos={dados.precos} admin={admin} onApagar={setApagando} onCadastrar={() => abrir()} />
       </div>
-      <TabelaPrecos precos={dados.precos} admin={admin} onApagar={setApagando} />
+      {admin && <DadosPrivacidade />}
+      <ModalPreco aberto={form} onFechar={() => setForm(null)} onSalvo={salvo} />
       <ConfirmDialog
         open={apagando !== null}
         onCancel={() => setApagando(null)}
-        onConfirm={confirmarApagar}
+        onConfirm={confirmar}
         verb="Apagar"
         target={`o preço de ${apagando?.modelo ?? ""}`}
         consequences="As chamadas que usavam este preço passam a ser calculadas com outra linha que case com o modelo ou aparecem como “sem preço”. Não dá para desfazer; você pode cadastrar o preço de novo."

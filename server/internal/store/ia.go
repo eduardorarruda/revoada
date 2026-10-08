@@ -76,11 +76,14 @@ func (s *Store) CriarPrecoLLM(ctx context.Context, p PrecoLLM) (PrecoLLM, error)
 	return criado, err
 }
 
-// normalizarPreco põe provedor e modelo em minúsculas: é como a busca de preço compara,
-// e duas linhas que só diferem na caixa seriam o mesmo preço com duas vigências.
+// normalizarPreco põe provedor e modelo em minúsculas (é como a busca de preço compara;
+// duas linhas que só diferem na caixa seriam o mesmo preço com duas vigências) e alinha
+// a vigência ao minuto: o agregado genai_1m e as séries llm.* são por minuto, e uma
+// troca de preço no meio de um minuto não teria como ser cobrada exata.
 func normalizarPreco(p PrecoLLM) PrecoLLM {
 	p.Provedor = strings.ToLower(strings.TrimSpace(p.Provedor))
 	p.Modelo = strings.ToLower(strings.TrimSpace(p.Modelo))
+	p.VigenteDesde = p.VigenteDesde.UTC().Truncate(time.Minute)
 	return p
 }
 

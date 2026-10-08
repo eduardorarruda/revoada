@@ -346,12 +346,73 @@ func TestFiltrosNaoInjetam(t *testing.T) {
 	}
 }
 
-func TestErroDoClickHouseViraErro500(t *testing.T) {
-	h := New(&chFalso{err: errors.New("caiu")}, &lojaFalsa{}, nil)
-	rec := httptest.NewRecorder()
-	h.ResumoHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/ia/resumo", nil))
-	if rec.Code != http.StatusInternalServerError {
-		t.Fatalf("código %d", rec.Code)
+// lojaQuebrada é o Postgres fora do ar: toda operação da tabela de preços falha.
+type lojaQuebrada struct{}
+
+var errLoja = errors.New("postgres caiu")
+
+func (lojaQuebrada) ListarPrecosLLM(context.Context) ([]store.PrecoLLM, error) { return nil, errLoja }
+func (lojaQuebrada) CriarPrecoLLM(context.Context, store.PrecoLLM) (store.PrecoLLM, error) {
+	return store.PrecoLLM{}, errLoja
+}
+func (lojaQuebrada) ApagarPrecoLLM(context.Context, int64) error { return errLoja }
+func (lojaQuebrada) SemearPrecosLLM(context.Context, string, []store.PrecoLLM) (int, error) {
+	return 0, errLoja
+}
+
+// TestErroDoBancoViraErro500: toda rota, com o ClickHouse ou o Postgres fora, responde
+// 500 com a explicação — nunca 200 com zeros (que a tela leria como "não custou nada").
+func TestErroDoBancoViraErro500(t *testing.T) {
+	req := func(metodo, alvo, corpo string, path map[string]string) *http.Request {
+		r := httptest.NewRequest(metodo, alvo, strings.NewReader(corpo))
+		for k, v := range path {
+			r.SetPathValue(k, v)
+		}
+		return r
+	}
+	tid := map[string]string{"trace_id": "abc123"}
+	preco := `{"modelo":"m","entrada_por_1m":1,"saida_por_1m":2}`
+	casos := []struct {
+		nome    string
+		loja    Precos
+		handler func(*Handler) http.HandlerFunc
+		r       *http.Request
+	}{
+		{"resumo", &lojaFalsa{}, func(h *Handler) http.HandlerFunc { return h.ResumoHTTP }, req("GET", "/api/ia/resumo", "", nil)},
+		{"resumo pelas linhas", &lojaFalsa{}, func(h *Handler) http.HandlerFunc { return h.ResumoHTTP }, req("GET", "/api/ia/resumo?agente=a", "", nil)},
+		{"execuções", &lojaFalsa{}, func(h *Handler) http.HandlerFunc { return h.ExecucoesHTTP }, req("GET", "/api/ia/execucoes", "", nil)},
+		{"replay", &lojaFalsa{}, func(h *Handler) http.HandlerFunc { return h.ExecucaoHTTP }, req("GET", "/x", "", tid)},
+		{"conteúdo", &lojaFalsa{}, func(h *Handler) http.HandlerFunc { return h.ConteudoHTTP }, req("GET", "/x", "", tid)},
+		{"ferramentas", &lojaFalsa{}, func(h *Handler) http.HandlerFunc { return h.FerramentasHTTP }, req("GET", "/api/ia/ferramentas", "", nil)},
+		{"preços", &lojaFalsa{}, func(h *Handler) http.HandlerFunc { return h.PrecosHTTP }, req("GET", "/api/ia/precos", "", nil)},
+		{"purge do trace", &lojaFalsa{}, func(h *Handler) http.HandlerFunc { return h.PurgeHTTP },
+			req("POST", "/api/ia/purge", `{"alvo":"trace","valor":"abc123"}`, nil)},
+		{"purge da conversa", &lojaFalsa{}, func(h *Handler) http.HandlerFunc { return h.PurgeHTTP },
+			req("POST", "/api/ia/purge", `{"alvo":"conversa","valor":"c1"}`, nil)},
+		{"purge de todo o conteúdo", &lojaFalsa{}, func(h *Handler) http.HandlerFunc { return h.PurgeHTTP },
+			req("POST", "/api/ia/purge", `{"alvo":"todo_conteudo","frase":"`+FraseApagarConteudo+`"}`, nil)},
+		{"preços sem Postgres", lojaQuebrada{}, func(h *Handler) http.HandlerFunc { return h.PrecosHTTP }, req("GET", "/api/ia/precos", "", nil)},
+		{"resumo sem Postgres", lojaQuebrada{}, func(h *Handler) http.HandlerFunc { return h.ResumoHTTP }, req("GET", "/api/ia/resumo", "", nil)},
+		{"criar preço sem Postgres", lojaQuebrada{}, func(h *Handler) http.HandlerFunc { return h.CriarPrecoHTTP }, req("POST", "/api/ia/precos", preco, nil)},
+		{"apagar preço sem Postgres", lojaQuebrada{}, func(h *Handler) http.HandlerFunc { return h.ApagarPrecoHTTP },
+			req("DELETE", "/x", "", map[string]string{"id": "1"})},
+	}
+	for _, c := range casos {
+		t.Run(c.nome, func(t *testing.T) {
+			ch := &chFalso{err: errors.New("caiu")}
+			if _, ok := c.loja.(lojaQuebrada); ok {
+				ch.err = nil // só o Postgres está fora
+			}
+			h := New(ch, c.loja, &auditorFalso{})
+			rec := httptest.NewRecorder()
+			c.handler(h)(rec, c.r)
+			if rec.Code != http.StatusInternalServerError {
+				t.Fatalf("código %d (%s)", rec.Code, rec.Body)
+			}
+			if !strings.Contains(rec.Body.String(), "erro consultando as chamadas de IA") {
+				t.Fatalf("corpo sem explicação: %q", rec.Body)
+			}
+		})
 	}
 }
 
@@ -382,5 +443,31 @@ func TestDominioRecusaTraceIDInvalido(t *testing.T) {
 func TestLeituraToleraTiposInesperados(t *testing.T) {
 	if inteiro(true) != 0 || numero(nil) != 0 || inteiroOuNulo(nil) != nil || len(textos([]any{"a", nil, 3})) != 1 {
 		t.Fatal("leitura de tipo inesperado deveria cair em zero/nil")
+	}
+}
+
+func TestFronteirasETrechos(t *testing.T) {
+	de, ate := time.Unix(1000, 0), time.Unix(5000, 0)
+	ps := []store.PrecoLLM{{VigenteDesde: time.Unix(3000, 0)}, {VigenteDesde: time.Unix(2000, 0)},
+		{VigenteDesde: time.Unix(2000, 0)}, {VigenteDesde: time.Unix(500, 0)}, {VigenteDesde: time.Unix(5000, 0)}}
+	fs := fronteiras(ps, de, ate)
+	if len(fs) != 2 || fs[0].Unix() != 2000 || fs[1].Unix() != 3000 {
+		t.Fatalf("fronteiras = %v", fs)
+	}
+	if exprTrecho("ts", nil, false) != "0" {
+		t.Fatal("sem fronteira o trecho é a constante 0")
+	}
+	if got := exprTrecho("s.ts", fs, true); got != "multiIf(s.ts < toDateTime(2000), 0, s.ts < toDateTime(3000), 1, 2)" {
+		t.Fatalf("expr = %s", got)
+	}
+	if got := exprTrecho("ts", fs[:1], false); got != "multiIf(ts < fromUnixTimestamp64Milli(2000000), 0, 1)" {
+		t.Fatalf("expr com uma fronteira = %s", got)
+	}
+	ini := time.Unix(1800, 0)
+	if inicioDoTrecho(ini, 0, fs) != ini || inicioDoTrecho(ini, 1, fs).Unix() != 2000 || inicioDoTrecho(ini, 9, fs) != ini {
+		t.Fatal("início do trecho")
+	}
+	if inicioDoTrecho(time.Unix(2500, 0), 1, fs).Unix() != 2500 {
+		t.Fatal("intervalo que começa depois da fronteira usa o próprio início")
 	}
 }

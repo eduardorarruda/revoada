@@ -39,6 +39,7 @@ import {
   Network,
   ArrowRightLeft,
   Bot,
+  BrainCircuit,
   Rocket,
 } from "lucide-react";
 import { CommandPalette, type ItemPaleta } from "./CommandPalette";
@@ -119,7 +120,9 @@ export const NAV: NavGroup[] = [
       {
         label: "Agentes de IA",
         href: "#/ia",
-        icon: Bot,
+        // BrainCircuit, e não Bot: Bot já é o MCP, e dois itens com o mesmo ícone
+        // no menu obrigavam a ler o rótulo para saber qual era qual.
+        icon: BrainCircuit,
         // Execuções, replay, ferramentas e preços são abas da mesma tela.
         match: (r) => r === "/ia" || r.startsWith("/ia/"),
       },

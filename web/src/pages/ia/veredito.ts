@@ -1,5 +1,9 @@
 // Veredito da Visão geral de IA: a frase do topo, no mesmo formato da Início.
-// "Última 1 h: US$ 12,40 em 3.214 chamadas, 1,8% com erro, p95 de 4,2 s".
+//
+// O título é um JULGAMENTO estável ("Agentes de IA em ordem", "Erro acima do
+// normal: 1,8% das chamadas"): os números já estão nos indicadores logo abaixo, e um
+// título feito de números mudava a cada atualização, o que fazia a frase animar
+// sem que nada de importante tivesse mudado. Os números vão no detalhe.
 import type { IaTotais } from "../../api.ia";
 import type { Veredito } from "../homeResumo";
 import { fmtInteiro, fmtMs, fmtPct, fmtUsd } from "./formato";
@@ -9,7 +13,8 @@ export const TAXA_ERRO_ATENCAO = 0.01;
 /** A partir daqui, crítico: uma em cada vinte chamadas falhando. */
 export const TAXA_ERRO_CRITICA = 0.05;
 
-function plural(n: number, um: string, varios: string): string {
+/** Contagem com o substantivo no número certo: "1 chamada", "3.214 chamadas". */
+export function plural(n: number, um: string, varios: string): string {
   return `${fmtInteiro(n)} ${n === 1 ? um : varios}`;
 }
 
@@ -36,6 +41,36 @@ function tomDaTaxa(taxa: number | null): Veredito["tom"] {
   return "ok";
 }
 
+function tituloDoTom(tom: Veredito["tom"], taxa: number | null): string {
+  switch (tom) {
+    case "crit":
+      return `Muitas chamadas falhando: ${fmtPct(taxa)}`;
+    case "warn":
+      return `Erro acima do normal: ${fmtPct(taxa)} das chamadas`;
+    case "ok":
+      return "Agentes de IA em ordem";
+    default:
+      return "Taxa de erro não informada";
+  }
+}
+
+/** Os números da janela numa frase: "Últimas 24 h: US$ 12,40 em 3.214 chamadas, p95 de 4,2 s." */
+function numerosDaJanela(t: IaTotais, fraseJanela: string): string {
+  const custo = t.custo_usd == null ? "custo não informado" : `${fmtUsd(t.custo_usd)}${t.custo_parcial ? " (parcial)" : ""}`;
+  const p95 = t.latencia_p95_ms == null ? "p95 não informado" : `p95 de ${fmtMs(t.latencia_p95_ms)}`;
+  return `${fraseJanela}: ${custo} em ${plural(t.chamadas, "chamada", "chamadas")}, ${p95}.`;
+}
+
+function explicacaoDoTom(tom: Veredito["tom"]): string {
+  if (tom === "crit") return `Acima de ${fmtPct(TAXA_ERRO_CRITICA)} de erro, uma em cada vinte chamadas falha.`;
+  if (tom === "warn") return `A taxa de erro passou de ${fmtPct(TAXA_ERRO_ATENCAO)}.`;
+  return "";
+}
+
+/**
+ * Veredito da janela. `fraseJanela` precisa ser a janela DOS DADOS recebidos
+ * ("Últimas 24 h"), não a que a pessoa acabou de escolher e ainda está carregando.
+ */
 export function vereditoIa(t: IaTotais, fraseJanela: string): Veredito {
   if (t.chamadas === 0) {
     return {
@@ -46,18 +81,7 @@ export function vereditoIa(t: IaTotais, fraseJanela: string): Veredito {
     };
   }
   const taxa = taxaErro(t);
-  const custo = t.custo_usd == null ? "custo não informado" : `${fmtUsd(t.custo_usd)}${t.custo_parcial ? " (parcial)" : ""}`;
-  const p95 = t.latencia_p95_ms == null ? "p95 não informado" : `p95 de ${fmtMs(t.latencia_p95_ms)}`;
-  const titulo = `${fraseJanela}: ${custo} em ${plural(t.chamadas, "chamada", "chamadas")}, ${fmtPct(taxa)} com erro, ${p95}`;
-
   const tom = tomDaTaxa(taxa);
-  const detalhes: string[] = [];
-  if (tom === "crit") detalhes.push(`A taxa de erro passou de ${fmtPct(TAXA_ERRO_CRITICA)}.`);
-  else if (tom === "warn") detalhes.push(`A taxa de erro passou de ${fmtPct(TAXA_ERRO_ATENCAO)}.`);
-  const parcial = motivoParcial(t);
-  if (parcial) detalhes.push(parcial);
-  detalhes.push(
-    `${plural(t.execucoes, "execução", "execuções")} e ${plural(t.ferramentas_chamadas, "chamada", "chamadas")} de ferramenta (${fmtInteiro(t.ferramentas_erros)} com erro).`,
-  );
-  return { tom, titulo, detalhe: detalhes.join(" ") };
+  const detalhes = [numerosDaJanela(t, fraseJanela), explicacaoDoTom(tom), motivoParcial(t)].filter(Boolean);
+  return { tom, titulo: tituloDoTom(tom, taxa), detalhe: detalhes.join(" ") };
 }

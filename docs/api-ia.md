@@ -94,8 +94,10 @@ de IA (0 = raiz). `repeticoes` aponta a mesma ferramenta chamada várias vezes s
 
 ## `GET /api/ia/execucoes/{trace_id}/conteudo`
 
-Exige a permissão **ver conteúdo de IA** (admin e operador). Cada leitura entra na
-trilha de auditoria. 403 para leitor; 404 se não houver conteúdo gravado.
+Exige a permissão **ver conteúdo de IA** (admin e operador), que é crítica: 2FA e
+reautenticação recente (403 com `codigo: "reautenticacao_necessaria"` até confirmar a
+identidade). Cada leitura entra na trilha de auditoria. 403 para leitor; 404 se não
+houver conteúdo gravado.
 
 ```jsonc
 { "mensagens": [ { "span_id": "a1", "lado": "entrada", "papel": "user", "ordem": 0,
@@ -126,10 +128,24 @@ trilha de auditoria. 403 para leitor; 404 se não houver conteúdo gravado.
 
 `modelo` aceita `*` no fim como prefixo (`gpt-4o-mini*` cobre `gpt-4o-mini-2024-07-18`).
 
-## `POST /api/ia/purge` (admin)
+## `POST /api/ia/purge` (admin, com 2FA e reautenticação recente)
 
 Apaga chamadas e conteúdo. Corpo: `{ "alvo": "conversa" | "trace" | "todo_conteudo", "valor": "…", "frase": "…" }`.
 `todo_conteudo` exige a frase `APAGAR TODO O CONTEÚDO DE IA`.
+
+O que some e o que fica:
+
+- `trace` / `conversa`: as linhas de `genai_spans` e o conteúdo daquelas execuções. Elas
+  saem da lista, do replay e de toda conta feita sobre as linhas (filtro por agente ou
+  conversa, custo por agente, ferramentas). O **agregado por minuto** (`genai_1m`, base da
+  visão geral sem filtro e da tabela de modelos) continua contando aquelas chamadas: ele
+  só guarda somas por minuto e modelo, sem texto, trace ou id de conversa — não é dado
+  pessoal, e apagar parte de uma soma não é possível sem reconstruí-la.
+- `todo_conteudo`: só o texto gravado; custo, tokens e passos continuam.
+- O span genérico do trace (`spans`, tela Traces) não é tocado — ele já não guarda o
+  conteúdo de IA, que o gateway retira dos rótulos.
+
+As remoções do ClickHouse são assíncronas: a resposta é 202 e as linhas somem em segundos.
 
 ## Séries para alertas
 

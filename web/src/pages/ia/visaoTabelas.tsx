@@ -91,7 +91,7 @@ export function TabelaModelos({ modelos }: { modelos: IaModeloResumo[] }) {
         rows={modelos}
         keyFn={(m) => `${m.provedor}/${m.modelo}`}
         initialSort={{ key: "custo_usd", dir: "desc" }}
-        empty={<p className="ia-texto">Nenhuma chamada de modelo nesta janela.</p>}
+        empty={<p className="ia-texto">Nenhuma chamada de modelo nesta janela. Quando houver, cada modelo aparece aqui com o custo dele.</p>}
       />
     </Card>
   );
@@ -115,13 +115,28 @@ export function TabelaAgentes({ agentes, janelaId }: { agentes: IaAgenteResumo[]
     { key: "custo_usd", label: "Custo", align: "right", render: (a) => fmtUsd(a.custo_usd) },
   ];
   return (
-    <Card title="Agentes que mais gastam">
+    <Card
+      title={
+        <>
+          Agentes que mais gastam{" "}
+          <InfoTip
+            title="agentes que mais gastam"
+            text={`Os ${TOP_AGENTES} agentes de maior custo na janela. O agente é o que a aplicação declarou ao iniciar a execução; sem essa informação, usamos o nome do serviço. Clique num agente para ver as execuções dele.`}
+          />
+        </>
+      }
+    >
       <DataTable
         columns={colunas}
         rows={top}
         keyFn={(a) => `${a.service}/${a.agente}`}
         pageSize={0}
-        empty={<p className="ia-texto">Nenhum agente identificado. O agente vem do span invoke_agent; sem ele, do serviço.</p>}
+        empty={
+          <p className="ia-texto">
+            Nenhum agente identificado nesta janela. O agente é o que a aplicação declarou ao iniciar a execução; sem essa
+            informação, usamos o nome do serviço.
+          </p>
+        }
       />
     </Card>
   );
@@ -143,13 +158,23 @@ export function TabelaFerramentasComErro({ ferramentas, janelaId }: { ferramenta
     { key: "p95", label: "p95", align: "right", render: (f) => fmtMs(f.latencia_p95_ms) },
   ];
   return (
-    <Card title="Ferramentas com mais erros">
+    <Card
+      title={
+        <>
+          Ferramentas com mais erros{" "}
+          <InfoTip
+            title="ferramentas com mais erros"
+            text={`As ${TOP_FERRAMENTAS} ferramentas que mais falharam na janela, com quantas chamadas deram erro e o p95 (95% das chamadas terminaram em até este tempo). Ferramenta sem erro não aparece aqui.`}
+          />
+        </>
+      }
+    >
       <DataTable
         columns={colunas}
         rows={top}
         keyFn={(f) => f.ferramenta}
         pageSize={0}
-        empty={<p className="ia-texto">Nenhuma ferramenta falhou nesta janela.</p>}
+        empty={<p className="ia-texto">Nenhuma ferramenta falhou nesta janela. Bom sinal: as que foram chamadas responderam.</p>}
       />
       <p className="ia-sub">
         <a href={hrefIa("/ia/ferramentas", { janela: janelaId })}>Ver todas as ferramentas</a>

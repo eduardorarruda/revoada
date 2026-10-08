@@ -1,12 +1,16 @@
 // Ferramentas (#/ia/ferramentas): as funções que os agentes chamam (buscar pedido,
 // consultar clima…), com volume, taxa de erro, latência e os erros mais comuns.
 import { useCallback } from "react";
+import { Wrench } from "lucide-react";
 import { listIaFerramentas, type IaFerramenta } from "../../api.ia";
-import { Badge, Card, DataTable, type Column } from "../../components";
-import { intervaloDaJanela, type OpcaoJanela } from "../../components/JanelaTempo";
-import { FalhaCarga, useCarga } from "./comum";
+import { Badge, Card, DataTable, EmptyState, InfoTip, type Column } from "../../components";
+import { intervaloDaJanela, janelaParaAmpliar, type OpcaoJanela } from "../../components/JanelaTempo";
+import { FalhaCarga, useCarga, useSinalizarCarga } from "./comum";
 import { fmtInteiro, fmtMs, fmtPct } from "./formato";
-import { TAXA_ERRO_ATENCAO, TAXA_ERRO_CRITICA, taxaErro } from "./veredito";
+import { plural, TAXA_ERRO_ATENCAO, TAXA_ERRO_CRITICA, taxaErro } from "./veredito";
+
+const EXPLICA_FERRAMENTAS =
+  "Ferramentas são as funções que o agente pede para rodar no meio da conversa (buscar um pedido, consultar o clima…). Uma ferramenta lenta segura a resposta inteira; uma que falha faz o agente tentar de novo e gastar mais chamadas de modelo. p50 é o tempo típico; p95, o tempo em que 95% das chamadas terminaram.";
 
 function TaxaErro({ f }: { f: IaFerramenta }) {
   const taxa = taxaErro(f);
@@ -19,7 +23,7 @@ function TaxaErro({ f }: { f: IaFerramenta }) {
 function ErrosFrequentes({ f }: { f: IaFerramenta }) {
   if (f.erros_frequentes.length === 0) return <span className="ia-sub">{f.erros > 0 ? "sem mensagem de erro" : "nenhum erro"}</span>;
   return (
-    <ul style={{ margin: 0, paddingLeft: "var(--sp-4)" }}>
+    <ul className="ia-lista-erros">
       {f.erros_frequentes.map((e) => (
         <li key={e.erro}>
           <span className="ia-mono">{e.erro}</span> <span className="ia-sub tabular">× {fmtInteiro(e.vezes)}</span>
@@ -46,34 +50,65 @@ const COLUNAS: Column<IaFerramenta>[] = [
   { key: "erros_frequentes", label: "Erros mais frequentes", render: (f) => <ErrosFrequentes f={f} /> },
 ];
 
-export function Ferramentas({ janela, versao }: { janela: OpcaoJanela; versao: number }) {
+function SemFerramentas({ janela, mudarJanela }: { janela: OpcaoJanela; mudarJanela?: (id: string) => void }) {
+  const maior = ["24h", "7d", "30d"].map((id) => janelaParaAmpliar(janela, id)).find(Boolean) ?? null;
+  return (
+    <EmptyState
+      icon={<Wrench size={32} strokeWidth={1.5} />}
+      title="Nenhuma chamada de ferramenta nesta janela"
+      body={`${janela.frase} sem nenhuma chamada de ferramenta registrada. Agentes que só conversam com o modelo, sem chamar funções, não aparecem aqui.`}
+      action={maior && mudarJanela ? { label: `Ampliar para ${maior.rotulo}`, onClick: () => mudarJanela(maior.id) } : undefined}
+    />
+  );
+}
+
+function TituloFerramentas({ n }: { n: number | null }) {
+  return (
+    <span className="ia-cartao-titulo">
+      {n == null ? "Ferramentas" : plural(n, "ferramenta", "ferramentas")}
+      <InfoTip title="ferramentas" text={EXPLICA_FERRAMENTAS} />
+    </span>
+  );
+}
+
+export function Ferramentas({
+  janela,
+  versao,
+  mudarJanela,
+}: {
+  janela: OpcaoJanela;
+  versao: number;
+  mudarJanela?: (id: string) => void;
+}) {
   const buscar = useCallback(
     () => listIaFerramentas(intervaloDaJanela(janela)).then((r) => r.ferramentas),
     // `versao` entra de propósito: o botão Atualizar refaz a busca até agora.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [janela, versao],
   );
-  const { dados, erro, carregando, recarregar } = useCarga(buscar, "Não foi possível listar as ferramentas.");
+  const carga = useCarga(buscar, "Não foi possível listar as ferramentas.");
+  useSinalizarCarga(carga);
+  const { dados, erro, carregando, recarregar } = carga;
   return (
-    <Card>
-      <p className="ia-texto">
-        Ferramentas são as funções que o agente pede para rodar no meio da conversa. Uma ferramenta lenta segura a resposta
-        inteira; uma que falha faz o agente tentar de novo e gastar mais chamadas de modelo. p50 é o tempo típico; p95, o
-        tempo que só 5% das chamadas passam.
-      </p>
+    <Card title={<TituloFerramentas n={dados ? dados.length : null} />}>
       {erro && dados && <FalhaCarga erro={erro} onTentar={recarregar} />}
-      <DataTable
-        columns={COLUNAS}
-        rows={dados ?? []}
-        keyFn={(f) => f.ferramenta}
-        loading={carregando && !dados}
-        error={!dados && erro ? erro : undefined}
-        initialSort={{ key: "erros", dir: "desc" }}
-        searchable
-        searchText={(f) => f.ferramenta}
-        searchPlaceholder="Buscar ferramenta…"
-        empty={<p className="ia-texto">Nenhuma chamada de ferramenta nesta janela.</p>}
-      />
+      {!dados && erro ? (
+        <FalhaCarga erro={erro} onTentar={recarregar} />
+      ) : (
+        <div className="ia-recarregavel">
+          <DataTable
+            columns={COLUNAS}
+            rows={dados ?? []}
+            keyFn={(f) => f.ferramenta}
+            loading={carregando && !dados}
+            initialSort={{ key: "erros", dir: "desc" }}
+            searchable
+            searchText={(f) => f.ferramenta}
+            searchPlaceholder="Buscar ferramenta…"
+            empty={<SemFerramentas janela={janela} mudarJanela={mudarJanela} />}
+          />
+        </div>
+      )}
     </Card>
   );
 }

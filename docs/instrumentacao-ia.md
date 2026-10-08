@@ -350,10 +350,12 @@ Quando gravado, o conteúdo:
 - fica numa tabela própria (`genai_conteudo`) por **7 dias**;
 - é cortado em 32 KiB por mensagem e 256 KiB por span (o corte fica marcado na tela;
   o span nunca é recusado por causa do conteúdo);
-- só é lido por quem tem a permissão **ver conteúdo de IA** (admin e operador; o
-  leitor vê o replay sem o texto), e **cada leitura entra na auditoria**;
-- pode ser apagado antes do prazo por conversa, por trace ou por inteiro
-  (`POST /api/ia/purge`, ver [api-ia.md](api-ia.md)).
+- só é lido por quem tem a permissão **ver conteúdo de IA** (admin e operador, com 2FA
+  e confirmação de identidade recente, como ver credencial; o leitor vê o replay sem
+  o texto), e **cada leitura entra na auditoria**;
+- pode ser apagado antes do prazo por conversa, por execução ou por inteiro, na aba
+  **Modelos e preços → Dados e privacidade** (admin) ou por `POST /api/ia/purge`
+  (ver [api-ia.md](api-ia.md)).
 
 **LGPD.** Prompt é dado pessoal quase sempre: nome, CPF, endereço, o problema que a
 pessoa descreveu ao seu chatbot. Antes de ligar o conteúdo:
@@ -513,7 +515,10 @@ Extraído para o replay (se o modo de conteúdo gravar) e **sempre retirado dos 
 | `openinference` | `llm.input_messages.N.message.{role,content}` (e `contents.K.message_content.text`, `tool_calls.K.tool_call.function.{name,arguments}`), `llm.output_messages.N.message.*`, `input.value`, `output.value` |
 | `vercel-ai` | `ai.prompt.messages`, `ai.prompt` (`{messages}` / `{prompt}` / `{system}`), `ai.response.text`, `ai.response.toolCalls`, `ai.toolCall.args`, `ai.toolCall.result` |
 
-Retiradas dos rótulos, mas não gravadas: `gen_ai.tool.definitions`, `gen_ai.prompt`,
+Retiradas dos rótulos de **todo** span (reconhecido como IA ou não), mas não gravadas:
+os documentos de RAG do OpenInference (`retrieval.documents.*`, `reranker.input_documents.*`,
+`reranker.output_documents.*`, `reranker.query`, `embedding.embeddings.*`),
+`gen_ai.tool.definitions`, `gen_ai.prompt`,
 `gen_ai.completion`, `tool.parameters`, `llm.tools.*`, `llm.prompt_template.*`,
 `ai.prompt.tools`, `ai.response.object`, `ai.response.reasoning`, `ai.value(s)`,
 `ai.embedding(s)`.

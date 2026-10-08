@@ -1,33 +1,54 @@
 import { describe, expect, it } from "vitest";
 import type { IaMensagem } from "../../api.ia";
 import { detalhe, passo, totais } from "./fixtures";
-import { barraDoPasso, passosRepetidos, requisicaoOpenAI, rotuloDoPasso, tipoDoPasso } from "./replay";
+import {
+  barraDoPasso,
+  fraseRepeticao,
+  passosRepetidos,
+  requisicaoOpenAI,
+  ROTULO_TIPO,
+  rotuloDoPasso,
+  rotuloMotivosFim,
+  rotuloOperacao,
+  rotuloPapel,
+  textoTokens,
+  tipoDoPasso,
+} from "./replay";
 import { abaDaVista, hrefHostNaHora, hrefIa, hrefReplay, vistaDaRota } from "./rotas";
 import { motivoParcial, vereditoIa } from "./veredito";
 
 describe("vereditoIa", () => {
-  it("resume a janela numa frase, como na Início", () => {
+  it("título é um julgamento estável; os números vão no detalhe", () => {
     const v = vereditoIa(totais({ custo_parcial: false }), "Hoje");
-    expect(v.titulo).toBe("Hoje: US$ 12,40 em 3.214 chamadas, 1,8% com erro, p95 de 4,2 s");
     expect(v.tom).toBe("warn");
+    expect(v.titulo).toBe("Erro acima do normal: 1,8% das chamadas");
+    expect(v.detalhe).toContain("Hoje: US$ 12,40 em 3.214 chamadas, p95 de 4,2 s.");
   });
 
-  it("custo parcial aparece no título e o motivo no detalhe", () => {
+  it("títulos por tom: em ordem, atenção, crítico", () => {
+    expect(vereditoIa(totais({ taxa_erro: 0.002 }), "x").titulo).toBe("Agentes de IA em ordem");
+    expect(vereditoIa(totais({ taxa_erro: 0.08 }), "x").titulo).toBe("Muitas chamadas falhando: 8%");
+    // O título não depende do custo: atualizar o número não troca (nem anima) a frase.
+    expect(vereditoIa(totais({ taxa_erro: 0.002, custo_usd: 99 }), "x").titulo).toBe("Agentes de IA em ordem");
+  });
+
+  it("custo parcial aparece no detalhe, com o motivo", () => {
     const v = vereditoIa(totais(), "Última 1 h");
-    expect(v.titulo).toContain("US$ 12,40 (parcial)");
+    expect(v.detalhe).toContain("US$ 12,40 (parcial)");
     expect(v.detalhe).toContain("3 chamadas sem preço cadastrado e 14 chamadas sem tokens informados");
   });
 
   it("custo e p95 nulos são ditos como não informados, nunca zero", () => {
     const v = vereditoIa(totais({ custo_usd: null, latencia_p95_ms: null }), "Hoje");
-    expect(v.titulo).toContain("custo não informado");
-    expect(v.titulo).toContain("p95 não informado");
-    expect(v.titulo).not.toMatch(/US\$ 0/);
+    expect(v.detalhe).toContain("custo não informado");
+    expect(v.detalhe).toContain("p95 não informado");
+    expect(`${v.titulo} ${v.detalhe}`).not.toMatch(/US\$ 0/);
   });
 
-  it("tom pela taxa de erro: ok, atenção, crítico", () => {
-    expect(vereditoIa(totais({ taxa_erro: 0.002 }), "x").tom).toBe("ok");
-    expect(vereditoIa(totais({ taxa_erro: 0.08 }), "x").tom).toBe("crit");
+  it("plural certo para uma chamada só", () => {
+    const v = vereditoIa(totais({ chamadas: 1, erros: 0, taxa_erro: 0, chamadas_sem_preco: 1, sem_tokens: 0 }), "x");
+    expect(v.detalhe).toContain("em 1 chamada,");
+    expect(v.detalhe).toContain("1 chamada sem preço cadastrado");
   });
 
   it("janela sem chamadas explica em vez de mostrar zeros", () => {
@@ -60,6 +81,58 @@ describe("replay", () => {
   it("posiciona o passo na barra da execução", () => {
     expect(barraDoPasso({ ts_ms: 2000, duracao_ms: 500 }, 1000, 5000)).toEqual({ inicioPct: 20, larguraPct: 10 });
     expect(barraDoPasso({ ts_ms: 1000, duracao_ms: 0 }, 1000, 5000).larguraPct).toBe(0.5);
+  });
+
+  it("operação em português, com o valor cru ao lado; desconhecida fica crua", () => {
+    expect(rotuloOperacao("chat")).toEqual({ rotulo: "conversa com o modelo", cru: "chat" });
+    expect(rotuloOperacao("text_completion").rotulo).toBe("completar texto");
+    expect(rotuloOperacao("generate_content").rotulo).toBe("gerar conteúdo");
+    expect(rotuloOperacao("embeddings").rotulo).toBe("gerar embeddings");
+    expect(rotuloOperacao("execute_tool").rotulo).toBe("executar ferramenta");
+    expect(rotuloOperacao("invoke_agent").rotulo).toBe("acionar agente");
+    expect(rotuloOperacao("create_agent").rotulo).toBe("criar agente");
+    expect(rotuloOperacao("agent_step").rotulo).toBe("passo do agente");
+    expect(rotuloOperacao("rerank")).toEqual({ rotulo: "rerank", cru: "" });
+    expect(rotuloOperacao("")).toEqual({ rotulo: "não informada", cru: "" });
+    // Nome herdado de Object.prototype não é tradução.
+    expect(rotuloOperacao("toString")).toEqual({ rotulo: "toString", cru: "" });
+  });
+
+  it("motivo do fim em português, sem repetir; desconhecido fica cru", () => {
+    expect(rotuloMotivosFim(["stop"])).toBe("terminou a resposta");
+    expect(rotuloMotivosFim(["length"])).toBe("cortado no limite de tokens");
+    expect(rotuloMotivosFim(["tool_calls", "tool-calls", "tool_call"])).toBe("pediu para usar ferramenta");
+    expect(rotuloMotivosFim(["content_filter"])).toBe("bloqueado pelo filtro de conteúdo");
+    expect(rotuloMotivosFim(["stop", "max_tokens_custom"])).toBe("terminou a resposta, max_tokens_custom");
+    expect(rotuloMotivosFim([])).toBe("não informado");
+  });
+
+  it("papel da mensagem em português; desconhecido fica cru", () => {
+    expect(rotuloPapel("user")).toBe("pessoa");
+    expect(rotuloPapel("assistant")).toBe("modelo");
+    expect(rotuloPapel("system")).toBe("instruções do sistema");
+    expect(rotuloPapel("tool")).toBe("ferramenta");
+    expect(rotuloPapel("developer")).toBe("developer");
+    expect(rotuloPapel("")).toBe("papel não informado");
+  });
+
+  it("tokens: os dois nulos viram uma frase; um nulo é dito como não informado", () => {
+    const nulos = { tokens_entrada: null, tokens_saida: null, tokens_cache_leitura: null };
+    expect(textoTokens(nulos)).toBe("tokens não informados");
+    expect(textoTokens(nulos, true)).toBe("tokens não informados");
+    expect(textoTokens({ tokens_entrada: 120, tokens_saida: 30, tokens_cache_leitura: 100 })).toBe("entrada 120 · saída 30");
+    expect(textoTokens({ tokens_entrada: 120, tokens_saida: null, tokens_cache_leitura: null }, true)).toBe(
+      "entrada 120 · saída não informado · cache não informado",
+    );
+    // Zero é medição: aparece como 0.
+    expect(textoTokens({ tokens_entrada: 0, tokens_saida: 0, tokens_cache_leitura: 0 }, true)).toBe("entrada 0 · saída 0 · cache 0");
+  });
+
+  it("rótulos curtos de tipo e frase do loop sem travessão", () => {
+    expect(ROTULO_TIPO).toEqual({ modelo: "modelo", ferramenta: "ferramenta", agente: "agente", outro: "passo" });
+    const frase = fraseRepeticao({ ferramenta: "clima", vezes: 3, primeiro_span_id: "b7" });
+    expect(frase).toBe("clima chamada 3 vezes seguidas: possível loop");
+    expect(frase).not.toContain("—");
   });
 
   it("monta a requisição OpenAI só com a ENTRADA do passo, na ordem", () => {

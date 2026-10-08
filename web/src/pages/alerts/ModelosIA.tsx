@@ -2,7 +2,9 @@
 // grava as séries llm.* em `metrics` a cada minuto (server/internal/ia/runner.go) e
 // estas regras são regras comuns sobre elas — com prévia retroativa, plantão e
 // silêncio. O modelo só preenche o assistente; a pessoa ajusta o limite e salva.
-import { Button, Modal } from "../../components";
+import type { ComponentType } from "react";
+import { CircleAlert, Coins, Repeat, Tag, Timer } from "lucide-react";
+import { Modal } from "../../components";
 
 /** Os campos do assistente que um modelo preenche (subconjunto de WizardState). */
 export type PresetRegraIA = {
@@ -17,11 +19,14 @@ export type PresetRegraIA = {
   runbook: string;
 };
 
-export type ModeloIA = { id: string; titulo: string; explicacao: string; preset: PresetRegraIA };
+type Icone = ComponentType<{ size?: number; className?: string; "aria-hidden"?: boolean }>;
+
+export type ModeloIA = { id: string; titulo: string; explicacao: string; icone: Icone; preset: PresetRegraIA };
 
 export const MODELOS_IA: ModeloIA[] = [
   {
     id: "gasto-hora",
+    icone: Coins,
     titulo: "Gasto com IA na última hora",
     explicacao: "Soma do custo das chamadas numa janela de 1 h, por serviço/agente/modelo. Ajuste o limite ao seu orçamento.",
     preset: {
@@ -32,6 +37,7 @@ export const MODELOS_IA: ModeloIA[] = [
   },
   {
     id: "erros",
+    icone: CircleAlert,
     titulo: "Chamadas de IA com erro",
     explicacao: "Mais de N erros do provedor em 10 min (limite de taxa, timeout, 5xx).",
     preset: {
@@ -42,6 +48,7 @@ export const MODELOS_IA: ModeloIA[] = [
   },
   {
     id: "latencia",
+    icone: Timer,
     titulo: "IA lenta (p95)",
     explicacao: "p95 das chamadas acima de N segundos de forma sustentada. É o p95 de cada minuto: use Máximo, não média.",
     preset: {
@@ -52,8 +59,9 @@ export const MODELOS_IA: ModeloIA[] = [
   },
   {
     id: "loop",
+    icone: Repeat,
     titulo: "Agente em loop",
-    explicacao: "Uma execução fez mais de N chamadas de modelo — o agente provavelmente está repetindo a mesma ferramenta.",
+    explicacao: "Uma execução fez mais de N chamadas de modelo: o agente provavelmente está repetindo a mesma ferramenta.",
     preset: {
       name: "Agente de IA em loop", metric: "llm.execucao.passos_max", condition_op: ">", threshold: 20,
       agg: "max", window_seconds: 300, for_seconds: 0, severity: "warning",
@@ -62,6 +70,7 @@ export const MODELOS_IA: ModeloIA[] = [
   },
   {
     id: "sem-preco",
+    icone: Tag,
     titulo: "Modelo sem preço",
     explicacao: "Chamadas num modelo que não está na tabela de preços: o gasto mostrado fica menor que o real.",
     preset: {
@@ -83,22 +92,39 @@ export function ModelosIA({
 }) {
   return (
     <Modal open={aberto} onClose={onFechar} title="Alertas para agentes de IA">
-      <p className="muted" style={{ marginTop: 0 }}>
-        Regras comuns sobre as séries que o painel grava a cada minuto (com 5 min de atraso, para esperar os spans de
-        execuções longas). Escolha um modelo, ajuste o limite e salve.
-      </p>
-      <ul className="modelos-ia" style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: "var(--sp-2)" }}>
-        {MODELOS_IA.map((m) => (
-          <li key={m.id}>
-            <Button onClick={() => onEscolher(m.preset)} style={{ width: "100%", justifyContent: "flex-start", textAlign: "left" }}>
-              <span style={{ display: "grid", gap: 2 }}>
-                <strong>{m.titulo}</strong>
-                <span className="muted" style={{ fontWeight: 400 }}>{m.explicacao}</span>
-              </span>
-            </Button>
-          </li>
-        ))}
-      </ul>
+      <div className="stack">
+        <p className="confirm__body">
+          Regras comuns sobre as séries que o painel grava a cada minuto (com 5 min de atraso, para esperar os spans de
+          execuções longas). Escolha um modelo, ajuste o limite e salve.
+        </p>
+        <div className="stack" role="group" aria-label="Modelos de regra">
+          {MODELOS_IA.map((m) => {
+            const Icone = m.icone;
+            // Nome do botão = título; a explicação entra como descrição (mesmo
+            // desenho do InstalarServidorModal), e não como parte do nome.
+            return (
+              <button
+                key={m.id}
+                type="button"
+                className="opcao"
+                aria-labelledby={`modelo-ia-${m.id}-titulo`}
+                aria-describedby={`modelo-ia-${m.id}-texto`}
+                onClick={() => onEscolher(m.preset)}
+              >
+                <Icone size={18} className="opcao__icone" aria-hidden />
+                <span>
+                  <span id={`modelo-ia-${m.id}-titulo`} className="opcao__titulo">
+                    {m.titulo}
+                  </span>
+                  <span id={`modelo-ia-${m.id}-texto`} className="opcao__texto">
+                    {m.explicacao}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </Modal>
   );
 }

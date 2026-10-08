@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -220,4 +222,423 @@ func boolNum(b bool) int {
 		return 1
 	}
 	return 0
+}
+
+// ---------------------------------------------------------------- utilitários de integração
+
+func clickhouseDeTeste(t *testing.T) *chquery.Client {
+	t.Helper()
+	addr := os.Getenv("REVOADA_TEST_CH_ADDR")
+	if addr == "" {
+		t.Skip("REVOADA_TEST_CH_ADDR não definido")
+	}
+	return chquery.New(addr, os.Getenv("REVOADA_TEST_CH_USER"), os.Getenv("REVOADA_TEST_CH_PASS"), "default")
+}
+
+func fmtTS(ts time.Time) string { return ts.UTC().Format("2006-01-02 15:04:05.000") }
+
+// linhaGenAI monta uma linha de genai_spans com valores neutros (chat, sem tokens, sem
+// custo); extra sobrescreve as colunas do caso.
+func linhaGenAI(service string, ts time.Time, trace, span string, extra map[string]any) map[string]any {
+	l := map[string]any{"tenant_id": "default", "ts": fmtTS(ts), "trace_id": trace, "span_id": span,
+		"parent_span_id": "", "service": service, "host": "h1", "nome": "chat", "duracao_ms": 100,
+		"convencao": "otel-genai", "operacao": "chat", "provedor": "openai", "modelo": "", "agente": "",
+		"conversa_id": "", "ferramenta": "", "erro": "", "tokens_entrada": nil, "tokens_saida": nil,
+		"tokens_cache_leitura": nil, "custo_informado_usd": nil, "motivos_fim": []string{}, "com_conteudo": 0}
+	for k, v := range extra {
+		l[k] = v
+	}
+	return l
+}
+
+func linhaConteudo(ts time.Time, trace, span string) map[string]any {
+	return map[string]any{"tenant_id": "default", "ts": fmtTS(ts), "trace_id": trace, "span_id": span,
+		"lado": "entrada", "papel": "user", "ordem": 0, "texto": "dado pessoal de " + trace, "truncado": 0, "redigido": 0}
+}
+
+func inserirJSON(t *testing.T, ch *chquery.Client, tabela string, linhas []map[string]any) {
+	t.Helper()
+	var sb strings.Builder
+	for _, l := range linhas {
+		b, err := json.Marshal(l)
+		if err != nil {
+			t.Fatal(err)
+		}
+		sb.Write(b)
+		sb.WriteByte('\n')
+	}
+	if err := ch.Exec(context.Background(), "INSERT INTO "+tabela+" FORMAT JSONEachRow\n"+sb.String()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func contar(t *testing.T, ch *chquery.Client, sql string) int64 {
+	t.Helper()
+	rows, err := ch.QueryJSON(context.Background(), sql)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) == 0 {
+		return 0
+	}
+	return inteiro(rows[0]["n"])
+}
+
+// esperarContagem espera a mutation assíncrona do ClickHouse (o purge responde 202
+// antes de as linhas sumirem) até a contagem chegar ao valor esperado.
+func esperarContagem(t *testing.T, ch *chquery.Client, sql string, quer int64) {
+	t.Helper()
+	limite := time.Now().Add(30 * time.Second)
+	for {
+		n := contar(t, ch, sql)
+		if n == quer {
+			return
+		}
+		if time.Now().After(limite) {
+			t.Fatalf("depois de 30 s, %d linhas (quer %d): %s", n, quer, sql)
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+}
+
+func listaSQL(ids ...string) string {
+	q := make([]string, len(ids))
+	for i, id := range ids {
+		q[i] = quote(id)
+	}
+	return strings.Join(q, ",")
+}
+
+func purgar(h *Handler, corpo string) *httptest.ResponseRecorder {
+	rec := httptest.NewRecorder()
+	h.PurgeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/ia/purge", strings.NewReader(corpo)))
+	return rec
+}
+
+// ---------------------------------------------------------------- purge de ponta a ponta
+
+// TestIntegracaoPurge executa o PurgeHTTP de verdade (pedido de titular de dado, LGPD):
+// apagar a conversa tira as chamadas E o conteúdo de TODOS os traces dela e deixa os
+// outros; apagar o trace pelo handler faz o mesmo para um trace só.
+func TestIntegracaoPurge(t *testing.T) {
+	ch := clickhouseDeTeste(t)
+	service := fmt.Sprintf("teste-ia-purge-%d", time.Now().UnixNano())
+	conversa := "conv-" + service
+	base := time.Now().Add(-10 * time.Minute).Truncate(time.Second)
+	t1, t2, t3 := hexDe(service, "p1"), hexDe(service, "p2"), hexDe(service, "p3")
+	inserirJSON(t, ch, "genai_spans", []map[string]any{
+		linhaGenAI(service, base, t1, "s1", map[string]any{"conversa_id": conversa, "com_conteudo": 1}),
+		linhaGenAI(service, base.Add(time.Second), t1, "s2", map[string]any{"conversa_id": conversa}),
+		linhaGenAI(service, base.Add(2*time.Second), t2, "s3", map[string]any{"conversa_id": conversa, "com_conteudo": 1}),
+		linhaGenAI(service, base.Add(3*time.Second), t3, "s4", map[string]any{"conversa_id": "outra-" + service, "com_conteudo": 1}),
+	})
+	inserirJSON(t, ch, "genai_conteudo", []map[string]any{
+		linhaConteudo(base, t1, "s1"), linhaConteudo(base.Add(2*time.Second), t2, "s3"), linhaConteudo(base.Add(3*time.Second), t3, "s4"),
+	})
+	h := New(ch, &lojaFalsa{}, nil)
+	spansDe := func(ids ...string) string {
+		return "SELECT count() AS n FROM genai_spans WHERE tenant_id = 'default' AND trace_id IN (" + listaSQL(ids...) + ")"
+	}
+	conteudoDe := func(ids ...string) string {
+		return "SELECT count() AS n FROM genai_conteudo WHERE tenant_id = 'default' AND trace_id IN (" + listaSQL(ids...) + ")"
+	}
+	if contar(t, ch, spansDe(t1, t2, t3)) != 4 || contar(t, ch, conteudoDe(t1, t2, t3)) != 3 {
+		t.Fatal("cenário não foi gravado")
+	}
+
+	t.Run("conversa inexistente explica e não apaga nada", func(t *testing.T) {
+		rec := purgar(h, `{"alvo":"conversa","valor":"nao-existe-`+service+`"}`)
+		if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "nenhuma execução") {
+			t.Fatalf("%d %s", rec.Code, rec.Body)
+		}
+	})
+	t.Run("conversa apaga spans e conteúdo de todos os traces dela", func(t *testing.T) {
+		rec := purgar(h, `{"alvo":"conversa","valor":"`+conversa+`"}`)
+		if rec.Code != http.StatusAccepted || !strings.Contains(rec.Body.String(), `"comandos":2`) {
+			t.Fatalf("%d %s", rec.Code, rec.Body)
+		}
+		esperarContagem(t, ch, spansDe(t1, t2), 0)
+		esperarContagem(t, ch, conteudoDe(t1, t2), 0)
+		if contar(t, ch, spansDe(t3)) != 1 || contar(t, ch, conteudoDe(t3)) != 1 {
+			t.Fatal("o purge da conversa apagou um trace de outra conversa")
+		}
+	})
+	t.Run("trace pelo handler", func(t *testing.T) {
+		if rec := purgar(h, `{"alvo":"trace","valor":"x' OR 1=1 --"}`); rec.Code != http.StatusBadRequest {
+			t.Fatalf("trace inválido: %d", rec.Code)
+		}
+		rec := purgar(h, `{"alvo":"trace","valor":"`+t3+`"}`)
+		if rec.Code != http.StatusAccepted {
+			t.Fatalf("%d %s", rec.Code, rec.Body)
+		}
+		esperarContagem(t, ch, spansDe(t3), 0)
+		esperarContagem(t, ch, conteudoDe(t3), 0)
+	})
+}
+
+// ---------------------------------------------------------------- custo: origem e vigência
+
+// TestIntegracaoCustoPorOrigem: um proxy informa o custo SEM tokens numa chamada e
+// tokens SEM custo noutra, do mesmo modelo e no mesmo minuto. As contagens sem_tok e
+// estimaveis vêm do SQL linha a linha (no agregado, da MV); deduzi-las no Go das outras
+// contagens deixaria a chamada com tokens sem estimativa. Os dois caminhos (genai_1m e
+// as linhas, com filtro de agente) têm de dar exatamente o mesmo número.
+func TestIntegracaoCustoPorOrigem(t *testing.T) {
+	ch := clickhouseDeTeste(t)
+	ctx := context.Background()
+	service := fmt.Sprintf("teste-ia-proxy-%d", time.Now().UnixNano())
+	base := time.Now().Add(-20 * time.Minute).Truncate(time.Minute)
+	tr := hexDe(service, "px")
+	const comPreco, semPreco = "proxy-modelo", "proxy-sem-preco"
+	inserirJSON(t, ch, "genai_spans", []map[string]any{
+		linhaGenAI(service, base, tr, "a0", map[string]any{"operacao": "invoke_agent", "agente": "Proxy", "nome": "agente"}),
+		// c1: custo informado, sem tokens
+		linhaGenAI(service, base.Add(time.Second), tr, "c1", map[string]any{"parent_span_id": "a0", "modelo": comPreco, "custo_informado_usd": 0.3}),
+		// c2: tokens, sem custo → estimado pelo preço (1 US$/1M de entrada)
+		linhaGenAI(service, base.Add(2*time.Second), tr, "c2", map[string]any{"parent_span_id": "a0", "modelo": comPreco,
+			"tokens_entrada": 1_000_000, "tokens_saida": 0}),
+		// c3: tokens, modelo sem preço
+		linhaGenAI(service, base.Add(3*time.Second), tr, "c3", map[string]any{"parent_span_id": "a0", "modelo": semPreco,
+			"tokens_entrada": 500, "tokens_saida": 50}),
+		// c4: nem tokens nem custo
+		linhaGenAI(service, base.Add(4*time.Second), tr, "c4", map[string]any{"parent_span_id": "a0", "modelo": comPreco}),
+		// c5: tokens E custo informado → vale o informado
+		linhaGenAI(service, base.Add(5*time.Second), tr, "c5", map[string]any{"parent_span_id": "a0", "modelo": comPreco,
+			"tokens_entrada": 1000, "tokens_saida": 100, "custo_informado_usd": 0.2}),
+	})
+	loja := &lojaFalsa{precos: []store.PrecoLLM{{ID: 1, Provedor: "openai", Modelo: comPreco, EntradaPor1M: 1, SaidaPor1M: 0,
+		VigenteDesde: jan2025, Origem: "manual"}}}
+	h := New(ch, loja, nil)
+	f := Filtros{De: base.Add(-time.Minute), Ate: time.Now().Add(time.Minute), Service: service}
+	const custoTotal = 0.3 + 1.0 + 0.2
+
+	for _, agente := range []string{"", "Proxy"} {
+		nome := "pelo agregado (genai_1m)"
+		if agente != "" {
+			nome = "pelas linhas (filtro de agente)"
+		}
+		t.Run(nome, func(t *testing.T) {
+			g := f
+			g.Agente = agente
+			r, err := h.Resumo(ctx, g)
+			if err != nil {
+				t.Fatal(err)
+			}
+			tt := r.Totais
+			if tt.Chamadas != 5 || tt.SemTokens != 1 || tt.ChamadasSemPreco != 1 || !tt.CustoParcial ||
+				math.Abs(deref(tt.CustoUSD)-custoTotal) > 1e-9 || math.Abs(tt.CustoInformadoUSD-0.5) > 1e-9 ||
+				tt.TokensEntrada != 1_001_500 {
+				t.Fatalf("totais: %+v (custo=%v)", tt, deref(tt.CustoUSD))
+			}
+			modelos := map[string]PorModelo{}
+			for _, m := range r.PorModelo {
+				modelos[m.Modelo] = m
+			}
+			if m := modelos[comPreco]; m.SemPreco || math.Abs(deref(m.CustoUSD)-custoTotal) > 1e-9 || m.Chamadas != 4 {
+				t.Fatalf("modelo com preço: %+v (custo=%v)", m, deref(m.CustoUSD))
+			}
+			if m := modelos[semPreco]; !m.SemPreco || m.CustoUSD != nil {
+				t.Fatalf("modelo sem preço: %+v", m)
+			}
+		})
+	}
+	t.Run("lista de execuções", func(t *testing.T) {
+		ex, err := h.Execucoes(ctx, FiltroExecucoes{Filtros: f, Limite: 10})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(ex) != 1 || ex[0].Agente != "Proxy" || ex[0].ChamadasModelo != 5 || !ex[0].CustoParcial ||
+			math.Abs(deref(ex[0].CustoUSD)-custoTotal) > 1e-9 {
+			t.Fatalf("execuções: %+v", ex)
+		}
+	})
+	t.Run("replay marca a origem de cada custo", func(t *testing.T) {
+		rep, err := h.Execucao(ctx, tr, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		quer := []struct {
+			origem string
+			usd    *float64
+			data   string
+		}{
+			{"", nil, ""}, {"informado", f64(0.3), ""}, {"estimado", f64(1.0), "2025-01-01"},
+			{"sem_preco", nil, ""}, {"sem_tokens", nil, ""}, {"informado", f64(0.2), ""},
+		}
+		if len(rep.Passos) != len(quer) {
+			t.Fatalf("%d passos", len(rep.Passos))
+		}
+		for i, q := range quer {
+			p := rep.Passos[i]
+			if p.CustoOrigem != q.origem || p.PrecoData != q.data || (p.CustoUSD == nil) != (q.usd == nil) ||
+				(q.usd != nil && math.Abs(*p.CustoUSD-*q.usd) > 1e-9) {
+				t.Fatalf("passo %s: origem=%q usd=%v data=%q, quer %+v", p.SpanID, p.CustoOrigem, deref(p.CustoUSD), p.PrecoData, q)
+			}
+		}
+		if !rep.Totais.CustoParcial || math.Abs(deref(rep.Totais.CustoUSD)-custoTotal) > 1e-9 || rep.Agente != "Proxy" {
+			t.Fatalf("totais do replay: %+v", rep.Totais)
+		}
+	})
+}
+
+// TestIntegracaoPrecoMudaNoMeioDaJanela: o preço mudou no meio da janela consultada.
+// Cada intervalo (no resumo) e cada execução (na lista e no replay) usa o preço vigente
+// NAQUELE momento — nem o de hoje para tudo, nem o antigo para tudo.
+func TestIntegracaoPrecoMudaNoMeioDaJanela(t *testing.T) {
+	ch := clickhouseDeTeste(t)
+	ctx := context.Background()
+	service := fmt.Sprintf("teste-ia-vigencia-%d", time.Now().UnixNano())
+	base := time.Now().Add(-2 * time.Hour).Truncate(time.Minute)
+	troca := base.Add(time.Hour)
+	antes, depois := hexDe(service, "va"), hexDe(service, "vd")
+	const modelo = "vig-modelo"
+	var linhas []map[string]any
+	for _, x := range []struct {
+		trace string
+		ts    time.Time
+	}{{antes, troca.Add(-10 * time.Minute)}, {depois, troca.Add(10 * time.Minute)}} {
+		linhas = append(linhas,
+			linhaGenAI(service, x.ts, x.trace, "ag", map[string]any{"operacao": "invoke_agent", "agente": "Vig", "nome": "agente"}),
+			linhaGenAI(service, x.ts.Add(time.Second), x.trace, "ch", map[string]any{"parent_span_id": "ag", "modelo": modelo,
+				"tokens_entrada": 1_000_000, "tokens_saida": 0}))
+	}
+	inserirJSON(t, ch, "genai_spans", linhas)
+	loja := &lojaFalsa{precos: []store.PrecoLLM{
+		{ID: 1, Provedor: "openai", Modelo: modelo, EntradaPor1M: 1, VigenteDesde: jan2025, Origem: "manual"},
+		{ID: 2, Provedor: "openai", Modelo: modelo, EntradaPor1M: 10, VigenteDesde: troca, Origem: "manual"},
+	}}
+	h := New(ch, loja, nil)
+	f := Filtros{De: base.Add(-time.Minute), Ate: time.Now().Add(time.Minute), Service: service}
+
+	for _, agente := range []string{"", "Vig"} {
+		t.Run("resumo agente="+agente, func(t *testing.T) {
+			g := f
+			g.Agente = agente
+			r, err := h.Resumo(ctx, g)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if math.Abs(deref(r.Totais.CustoUSD)-11) > 1e-9 || r.Totais.CustoParcial {
+				t.Fatalf("total = %v, quer 11 (1 antes da troca + 10 depois): %+v", deref(r.Totais.CustoUSD), r.Totais)
+			}
+			if len(r.PorModelo) != 1 || math.Abs(deref(r.PorModelo[0].CustoUSD)-11) > 1e-9 ||
+				r.PorModelo[0].Preco == nil || r.PorModelo[0].Preco.EntradaPor1M != 10 {
+				t.Fatalf("por modelo: %+v", r.PorModelo)
+			}
+			if len(r.PorAgente) != 1 || r.PorAgente[0].Agente != "Vig" || math.Abs(deref(r.PorAgente[0].CustoUSD)-11) > 1e-9 {
+				t.Fatalf("por agente: %+v", r.PorAgente)
+			}
+		})
+	}
+	t.Run("execuções e replay", func(t *testing.T) {
+		ex, err := h.Execucoes(ctx, FiltroExecucoes{Filtros: f, Limite: 10})
+		if err != nil {
+			t.Fatal(err)
+		}
+		custos := map[string]float64{}
+		for _, e := range ex {
+			custos[e.TraceID] = deref(e.CustoUSD)
+		}
+		if len(ex) != 2 || math.Abs(custos[antes]-1) > 1e-9 || math.Abs(custos[depois]-10) > 1e-9 {
+			t.Fatalf("custos por execução: %v", custos)
+		}
+		for trace, quer := range map[string]struct {
+			usd  float64
+			data string
+		}{antes: {1, "2025-01-01"}, depois: {10, troca.UTC().Format("2006-01-02")}} {
+			rep, err := h.Execucao(ctx, trace, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			p := rep.Passos[1]
+			if math.Abs(deref(p.CustoUSD)-quer.usd) > 1e-9 || p.PrecoData != quer.data {
+				t.Fatalf("replay %s: usd=%v data=%q, quer %+v", trace, deref(p.CustoUSD), p.PrecoData, quer)
+			}
+		}
+	})
+}
+
+// ---------------------------------------------------------------- por último: esvaziar o conteúdo
+
+// TestIntegracaoPurgeTodoConteudo roda por último entre os testes do pacote que usam o
+// ClickHouse: o alvo todo_conteudo esvazia a tabela genai_conteudo INTEIRA, de qualquer
+// teste. REVOADA_TEST_CH_ADDR aponta, por contrato, para um ClickHouse descartável.
+// Frase errada não apaga nada; a frase certa esvazia genai_conteudo e deixa
+// genai_spans (custo e tokens seguem).
+func TestIntegracaoPurgeTodoConteudo(t *testing.T) {
+	ch := clickhouseDeTeste(t)
+	service := fmt.Sprintf("teste-ia-todo-conteudo-%d", time.Now().UnixNano())
+	tr := hexDe(service, "tc")
+	agora := time.Now().Add(-time.Minute)
+	inserirJSON(t, ch, "genai_spans", []map[string]any{linhaGenAI(service, agora, tr, "s1", map[string]any{"com_conteudo": 1})})
+	inserirJSON(t, ch, "genai_conteudo", []map[string]any{linhaConteudo(agora, tr, "s1")})
+	h := New(ch, &lojaFalsa{}, nil)
+	doTrace := "SELECT count() AS n FROM genai_conteudo WHERE trace_id = " + quote(tr)
+
+	rec := purgar(h, `{"alvo":"todo_conteudo","frase":"apagar tudo"}`)
+	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), FraseApagarConteudo) {
+		t.Fatalf("frase errada: %d %s", rec.Code, rec.Body)
+	}
+	if contar(t, ch, doTrace) != 1 {
+		t.Fatal("frase errada apagou conteúdo")
+	}
+	rec = purgar(h, `{"alvo":"todo_conteudo","frase":"`+FraseApagarConteudo+`"}`)
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("frase certa: %d %s", rec.Code, rec.Body)
+	}
+	esperarContagem(t, ch, "SELECT count() AS n FROM genai_conteudo", 0)
+	if contar(t, ch, "SELECT count() AS n FROM genai_spans WHERE trace_id = "+quote(tr)) != 1 {
+		t.Fatal("todo_conteudo não pode apagar as chamadas (custo e tokens seguem)")
+	}
+}
+
+// Troca de preço no MEIO de um intervalo do gráfico. Numa janela de 24 h o intervalo é
+// de 15 min; as duas chamadas caem no mesmo intervalo, uma antes e outra depois da
+// troca. Sem partir o intervalo na fronteira de vigência, as duas seriam cobradas pelo
+// preço antigo (2 em vez de 11).
+func TestIntegracaoTrocaDePrecoNoMeioDoIntervalo(t *testing.T) {
+	ch := clickhouseDeTeste(t)
+	ctx := context.Background()
+	service := fmt.Sprintf("teste-ia-trecho-%d", time.Now().UnixNano())
+	troca := time.Now().Add(-2 * time.Hour).Truncate(15 * time.Minute).Add(7 * time.Minute)
+	const modelo = "trecho-modelo"
+	var linhas []map[string]any
+	for i, ts := range []time.Time{troca.Add(-3 * time.Minute), troca.Add(3 * time.Minute)} {
+		tr := hexDe(service, fmt.Sprintf("t%d", i))
+		linhas = append(linhas,
+			linhaGenAI(service, ts, tr, "ag", map[string]any{"operacao": "invoke_agent", "agente": "Trecho", "nome": "agente"}),
+			linhaGenAI(service, ts.Add(time.Second), tr, "ch", map[string]any{"parent_span_id": "ag", "modelo": modelo,
+				"tokens_entrada": 1_000_000, "tokens_saida": 0}))
+	}
+	inserirJSON(t, ch, "genai_spans", linhas)
+	loja := &lojaFalsa{precos: []store.PrecoLLM{
+		{ID: 1, Provedor: "openai", Modelo: modelo, EntradaPor1M: 1, VigenteDesde: jan2025, Origem: "manual"},
+		{ID: 2, Provedor: "openai", Modelo: modelo, EntradaPor1M: 10, VigenteDesde: troca, Origem: "manual"},
+	}}
+	h := New(ch, loja, nil)
+	f := Filtros{De: time.Now().Add(-24 * time.Hour), Ate: time.Now(), Service: service}
+	if p := escolherPasso(f.Ate.Sub(f.De)); p != 900 {
+		t.Fatalf("o teste supõe intervalos de 15 min, veio %d s", p)
+	}
+	for _, agente := range []string{"", "Trecho"} { // agregado por minuto e linhas
+		g := f
+		g.Agente = agente
+		r, err := h.Resumo(ctx, g)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if math.Abs(deref(r.Totais.CustoUSD)-11) > 1e-9 {
+			t.Fatalf("agente=%q: total = %v, quer 11 (1 antes + 10 depois da troca)", agente, deref(r.Totais.CustoUSD))
+		}
+		if len(r.PorAgente) != 1 || math.Abs(deref(r.PorAgente[0].CustoUSD)-11) > 1e-9 {
+			t.Fatalf("agente=%q: por agente = %+v", agente, r.PorAgente)
+		}
+		var serie float64
+		for _, p := range r.Serie {
+			serie += p.CustoUSD
+		}
+		if math.Abs(serie-11) > 1e-9 {
+			t.Fatalf("agente=%q: soma da série = %v", agente, serie)
+		}
+	}
 }
