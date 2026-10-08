@@ -25,6 +25,7 @@ type Execucao struct {
 	TokensSaida        int64    `json:"tokens_saida"`
 	CustoUSD           *float64 `json:"custo_usd"`
 	CustoParcial       bool     `json:"custo_parcial"`
+	SemPreco           bool     `json:"sem_preco"` // há chamada com tokens num modelo sem preço
 	Modelos            []string `json:"modelos"`
 	Status             string   `json:"status"`
 }
@@ -136,7 +137,7 @@ func (h *Handler) custearExecucoes(ctx context.Context, f Filtros, ex []Execucao
 		custos[i].somar(calcular(tab, lerUso(r, quando)))
 	}
 	for i := range ex {
-		ex[i].CustoUSD, ex[i].CustoParcial = custos[i].usdOuNulo(), custos[i].parcial()
+		ex[i].CustoUSD, ex[i].CustoParcial, ex[i].SemPreco = custos[i].usdOuNulo(), custos[i].parcial(), custos[i].SemPreco > 0
 	}
 	return nil
 }

@@ -446,6 +446,15 @@ func TestLeituraToleraTiposInesperados(t *testing.T) {
 	}
 }
 
+func TestOrdenarPassosPaiAntesDoFilho(t *testing.T) {
+	// Medido com a demo: o agente e a 1ª chamada ao modelo começam no mesmo milissegundo.
+	ps := []Passo{{SpanID: "filho", TsMs: 10, Profundidade: 1}, {SpanID: "pai", TsMs: 10}, {SpanID: "depois", TsMs: 20, Profundidade: 1}}
+	ordenarPassos(ps)
+	if ps[0].SpanID != "pai" || ps[1].SpanID != "filho" || ps[2].SpanID != "depois" {
+		t.Fatalf("ordem = %v %v %v", ps[0].SpanID, ps[1].SpanID, ps[2].SpanID)
+	}
+}
+
 func TestFronteirasETrechos(t *testing.T) {
 	de, ate := time.Unix(1000, 0), time.Unix(5000, 0)
 	ps := []store.PrecoLLM{{VigenteDesde: time.Unix(3000, 0)}, {VigenteDesde: time.Unix(2000, 0)},

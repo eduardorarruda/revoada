@@ -24,7 +24,6 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-PORTA_PADRAO = 18080
 LATENCIA_S = (0.2, 0.9)
 
 
@@ -106,11 +105,15 @@ class LLMFalso(BaseHTTPRequestHandler):
         })
 
 
-def iniciar(porta=PORTA_PADRAO):
-    """Sobe o LLM falso numa thread e devolve a base_url para o cliente da OpenAI."""
+def iniciar(porta=0):
+    """Sobe o LLM falso numa thread e devolve a base_url para o cliente da OpenAI.
+
+    Porta 0 = o sistema escolhe uma livre. Porta fixa colidia com qualquer serviço que
+    já estivesse nela (rodando com --network host, um painel de teste na 18080 bastou).
+    """
     servidor = ThreadingHTTPServer(("127.0.0.1", porta), LLMFalso)
     threading.Thread(target=servidor.serve_forever, daemon=True).start()
-    return f"http://127.0.0.1:{porta}/v1"
+    return f"http://127.0.0.1:{servidor.server_address[1]}/v1"
 
 
 if __name__ == "__main__":

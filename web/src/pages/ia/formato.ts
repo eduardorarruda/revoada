@@ -99,3 +99,12 @@ export function fmtCustoPasso(p: {
       return { valor: fmtUsd(p.custo_usd), origem: "" };
   }
 }
+
+/** "2 de modelo · 1 de ferramenta", sem as partes zeradas ("1 de modelo"). */
+export function passosDaExecucao(modelo: number, ferramenta: number): string {
+  const partes = [
+    modelo > 0 ? `${fmtInteiro(modelo)} de modelo` : "",
+    ferramenta > 0 ? `${fmtInteiro(ferramenta)} de ferramenta` : "",
+  ].filter(Boolean);
+  return partes.length ? partes.join(" · ") : "nenhuma chamada";
+}

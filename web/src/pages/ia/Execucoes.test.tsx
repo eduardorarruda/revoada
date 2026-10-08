@@ -38,6 +38,17 @@ describe("Execuções", () => {
     expect(within(linhaParcial).getByText("parcial")).toBeInTheDocument();
   });
 
+  it("custo nulo por falta de preço diz 'sem preço', e a contagem omite a parte zerada", async () => {
+    listIaExecucoes.mockResolvedValue({
+      execucoes: [execucao({ trace_id: "t4", agente: "Novo", custo_usd: null, custo_parcial: true, sem_preco: true, chamadas_ferramenta: 0 })],
+    });
+    render(<Execucoes janela={acharJanela("1h")} versao={0} params={new URLSearchParams()} />);
+    const linha = (await screen.findByRole("link", { name: "Novo" })).closest("tr") as HTMLElement;
+    expect(within(linha).getByText("sem preço")).toBeInTheDocument();
+    expect(within(linha).queryByText(/não informado/)).not.toBeInTheDocument();
+    expect(within(linha).getByText("3 de modelo")).toBeInTheDocument();
+  });
+
   it("filtros da URL viram filtros da API", async () => {
     listIaExecucoes.mockResolvedValue({ execucoes: [] });
     render(<Execucoes janela={acharJanela("1h")} versao={0} params={new URLSearchParams("agente=Atendente&status=erro")} />);

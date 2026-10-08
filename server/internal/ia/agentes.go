@@ -46,7 +46,7 @@ func (h *Handler) porAgente(ctx context.Context, f Filtros, tab *genai.Tabela, f
 	out := make([]PorAgente, 0, len(grupos))
 	for k, t := range grupos {
 		out = append(out, PorAgente{Agente: k[0], Service: k[1], Chamadas: t.Chamadas, Erros: t.Erros,
-			CustoUSD: t.Custo.usdOuNulo(), TokensEntrada: t.Uso.Entrada, TokensSaida: t.Uso.Saida})
+			CustoUSD: t.Custo.usdOuNulo(), SemPreco: t.Custo.SemPreco > 0, TokensEntrada: t.Uso.Entrada, TokensSaida: t.Uso.Saida})
 	}
 	sort.Slice(out, func(i, j int) bool {
 		ci, cj := valorOuMenos(out[i].CustoUSD), valorOuMenos(out[j].CustoUSD)

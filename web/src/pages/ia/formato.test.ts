@@ -10,6 +10,7 @@ import {
   fmtUsd,
   NAO_INFORMADO,
   SEM_PRECO,
+  passosDaExecucao,
 } from "./formato";
 
 describe("fmtUsd", () => {
@@ -97,5 +98,14 @@ describe("origem do preço", () => {
     expect(fmtOrigemPreco("referencia-2025-10")).toBe("tabela de referência (out/2025)");
     expect(fmtOrigemPreco("")).toBe("não informada");
     expect(fmtOrigemPreco("manual")).toBe("manual");
+  });
+});
+
+describe("passosDaExecucao", () => {
+  it("omite as partes zeradas", () => {
+    expect(passosDaExecucao(2, 1)).toBe("2 de modelo · 1 de ferramenta");
+    expect(passosDaExecucao(1, 0)).toBe("1 de modelo");
+    expect(passosDaExecucao(0, 3)).toBe("3 de ferramenta");
+    expect(passosDaExecucao(0, 0)).toBe("nenhuma chamada");
   });
 });

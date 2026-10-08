@@ -60,8 +60,8 @@ export function resumo(over: Partial<IaResumo> = {}): IaResumo {
       },
     ],
     por_agente: [
-      { agente: "Atendente", service: "bot", chamadas: 2000, erros: 10, custo_usd: 9.1, tokens_entrada: 1, tokens_saida: 1 },
-      { agente: "Resumidor", service: "jobs", chamadas: 900, erros: 0, custo_usd: 3.3, tokens_entrada: 1, tokens_saida: 1 },
+      { agente: "Atendente", service: "bot", chamadas: 2000, erros: 10, custo_usd: 9.1, sem_preco: false, tokens_entrada: 1, tokens_saida: 1 },
+      { agente: "Resumidor", service: "jobs", chamadas: 900, erros: 0, custo_usd: 3.3, sem_preco: false, tokens_entrada: 1, tokens_saida: 1 },
     ],
     ferramentas: [
       { ferramenta: "buscar_pedido", chamadas: 120, erros: 6, latencia_p95_ms: 410 },
@@ -88,6 +88,7 @@ export function execucao(over: Partial<IaExecucao> = {}): IaExecucao {
     tokens_saida: 300,
     custo_usd: 0.0021,
     custo_parcial: false,
+    sem_preco: false,
     modelos: ["gpt-4o-mini-2024-07-18"],
     status: "ok",
     ...over,

@@ -112,7 +112,7 @@ export function TabelaAgentes({ agentes, janelaId }: { agentes: IaAgenteResumo[]
     },
     { key: "chamadas", label: "Chamadas", align: "right", render: (a) => fmtInteiro(a.chamadas) },
     { key: "erros", label: "Erros", align: "right", render: (a) => fmtInteiro(a.erros) },
-    { key: "custo_usd", label: "Custo", align: "right", render: (a) => fmtUsd(a.custo_usd) },
+    { key: "custo_usd", label: "Custo", align: "right", render: (a) => fmtUsd(a.custo_usd, a.sem_preco ? SEM_PRECO : undefined) },
   ];
   return (
     <Card

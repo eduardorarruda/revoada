@@ -70,9 +70,22 @@ func Connect(ctx context.Context, dsn string) (*Store, error) {
 	return s, nil
 }
 
+// travaMigracoesPainel é a MESMA trava de server/internal/store (migrar.go,
+// travaMigracoes "REVMIG"). Sem ela, na primeira subida o gateway criava agents/hosts
+// ao mesmo tempo em que o painel aplicava a migration 0001 (que cria as mesmas tabelas),
+// e os dois CREATE TABLE IF NOT EXISTS colidiam no catálogo do Postgres
+// (pg_type_typname_nsp_index): o painel caía e só subia no restart. Medido no
+// docker compose da raiz, banco novo.
+const travaMigracoesPainel = 0x52_45_56_4D_49_47
+
 func (s *Store) ensureSchema(ctx context.Context) error {
-	_, err := s.pool.Exec(ctx, schemaSQL)
-	return err
+	return pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1)`, int64(travaMigracoesPainel)); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, schemaSQL)
+		return err
+	})
 }
 
 // Close fecha o pool.

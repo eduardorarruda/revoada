@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/eduardorarruda/revoada/core/genai"
@@ -134,6 +135,7 @@ func (h *Handler) Execucao(ctx context.Context, traceID string, escopo *authz.Sc
 	}
 	rep.Totais.CustoUSD, rep.Totais.CustoParcial = tot.usdOuNulo(), tot.parcial()
 	profundidades(rep.Passos)
+	ordenarPassos(rep.Passos)
 	rep.Repeticoes = repeticoes(rep.Passos)
 	return rep, nil
 }
@@ -254,6 +256,19 @@ func profundidades(ps []Passo) {
 		}
 		ps[i].Profundidade = d
 	}
+}
+
+// ordenarPassos põe os passos em ordem de início e, no empate, o pai antes do filho.
+// O empate é comum: o span do agente e a primeira chamada ao modelo costumam começar no
+// mesmo milissegundo (medido com a demo), e desempatar pelo span_id (aleatório) punha o
+// modelo antes do agente que o chamou.
+func ordenarPassos(ps []Passo) {
+	sort.SliceStable(ps, func(i, j int) bool {
+		if ps[i].TsMs != ps[j].TsMs {
+			return ps[i].TsMs < ps[j].TsMs
+		}
+		return ps[i].Profundidade < ps[j].Profundidade
+	})
 }
 
 // repeticoes acha a mesma ferramenta chamada minimoRepeticao vezes ou mais em

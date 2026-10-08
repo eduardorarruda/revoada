@@ -7,7 +7,7 @@ import { Badge, Button, Card, DataTable, EmptyState, FormField, InfoTip, type Co
 import { intervaloDaJanela, janelaParaAmpliar, type OpcaoJanela } from "../../components/JanelaTempo";
 import { fmtRelAbs } from "../../format";
 import { Custo, FalhaCarga, useCarga, useSinalizarCarga } from "./comum";
-import { fmtInteiro, fmtMs, fmtTokens } from "./formato";
+import { fmtInteiro, fmtMs, fmtTokens, passosDaExecucao, SEM_PRECO } from "./formato";
 import { hrefReplay } from "./rotas";
 import { plural } from "./veredito";
 
@@ -84,7 +84,7 @@ function colunas(janelaId: string): Column<IaExecucao>[] {
       align: "right",
       sortable: true,
       sortValue: (e) => e.chamadas_modelo + e.chamadas_ferramenta,
-      render: (e) => `${fmtInteiro(e.chamadas_modelo)} de modelo · ${fmtInteiro(e.chamadas_ferramenta)} de ferramenta`,
+      render: (e) => passosDaExecucao(e.chamadas_modelo, e.chamadas_ferramenta),
     },
     {
       key: "tokens",
@@ -99,7 +99,7 @@ function colunas(janelaId: string): Column<IaExecucao>[] {
       align: "right",
       sortable: true,
       sortValue: (e) => e.custo_usd ?? -1,
-      render: (e) => <Custo valor={e.custo_usd} parcial={e.custo_parcial} />,
+      render: (e) => <Custo valor={e.custo_usd} parcial={e.custo_parcial} vazio={e.sem_preco ? SEM_PRECO : undefined} />,
     },
     { key: "duracao_ms", label: "Duração", align: "right", sortable: true, render: (e) => fmtMs(e.duracao_ms) },
     {

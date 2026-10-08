@@ -80,6 +80,7 @@ type PorAgente struct {
 	Chamadas      int64    `json:"chamadas"`
 	Erros         int64    `json:"erros"`
 	CustoUSD      *float64 `json:"custo_usd"`
+	SemPreco      bool     `json:"sem_preco"`
 	TokensEntrada int64    `json:"tokens_entrada"`
 	TokensSaida   int64    `json:"tokens_saida"`
 }

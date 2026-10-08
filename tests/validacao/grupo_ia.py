@@ -596,7 +596,13 @@ def _status(c, caminho):
 def caso_purge(c, trace):
     """Pedido de titular (LGPD): apagar por trace e por conversa tira as chamadas de IA
     (genai_spans e genai_conteudo), mas não a tabela genérica de traces. todo_conteudo
-    NÃO roda aqui: é um TRUNCATE do conteúdo de toda a stack (ver README)."""
+    NÃO roda aqui: é um TRUNCATE do conteúdo de toda a stack (ver README).
+
+    Purge é permissão crítica (2FA + reautenticação de 5 min, PermApagarDadosIA): este
+    caso roda depois da espera da série llm.*, quando a reautenticação de antes já
+    venceu, então reautentica aqui. A recusa sem reautenticação é provada nos testes de
+    rota (server/internal/httpapi/ia_rotas_test.go)."""
+    c.painel.reautenticar()
     st, r = c.painel.bruto("POST", "/api/ia/purge", {"alvo": "trace", "valor": trace})
     c.res.add(G, "Purge por trace aceito", 202, st, "exato", st == 202, str(r)[:160])
     t0 = time.time()

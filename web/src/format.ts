@@ -237,9 +237,10 @@ export function formatValue(
     case "bool":
       return value >= 0.5 ? "sim" : "não";
     // Custo de chamada de IA costuma ser fração de centavo: abaixo de US$ 0,01 ganha
-    // casas, senão "US$ 0,00" diria que não custou nada.
+    // casas, senão "US$ 0,00" diria que não custou nada (também no eixo do gráfico,
+    // onde 2 casas punham "US$ 0" em todas as marcas).
     case "usd":
-      return `US$ ${num(value, value !== 0 && Math.abs(value) < 0.01 && !opts.compact ? 4 : 2)}`;
+      return `US$ ${num(value, value !== 0 && Math.abs(value) < 0.01 ? 4 : 2)}`;
     default:
       return num(value, opts.compact ? 1 : 2);
   }

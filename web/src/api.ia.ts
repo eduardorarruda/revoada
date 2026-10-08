@@ -107,6 +107,8 @@ export interface IaAgenteResumo {
   chamadas: number;
   erros: number;
   custo_usd: number | null;
+  /** Há chamada com tokens num modelo sem preço: custo null quer dizer "sem preço". */
+  sem_preco: boolean;
   tokens_entrada: number;
   tokens_saida: number;
 }
@@ -158,6 +160,8 @@ export interface IaExecucao {
   tokens_saida: number | null;
   custo_usd: number | null;
   custo_parcial: boolean;
+  /** Há chamada com tokens num modelo sem preço: custo null quer dizer "sem preço". */
+  sem_preco: boolean;
   modelos: string[];
   status: IaStatusExecucao;
 }
