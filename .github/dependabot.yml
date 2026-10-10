@@ -12,6 +12,11 @@ updates:
     schedule: { interval: weekly }
     groups:
       web: { patterns: ["*"] }
+    ignore:
+      # typescript-eslint 8 só aceita TypeScript abaixo de 6.1 (peer): o 7 trava o
+      # `npm ci`. Liberar quando o typescript-eslint suportar o TypeScript 7.
+      - dependency-name: typescript
+        versions: [">=6.1"]
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
