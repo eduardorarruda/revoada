@@ -387,7 +387,11 @@ func TestClassificaConectouMasNaoRespondeu(t *testing.T) {
 	if res.OK || res.Diagnosis != DiagSemResposta {
 		t.Fatalf("quero %q, obtive ok=%v diag=%q (conn=%v tls=%v ttfb=%v)", DiagSemResposta, res.OK, res.Diagnosis, res.ConnectMs, res.TLSMs, res.TTFBMs)
 	}
-	if res.ConnectMs <= 0 || res.TLSMs <= 0 || res.TTFBMs != 0 {
+	// O primeiro byte pode chegar no MESMO instante do prazo: o servidor de teste só
+	// responde quando a requisição é cancelada (visto na CI: ttfb=501 ms com limite de
+	// 500). Byte no prazo ou depois dele não é resposta — a mesma regra do semByteNoPrazo.
+	semByteNoPrazo := res.TTFBMs == 0 || res.TTFBMs >= 500
+	if res.ConnectMs <= 0 || res.TLSMs <= 0 || !semByteNoPrazo {
 		t.Errorf("as fases precisam contar a história: conn=%v tls=%v ttfb=%v", res.ConnectMs, res.TLSMs, res.TTFBMs)
 	}
 	// Continua sendo falha do alvo (o usuário não consegue usar), não abstenção.
