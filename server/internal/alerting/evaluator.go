@@ -250,6 +250,9 @@ type Evaluator struct {
 	// relidos a cada ciclo. Em erro de leitura fica o conjunto anterior — um soluço do
 	// banco não pode fazer um container ignorado voltar a alertar.
 	ignorados ignorados
+	// cobertosBG: cores paradas de um par blue/green com a outra cor no ar, neste
+	// ciclo (ver bluegreen.go). Mesma chave host+container do `ignorados`.
+	cobertosBG ignorados
 }
 
 func New(st *store.Store, q seriesQuerier, ch *chquery.Client, log *slog.Logger, n Notifier) *Evaluator {
@@ -381,6 +384,7 @@ func (e *Evaluator) evalAll(ctx context.Context) {
 	} else {
 		e.ignorados = novosIgnorados(lista)
 	}
+	e.cobertosBG = nil
 	now := time.Now()
 	seen := map[string]bool{}   // fingerprints com dado neste ciclo
 	okRules := map[int64]bool{} // regras cuja query teve sucesso
@@ -520,8 +524,26 @@ func (e *Evaluator) evalRule(ctx context.Context, r store.AlertRule, now time.Ti
 		}
 	}
 
+	// Deploy blue/green: a cor parada com a outra no ar não é queda (bluegreen.go).
+	// Sai do ciclo SEM estado, como o container ignorado; o reconcile fecha calado
+	// o alerta que já estivesse aberto para ela.
+	if r.Metric == containerRunningMetric {
+		for fp := range cobertosBlueGreen(colapsadas) {
+			c := colapsadas[fp]
+			if e.cobertosBG == nil {
+				e.cobertosBG = ignorados{}
+			}
+			e.cobertosBG[chaveIgnorado(c.labels["host"], c.labels["container"])] = true
+			e.forgetFP(fp)
+			delete(colapsadas, fp)
+		}
+	}
+
 	for _, fp := range ordem {
-		c := colapsadas[fp]
+		c, ok := colapsadas[fp]
+		if !ok {
+			continue // cor coberta de um par blue/green
+		}
 		// O piso de minConsecutiveEvals conta EVIDÊNCIA NOVA, não tique de
 		// relógio. Sem esta trava ele conta o MESMO balde duas vezes: o
 		// avaliador roda a cada 30 s e pede duas janelas (evalRangeWindows), então
@@ -706,6 +728,11 @@ func (e *Evaluator) reconcile(ctx context.Context, ruleset map[int64]store.Alert
 			e.resolveStale(ctx, a, reasonContainerIgnored, nil)
 			continue
 		}
+		// Cor parada de um par blue/green, com a outra cor no ar: não é queda.
+		if exists && rule.Metric == containerRunningMetric && e.cobertosBG.contem(a.Labels) {
+			e.resolveStale(ctx, a, reasonBlueGreen, nil)
+			continue
+		}
 		// Container REMOVIDO: se a regra vigia container.running e o container deixou
 		// de reportar (foi removido, não apenas parou), resolve JÁ com motivo próprio.
 		// Sem isto, a janela da regra (ex.: 5 min) manteria o alerta "firing" por muito
@@ -774,6 +801,7 @@ const (
 	reasonContainerRemoved staleReason = "container removido"
 	reasonHostRemoved      staleReason = "servidor removido do inventário"
 	reasonContainerIgnored staleReason = "container ignorado"
+	reasonBlueGreen        staleReason = "deploy blue/green: a outra cor está no ar"
 )
 
 // staleNotification traduz o motivo do encerramento em (estado notificado, notifica?).
@@ -795,7 +823,7 @@ func staleNotification(reason staleReason) (state string, notify bool) {
 		// O container deixou de existir — não é ausência de dados nem melhora: é uma
 		// remoção, e o operador precisa saber que o alerta saiu da lista por isso.
 		return StateResolved, true
-	default: // regra removida, regra desativada, servidor removido, container ignorado
+	default: // regra removida, regra desativada, servidor removido, container ignorado, blue/green
 		return StateResolved, false
 	}
 }

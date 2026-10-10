@@ -373,6 +373,10 @@ export const help: {
           a: "Reabra o aviso de container caído e confira a opção no topo. \"Todos os containers\" acompanha sozinho o que for criado depois. Se estiver em \"só os containers que eu escolher\", a lista fica congelada no que foi marcado, e um container novo só passa a ser vigiado se você voltar e marcá-lo. Na dúvida, escolha \"todos\".",
         },
         {
+          q: "Faço deploy blue/green (app-blue e app-green). A cor parada vai alertar?",
+          a: "Não. Containers do mesmo servidor com o mesmo nome terminando em -blue e -green (também _blue/_green, e réplicas como app-blue-1) contam como um serviço só: a cor parada no deploy não alerta enquanto a outra estiver no ar. Se as duas pararem, o alerta sai normalmente, porque aí o serviço caiu de verdade. Vale sozinho para qualquer servidor que use esses nomes.",
+        },
+        {
           q: "Um container está parado de propósito. Como paro de receber alerta dele?",
           a: "Na aba Ativos, use o botão de sino cortado na linha do alerta do container. O painel deixa de alertar sobre ele em todas as regras, o alerta atual é encerrado e ele sai da TV; nada muda no servidor. Para voltar a vigiar, use a aba Regras › Containers ignorados.",
         },
