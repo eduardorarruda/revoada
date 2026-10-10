@@ -15,15 +15,15 @@ jobs:
   interface:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci && npm run build
         working-directory: web
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: interface
           path: web/dist
@@ -37,12 +37,12 @@ jobs:
         goos: [linux, windows, darwin]
         goarch: [amd64, arm64]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.26'
           cache-dependency-path: '**/go.sum'
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: interface
           path: server/internal/webui/dist
@@ -58,7 +58,7 @@ jobs:
           flags="-s -w -X main.version=${VERSAO}"
           (cd agent && go build -trimpath -ldflags "$flags" -o "../dist/revoada-agent-${GOOS}-${GOARCH}${ext}" ./cmd/revoada-agent)
           (cd server && go build -trimpath -ldflags "$flags" -o "../dist/revoada-painel-${GOOS}-${GOARCH}${ext}" ./cmd/server)
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: bin-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/*
@@ -67,7 +67,7 @@ jobs:
     needs: binarios
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: bin-*
           path: dist
@@ -75,7 +75,7 @@ jobs:
       - name: checksums
         working-directory: dist
         run: sha256sum * > SHA256SUMS
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: dist/*
           generate_release_notes: true
