@@ -6,11 +6,11 @@ require (
 	github.com/coder/websocket v1.8.15
 	github.com/eduardorarruda/revoada/core v0.0.0-00010101000000-000000000000
 	github.com/eduardorarruda/revoada/proto v0.0.0-00010101000000-000000000000
-	github.com/jackc/pgx/v5 v5.10.0
+	github.com/jackc/pgx/v5 v5.11.0
 	github.com/kardianos/service v1.3.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	golang.org/x/crypto v0.57.0
-	google.golang.org/grpc v1.83.2
+	google.golang.org/grpc v1.84.0
 	rsc.io/qr v0.2.0
 )
 
@@ -27,9 +27,9 @@ require (
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
-	golang.org/x/time v0.15.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
+	golang.org/x/time v0.16.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260706201446-f0a921348800 // indirect
+	google.golang.org/protobuf v1.36.12 // indirect
 )
 
 replace github.com/eduardorarruda/revoada/core => ../core
