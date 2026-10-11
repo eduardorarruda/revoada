@@ -642,8 +642,8 @@
   }
   .tv-letreiro__trilho {
     overflow: visible;
-    mask-image: none;
     -webkit-mask-image: none;
+    mask-image: none;
   }
   .tv-letreiro__copia {
     display: none;
