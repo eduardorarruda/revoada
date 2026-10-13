@@ -533,3 +533,19 @@ func TestFmtValueSeriesDeIA(t *testing.T) {
 		t.Fatal("nome da série de custo")
 	}
 }
+
+// O e-mail de alerta pedia a fonte ao Google (fonts.googleapis.com): cada abertura
+// avisava um terceiro de que aquela pessoa recebeu um alerta, sem que o painel
+// declarasse esse envio. O HTML não referencia nenhum endereço externo além dos
+// links do próprio painel; a fonte cai na do sistema de quem lê.
+func TestEmailDeAlertaNaoChamaTerceiros(t *testing.T) {
+	msg := render("", []AlertItem{{
+		RuleName: "CPU alta", Metric: "system.cpu.utilization", State: "firing", Severity: "warning",
+		Op: ">", Threshold: 10, Value: 11, Labels: map[string]string{"host": "srv-02"},
+	}})
+	for _, terceiro := range []string{"googleapis.com", "gstatic.com", "<link "} {
+		if strings.Contains(msg.HTML, terceiro) {
+			t.Errorf("o HTML do e-mail referencia %q", terceiro)
+		}
+	}
+}

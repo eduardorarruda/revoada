@@ -66,6 +66,13 @@ func (s *Store) PruneProbeResults(ctx context.Context, before time.Time) (int64,
 	return s.pruneBatched(ctx, "probe_results", "reported_at", before)
 }
 
+// PruneSessions apaga as sessões (refresh tokens) já vencidas. Vencida não renova
+// nada — só acumulava uma linha por login para sempre. As revogadas ainda dentro do
+// prazo ficam: é por elas que se detecta o reuso de um refresh roubado.
+func (s *Store) PruneSessions(ctx context.Context, agora time.Time) (int64, error) {
+	return s.pruneBatched(ctx, "sessions", "expires_at", agora)
+}
+
 // PruneAlertEvents apaga transições de alerta ANTIGAS E JÁ RESOLVIDAS
 // (ended_at < before). Nunca toca eventos ativos (ended_at IS NULL): um alerta
 // aberto há meses precisa continuar visível. Uma regra em flapping gera milhares
@@ -122,7 +129,7 @@ func (s *Store) RunRetention(ctx context.Context, retentionDays int, log *slog.L
 	}
 }
 
-// pruneOnce executa uma passada de retenção nas duas tabelas.
+// pruneOnce executa uma passada de retenção nas tabelas que crescem sem TTL.
 func (s *Store) pruneOnce(ctx context.Context, retentionDays int, log *slog.Logger) {
 	before := time.Now().Add(-time.Duration(retentionDays) * 24 * time.Hour)
 	// Guarda: nunca apagar se o corte não ficou no passado (protege contra erro
@@ -150,6 +157,11 @@ func (s *Store) pruneOnce(ctx context.Context, retentionDays int, log *slog.Logg
 		log.Error("retenção alert_events", "err", err, "apagadas_ate_erro", n)
 	} else {
 		log.Info("retenção alert_events", "apagadas", n, "antes_de", before)
+	}
+	if n, err := s.PruneSessions(ctx, time.Now()); err != nil {
+		log.Error("retenção sessions", "err", err, "apagadas_ate_erro", n)
+	} else {
+		log.Info("retenção sessions (vencidas)", "apagadas", n)
 	}
 	// Auditoria tem retenção PRÓPRIA (mais longa): a trilha de quem alterou o quê
 	// precisa sobreviver bem além da janela das séries temporais.

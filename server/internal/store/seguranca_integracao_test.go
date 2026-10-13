@@ -194,3 +194,38 @@ func TestAuditoriaEncadeadaDetectaAdulteracao(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// Sessão vencida não renova nada e só acumulava: sem esta poda, cada login deixava
+// uma linha para sempre (minimização de dados, LGPD). A ainda válida — inclusive a
+// revogada, que a detecção de reuso de refresh consulta — fica.
+func TestPruneSessionsApagaSoAsVencidas(t *testing.T) {
+	s := abrirTeste(t)
+	ctx := context.Background()
+	uid := novoUsuario(t, s, "leitor")
+	agora := time.Now()
+	vencida, valida := "venc-"+agora.Format("150405.000000000"), "val-"+agora.Format("150405.000000000")
+	if err := s.CreateSession(ctx, uid, vencida, agora.Add(-time.Hour), false, agora.Add(-25*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.CreateSession(ctx, uid, valida, agora.Add(time.Hour), false, agora); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.PruneSessions(ctx, agora); err != nil {
+		t.Fatal(err)
+	}
+	var restam []string
+	rows, err := s.pool.Query(ctx, `SELECT token_hash FROM sessions WHERE user_id = $1`, uid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var h string
+		if err := rows.Scan(&h); err != nil {
+			t.Fatal(err)
+		}
+		restam = append(restam, h)
+	}
+	if len(restam) != 1 || restam[0] != valida {
+		t.Fatalf("depois da poda sobrou %v; quer só a válida", restam)
+	}
+}

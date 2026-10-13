@@ -6,7 +6,6 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"log/slog"
-	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -18,7 +17,6 @@ import (
 	"github.com/eduardorarruda/revoada/server/internal/auth"
 	"github.com/eduardorarruda/revoada/server/internal/authz"
 	"github.com/eduardorarruda/revoada/server/internal/canal"
-	"github.com/eduardorarruda/revoada/server/internal/config"
 	"github.com/eduardorarruda/revoada/server/internal/dashboards"
 	"github.com/eduardorarruda/revoada/server/internal/deploys"
 	"github.com/eduardorarruda/revoada/server/internal/discovery"
@@ -26,6 +24,7 @@ import (
 	"github.com/eduardorarruda/revoada/server/internal/ia"
 	"github.com/eduardorarruda/revoada/server/internal/installer"
 	"github.com/eduardorarruda/revoada/server/internal/inventory"
+	"github.com/eduardorarruda/revoada/server/internal/ipcliente"
 	"github.com/eduardorarruda/revoada/server/internal/journey"
 	"github.com/eduardorarruda/revoada/server/internal/live"
 	"github.com/eduardorarruda/revoada/server/internal/logs"
@@ -121,6 +120,9 @@ func New(d Deps) http.Handler {
 	mux.Handle("POST /api/auth/register", register)
 	mux.HandleFunc("POST /api/auth/login", authRL.wrap(d.Auth.Login))
 	mux.HandleFunc("GET /api/auth/estado", authRL.wrap(d.Auth.Estado))
+	// Política de privacidade: pública, como o próprio texto (ver privacidade.go). Balde
+	// próprio: ler a política não pode gastar as tentativas de login do mesmo IP.
+	mux.HandleFunc("GET /api/privacidade", newIPRateLimiter(60, time.Minute).wrap(privacidade))
 
 	// Inscrição de servidor (instalador universal): PÚBLICA por necessidade — a
 	// máquina que está entrando ainda não tem credencial nenhuma. O que a protege é
@@ -645,88 +647,6 @@ func newIPRateLimiter(limit int, window time.Duration) *ipRateLimiter {
 	return &ipRateLimiter{counts: map[string]counter{}, limit: limit, window: window}
 }
 
-// trustedProxyNets são as redes cujo X-Forwarded-For pode ser acreditado. Lidas UMA
-// vez (a lista vem de env e não muda em runtime); entrada inválida é ignorada.
-var trustedProxyNets = parseCIDRs(config.TrustedProxies())
-
-func parseCIDRs(list []string) []*net.IPNet {
-	out := make([]*net.IPNet, 0, len(list))
-	for _, c := range list {
-		c = strings.TrimSpace(c)
-		if c == "" {
-			continue
-		}
-		if _, n, err := net.ParseCIDR(c); err == nil {
-			out = append(out, n)
-		}
-	}
-	return out
-}
-
-// ipIsTrustedProxy diz se um IP pertence a alguma rede de proxy confiável.
-func ipIsTrustedProxy(ip net.IP) bool {
-	if ip == nil {
-		return false
-	}
-	for _, n := range trustedProxyNets {
-		if n.Contains(ip) {
-			return true
-		}
-	}
-	return false
-}
-
-// peerIsTrusted diz se o peer DIRETO da conexão é um proxy declarado como confiável.
-func peerIsTrusted(remoteAddr string) bool {
-	host, _, err := net.SplitHostPort(remoteAddr)
-	if err != nil {
-		host = remoteAddr
-	}
-	return ipIsTrustedProxy(net.ParseIP(host))
-}
-
-// clientIP identifica o cliente para o rate-limit por IP (login/registro/refresh).
-//
-// O X-Forwarded-For é escrito por QUEM quiser: se ele for lido sem antes conferir de
-// onde a conexão veio, o balde deixa de existir. Medido em dev, na versão anterior
-// desta função: 15 logins errados do mesmo IP deram 401×10 + 429×5; as 6 tentativas
-// seguintes, só trocando `X-Forwarded-For: 203.0.113.N`, deram 401×6 e NENHUM 429 —
-// brute-force ilimitado com um header. O gateway já fazia certo (isTrusted antes de
-// olhar o XFF); o server, não.
-//
-// Regra agora, a mesma do gateway: o XFF só é olhado quando o peer direto pertence a
-// REVOADA_TRUSTED_PROXIES. Peer não confiável ⇒ o header é ignorado por completo e o
-// balde é o RemoteAddr, que o cliente não escolhe.
-//
-// Sendo confiável, lemos da DIREITA para a ESQUERDA descartando os saltos que também
-// são proxies confiáveis (a cadeia real em produção é cliente → Traefik → nginx →
-// server, e cada salto ANEXA o anterior, então os últimos elementos são IPs internos).
-// O primeiro que NÃO é proxy confiável é o cliente que a borda observou; o que o
-// cliente tenha inventado fica à esquerda disso e nunca é alcançado.
-func clientIP(r *http.Request) string {
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		host = r.RemoteAddr
-	}
-	if !peerIsTrusted(r.RemoteAddr) {
-		return host
-	}
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		parts := strings.Split(xff, ",")
-		for i := len(parts) - 1; i >= 0; i-- {
-			ip := net.ParseIP(strings.TrimSpace(parts[i]))
-			if ip == nil {
-				continue
-			}
-			if ipIsTrustedProxy(ip) {
-				continue // salto interno da própria cadeia de proxies
-			}
-			return ip.String()
-		}
-	}
-	return host
-}
-
 // tvBucketKey devolve a chave do balde das rotas públicas de TV. Usa o HASH do token
 // (nunca o token em claro, que não deve virar chave de mapa nem sair em log/pprof) e
 // cai no IP quando a requisição chega sem token — que é o caso de quem está sondando.
@@ -734,12 +654,12 @@ func tvBucketKey(r *http.Request) string {
 	if tok := r.URL.Query().Get("token"); tok != "" {
 		return "tv:" + auth.HashToken(tok)
 	}
-	return "ip:" + clientIP(r)
+	return "ip:" + ipcliente.De(r)
 }
 
 func (rl *ipRateLimiter) wrap(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !rl.allow(clientIP(r)) {
+		if !rl.allow(ipcliente.De(r)) {
 			http.Error(w, "muitas tentativas, tente novamente em instantes", http.StatusTooManyRequests)
 			return
 		}

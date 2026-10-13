@@ -215,6 +215,8 @@ services:
       REVOADA_CH_PASSWORD: ${CLICKHOUSE_PASSWORD}
       REVOADA_CH_DB: "painel"
       REVOADA_RETENTION_DAYS: ${REVOADA_RETENTION_DAYS:-120}
+      REVOADA_PRIVACIDADE_CONTROLADOR: ${REVOADA_PRIVACIDADE_CONTROLADOR:-}
+      REVOADA_PRIVACIDADE_CONTATO: ${REVOADA_PRIVACIDADE_CONTATO:-}
       REVOADA_PG_MAX_CONNS: ${REVOADA_PG_MAX_CONNS:-20}
       # Chave DEDICADA do cofre de credenciais SSH (32 bytes). Vazia = o cofre deriva a
       # chave de REVOADA_JWT_SECRET — e aí rotacionar o JWT (operação de rotina, que

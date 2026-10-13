@@ -5,6 +5,7 @@ package webui
 
 import (
 	"bytes"
+	"compress/gzip"
 	"crypto/sha256"
 	"embed"
 	"encoding/base64"
@@ -14,6 +15,7 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 //go:embed all:dist
@@ -49,6 +51,10 @@ func Embutida() bool {
 // Handler serve a SPA: arquivo que existe sai como está (assets com hash ficam em cache
 // para sempre); qualquer outra rota sem extensão devolve o index.html (o roteamento é
 // por hash, mas links diretos também funcionam).
+//
+// No binário único não há nginx na frente para comprimir: sem o gzip daqui, o
+// navegador recebia o JS cru (~3x maior). E sem ETag, o "no-cache" do index e dos
+// arquivos sem hash no nome virava reenvio completo a cada navegação.
 func Handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
@@ -59,29 +65,98 @@ func Handler() http.Handler {
 		if p == "" {
 			p = "index.html"
 		}
-		b, err := fs.ReadFile(raiz, p)
+		arq, err := carregar(p)
 		if err != nil {
 			if path.Ext(p) != "" {
 				http.NotFound(w, r)
 				return
 			}
 			p = "index.html"
-			if b, err = fs.ReadFile(raiz, p); err != nil {
+			if arq, err = carregar(p); err != nil {
 				http.NotFound(w, r)
 				return
 			}
 		}
-		if t := mime.TypeByExtension(path.Ext(p)); t != "" {
-			w.Header().Set("Content-Type", t)
-		}
-		w.Header().Set("Content-Security-Policy", politica)
-		if strings.HasPrefix(p, "assets/") {
-			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-		} else {
-			w.Header().Set("Cache-Control", "no-cache")
-		}
-		_, _ = w.Write(b)
+		servir(w, r, p, arq)
 	})
+}
+
+func servir(w http.ResponseWriter, r *http.Request, p string, arq *arquivo) {
+	if t := mime.TypeByExtension(path.Ext(p)); t != "" {
+		w.Header().Set("Content-Type", t)
+	}
+	w.Header().Set("Content-Security-Policy", politica)
+	if strings.HasPrefix(p, "assets/") {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	} else {
+		w.Header().Set("Cache-Control", "no-cache")
+	}
+	corpo, etag := arq.corpo, arq.etag
+	if arq.gz != nil {
+		w.Header().Set("Vary", "Accept-Encoding")
+		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			corpo, etag = arq.gz, arq.etagGz
+			w.Header().Set("Content-Encoding", "gzip")
+		}
+	}
+	w.Header().Set("ETag", etag)
+	if strings.Contains(r.Header.Get("If-None-Match"), etag) {
+		w.WriteHeader(http.StatusNotModified)
+		return
+	}
+	_, _ = w.Write(corpo)
+}
+
+// arquivo é um arquivo da interface pronto para servir: o conteúdo, a versão
+// comprimida (quando vale a pena) e o ETag de cada um.
+type arquivo struct {
+	corpo, gz    []byte
+	etag, etagGz string
+}
+
+// prontos guarda cada arquivo já preparado: o que está embutido não muda com o
+// painel rodando, então comprimir e calcular o hash uma vez basta.
+var prontos sync.Map // caminho → *arquivo
+
+func carregar(p string) (*arquivo, error) {
+	if v, ok := prontos.Load(p); ok {
+		return v.(*arquivo), nil
+	}
+	b, err := fs.ReadFile(raiz, p)
+	if err != nil {
+		return nil, err
+	}
+	sum := sha256.Sum256(b)
+	id := base64.RawURLEncoding.EncodeToString(sum[:12])
+	arq := &arquivo{corpo: b, etag: `"` + id + `"`, etagGz: `"` + id + `-gz"`}
+	if comprimivel(p) && len(b) >= minGzip {
+		if gz := gzipar(b); len(gz) < len(b) {
+			arq.gz = gz
+		}
+	}
+	v, _ := prontos.LoadOrStore(p, arq)
+	return v.(*arquivo), nil
+}
+
+// minGzip: abaixo disso o cabeçalho do gzip come o ganho.
+const minGzip = 1024
+
+// comprimivel diz se o tipo é texto. Imagem, fonte e afins já vêm comprimidos: gzip
+// de novo só gasta CPU.
+func comprimivel(p string) bool {
+	switch path.Ext(p) {
+	case ".html", ".js", ".mjs", ".css", ".json", ".svg", ".txt", ".map", ".ico", ".xml", ".webmanifest":
+		return true
+	}
+	return false
+}
+
+func gzipar(b []byte) []byte {
+	var buf bytes.Buffer
+	zw, _ := gzip.NewWriterLevel(&buf, gzip.BestCompression)
+	_, _ = zw.Write(b)
+	_ = zw.Close()
+	return buf.Bytes()
 }
 
 // ÉDaAPI diz se o caminho pertence à API (não à interface).

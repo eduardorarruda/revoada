@@ -1,80 +1,10 @@
 package httpapi
 
 import (
-	"net"
 	"net/http/httptest"
 	"testing"
 	"time"
 )
-
-// TestClientIPIgnoraXFFDePeerNaoConfiavel é a correção do bypass medido em dev: 15
-// logins errados do mesmo IP davam 401×10 + 429×5, e as 6 tentativas seguintes, só
-// trocando `X-Forwarded-For: 203.0.113.N`, davam 401×6 e NENHUM 429 — brute-force
-// ilimitado com um header. Quem conecta direto (peer fora de REVOADA_TRUSTED_PROXIES)
-// não escolhe mais a própria chave do balde.
-func TestClientIPIgnoraXFFDePeerNaoConfiavel(t *testing.T) {
-	nets := trustedProxyNets
-	trustedProxyNets = parseCIDRs([]string{"172.16.0.0/12"})
-	defer func() { trustedProxyNets = nets }()
-
-	for _, xff := range []string{"203.0.113.7", "203.0.113.8", "1.2.3.4, 5.6.7.8"} {
-		r := httptest.NewRequest("POST", "/api/auth/login", nil)
-		r.RemoteAddr = "198.51.100.10:44444"
-		r.Header.Set("X-Forwarded-For", xff)
-		if got := clientIP(r); got != "198.51.100.10" {
-			t.Errorf("XFF %q de peer não confiável mudou o balde: %q", xff, got)
-		}
-	}
-}
-
-// TestClientIPUsaXFFDeProxyConfiavel: atrás do Traefik/nginx (peer em rede privada) o
-// XFF é a ÚNICA forma de saber quem é o cliente — ignorá-lo colocaria a internet
-// inteira num balde só, transformando a proteção contra brute-force numa negação de
-// serviço no login. Da direita para a esquerda, pulando os saltos internos.
-func TestClientIPUsaXFFDeProxyConfiavel(t *testing.T) {
-	nets := trustedProxyNets
-	trustedProxyNets = parseCIDRs([]string{"172.16.0.0/12", "10.0.0.0/8"})
-	defer func() { trustedProxyNets = nets }()
-
-	r := httptest.NewRequest("POST", "/api/auth/login", nil)
-	r.RemoteAddr = "172.18.0.5:33333" // nginx do compose
-	// cadeia real: cliente → Traefik → nginx (cada salto ANEXA o anterior)
-	r.Header.Set("X-Forwarded-For", "203.0.113.9, 172.18.0.2")
-	if got := clientIP(r); got != "203.0.113.9" {
-		t.Errorf("cliente real esperado 203.0.113.9, veio %q", got)
-	}
-}
-
-// TestClientIPXFFForjadoNaoVence: o cliente pode escrever o começo do XFF; o proxy só
-// ANEXA. O valor forjado fica à esquerda do que a borda observou e nunca é escolhido.
-func TestClientIPXFFForjadoNaoVence(t *testing.T) {
-	nets := trustedProxyNets
-	trustedProxyNets = parseCIDRs([]string{"172.16.0.0/12"})
-	defer func() { trustedProxyNets = nets }()
-
-	r := httptest.NewRequest("POST", "/api/auth/login", nil)
-	r.RemoteAddr = "172.18.0.5:33333"
-	r.Header.Set("X-Forwarded-For", "6.6.6.6, 203.0.113.9, 172.18.0.2")
-	if got := clientIP(r); got != "203.0.113.9" {
-		t.Errorf("o forjado 6.6.6.6 não podia vencer; veio %q", got)
-	}
-}
-
-// TestDefaultConfiaEmRedePrivada garante que o default embarcado cobre a topologia
-// real do compose (nginx e Traefik em rede privada do Docker) — se ele deixasse de
-// cobrir, o login inteiro cairia num balde só e travaria usuários legítimos.
-func TestDefaultConfiaEmRedePrivada(t *testing.T) {
-	for _, ip := range []string{"172.18.0.5", "10.1.2.3", "192.168.0.9", "127.0.0.1"} {
-		if !ipIsTrustedProxy(net.ParseIP(ip)) {
-			t.Errorf("%s deveria ser proxy confiável no default", ip)
-		}
-	}
-	for _, ip := range []string{"203.0.113.9", "8.8.8.8"} {
-		if ipIsTrustedProxy(net.ParseIP(ip)) {
-			t.Errorf("%s NÃO pode ser proxy confiável", ip)
-		}
-	}
-}
 
 // TestTVBucketKeyPorToken: o balde das rotas de TV é por TOKEN, não por IP — várias
 // TVs saem pelo mesmo NAT do escritório e não podem se estrangular umas às outras; e

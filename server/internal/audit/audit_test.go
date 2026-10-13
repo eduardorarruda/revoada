@@ -84,6 +84,23 @@ func TestRedactCamposEmPortugues(t *testing.T) {
 	}
 }
 
+// Cadastrar um usuário mandava nome completo e celular por extenso para a trilha,
+// que fica 365 dias e NÃO sai quando o usuário é excluído: um pedido de exclusão
+// (LGPD) nunca alcançava essa cópia. O e-mail fica — é quem identifica o usuário na
+// trilha (o ator da própria ação também é gravado pelo e-mail).
+func TestRedactDadosPessoaisDoCadastro(t *testing.T) {
+	corpo := `{"email":"maria@exemplo.com.br","full_name":"Maria da Silva","phone":"5511987654321","role":"leitor"}`
+	raw, _ := json.Marshal(redactBody([]byte(corpo)))
+	for _, leak := range []string{"Maria da Silva", "5511987654321"} {
+		if strings.Contains(string(raw), leak) {
+			t.Errorf("dado pessoal %q foi para a trilha: %s", leak, raw)
+		}
+	}
+	if !strings.Contains(string(raw), "maria@exemplo.com.br") || !strings.Contains(string(raw), "leitor") {
+		t.Fatalf("e-mail e papel têm de continuar na trilha: %s", raw)
+	}
+}
+
 func TestRedactBodyNaoJSON(t *testing.T) {
 	if got := redactBody(nil); len(got) != 0 {
 		t.Errorf("corpo vazio = %v; quer mapa vazio", got)
@@ -176,18 +193,6 @@ func TestMiddlewareIgnoraLeitura(t *testing.T) {
 	case e := <-rec.ch:
 		t.Errorf("GET gerou entrada na trilha: %+v", e)
 	default:
-	}
-}
-
-func TestClientIP(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPost, "/api/x", nil)
-	req.RemoteAddr = "10.0.0.5:4444"
-	if got := clientIP(req); got != "10.0.0.5" {
-		t.Errorf("clientIP sem proxy = %q; quer 10.0.0.5", got)
-	}
-	req.Header.Set("X-Forwarded-For", "203.0.113.9, 10.0.0.1")
-	if got := clientIP(req); got != "203.0.113.9" {
-		t.Errorf("clientIP com XFF = %q; quer o primeiro da cadeia", got)
 	}
 }
 

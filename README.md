@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="web/public/logo-mark.png" alt="" width="132">
+<img src="web/public/logo-mark.webp" alt="" width="132">
 
 # Revoada
 
@@ -20,7 +20,7 @@ linha a linha, que nada se perdeu no caminho.
 [Arquitetura](#-arquitetura) ·
 [Contribuir](CONTRIBUTING.md)
 
-<img src="docs/imagens/inicio.png" alt="Tela inicial do Revoada: veredito da frota, indicadores e o que precisa de atenção" width="100%">
+<img src="docs/imagens/inicio.webp" alt="Tela inicial do Revoada: veredito da frota, indicadores e o que precisa de atenção" width="100%">
 
 </div>
 
@@ -118,12 +118,12 @@ sem systemd (cPanel)? Veja [docs/agente-cpanel.md](docs/agente-cpanel.md).
 </table>
 
 <p align="center">
-  <img src="docs/imagens/servidor.png" alt="Detalhe de um servidor: CPU, RAM, disco, rede, processos e serviços descobertos" width="49%">
-  <img src="docs/imagens/logs.png" alt="Busca de logs com histograma e filtros" width="49%">
+  <img src="docs/imagens/servidor.webp" alt="Detalhe de um servidor: CPU, RAM, disco, rede, processos e serviços descobertos" width="49%">
+  <img src="docs/imagens/logs.webp" alt="Busca de logs com histograma e filtros" width="49%">
 </p>
 <p align="center">
-  <img src="docs/imagens/mural.png" alt="Mural de Saúde com o semáforo de cada servidor" width="49%">
-  <img src="docs/imagens/sites.png" alt="Checagem de sites e jornadas" width="49%">
+  <img src="docs/imagens/mural.webp" alt="Mural de Saúde com o semáforo de cada servidor" width="49%">
+  <img src="docs/imagens/sites.webp" alt="Checagem de sites e jornadas" width="49%">
 </p>
 
 ## 🤖 Agentes de IA
@@ -144,8 +144,8 @@ biblioteca) e responde, ao lado da CPU e dos logs do mesmo servidor:
   respostas pelo MCP.
 
 <p align="center">
-  <img src="docs/imagens/agentes-ia.png" alt="Agentes de IA: veredito, custo, chamadas, erros, latência e tokens da última hora" width="49%">
-  <img src="docs/imagens/agentes-ia-replay.png" alt="Replay de uma execução: passos em ordem, loop de ferramenta apontado e o detalhe de cada chamada" width="49%">
+  <img src="docs/imagens/agentes-ia.webp" alt="Agentes de IA: veredito, custo, chamadas, erros, latência e tokens da última hora" width="49%">
+  <img src="docs/imagens/agentes-ia-replay.webp" alt="Replay de uma execução: passos em ordem, loop de ferramenta apontado e o detalhe de cada chamada" width="49%">
 </p>
 
 Prompt e resposta ficam **desligados** por padrão (`REVOADA_GENAI_CONTEUDO`); ler ou apagar
@@ -176,7 +176,7 @@ leitura, de tipo e de fuso horário. Num ERP de teste com 192 mil linhas, todas 
 fecharam em **192.005 linhas × 20 colunas idênticas**. Reverter desfaz tudo em uma transação.
 
 <p align="center">
-  <img src="docs/imagens/migracao-verificacao.png" alt="Tela de verificação da migração: 192.005 linhas idênticas, tabela a tabela" width="100%">
+  <img src="docs/imagens/migracao-verificacao.webp" alt="Tela de verificação da migração: 192.005 linhas idênticas, tabela a tabela" width="100%">
 </p>
 
 ## 🏗️ Arquitetura

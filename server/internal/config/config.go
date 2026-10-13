@@ -240,6 +240,17 @@ func horas(chave string, padrao int) time.Duration {
 	return time.Duration(n) * time.Hour
 }
 
+// PrivacidadeControlador é quem opera esta instalação e responde pelos dados (o
+// controlador, na LGPD). Aparece na política de privacidade do painel
+// (REVOADA_PRIVACIDADE_CONTROLADOR; vazio = "o administrador desta instalação").
+func PrivacidadeControlador() string {
+	return strings.TrimSpace(Env("REVOADA_PRIVACIDADE_CONTROLADOR", ""))
+}
+
+// PrivacidadeContato é o canal para o titular exercer os direitos da LGPD (e-mail ou
+// telefone do encarregado). REVOADA_PRIVACIDADE_CONTATO; vazio = sem canal publicado.
+func PrivacidadeContato() string { return strings.TrimSpace(Env("REVOADA_PRIVACIDADE_CONTATO", "")) }
+
 // SessaoInatividade: sem uso por este tempo, a sessão expira (REVOADA_SESSAO_INATIVIDADE_HORAS, padrão 24).
 func SessaoInatividade() time.Duration { return horas("REVOADA_SESSAO_INATIVIDADE_HORAS", 24) }
 

@@ -339,7 +339,7 @@ func notPurgedTraces() []map[string]string {
 			"note": "o mesmo trecho pode estar na linha de log correlacionada; use o expurgo de logs."},
 		{"store": "metrics_1m / metrics_1h", "retention": "90 e 730 dias",
 			"note": "métricas derivadas não são apagadas aqui."},
-		{"store": "backup diário no MinIO (ClickHouse + pg_dump)", "retention": "sem expiração automática configurada",
+		{"store": "backup diário no MinIO (ClickHouse + pg_dump)", "retention": "14 cópias diárias + 3 mensais (deploy/backup/backup.sh), se o backup estiver ligado",
 			"note": "cópia SEM cifra; o expurgo não a alcança, precisa ser tratada fora do painel."},
 		{"store": "system.query_log do ClickHouse", "retention": "3 dias",
 			"note": "consultas de trace antigas podem citar o trecho; o expurgo de logs por conteúdo faz essa limpeza."},

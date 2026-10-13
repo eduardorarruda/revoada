@@ -20,12 +20,12 @@ export function BrandLogo({ variant = "full", size = "md", className }: Props) {
     .join(" ");
 
   if (variant === "mark") {
-    return <img src="/logo-mark.png" alt="Revoada" className={cls} />;
+    return <img src="/logo-mark.webp" alt="Revoada" className={cls} />;
   }
 
   return (
     <span className={cls} aria-label="Revoada" role="img">
-      <img src="/logo-mark.png" alt="" className="brand-logo__mark" />
+      <img src="/logo-mark.webp" alt="" className="brand-logo__mark" />
       <span className="brand-logo__name" aria-hidden="true">
         Revoada
       </span>

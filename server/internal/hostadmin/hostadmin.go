@@ -435,12 +435,14 @@ func asInt64(v any) int64 {
 // cumprir um pedido de LGPD.
 func notPurgedHost() []map[string]string {
 	return []map[string]string{
-		{"store": "backup diário no MinIO (ClickHouse + pg_dump)", "retention": "sem expiração automática configurada",
+		{"store": "backup diário no MinIO (ClickHouse + pg_dump)", "retention": "14 cópias diárias + 3 mensais (deploy/backup/backup.sh), se o backup estiver ligado",
 			"note": "cópia SEM cifra dos dados deste servidor; precisa ser tratada fora do painel."},
 		{"store": "notification_log (Postgres)", "retention": "120 dias (REVOADA_RETENTION_DAYS)",
 			"note": "as mensagens enviadas sobre este servidor continuam gravadas até a poda."},
-		{"store": "audit_log (Postgres)", "retention": "permanente",
+		{"store": "audit_log (Postgres)", "retention": "365 dias (REVOADA_AUDIT_RETENTION_DAYS)",
 			"note": "por projeto: a trilha guarda o hostname da própria exclusão."},
+		{"store": "genai_spans / genai_1m / genai_conteudo (chamadas de IA)", "retention": "90 dias / 400 dias (agregado, sem texto) / 7 dias",
+			"note": "as chamadas de IA das aplicações deste servidor não são apagadas aqui; use Agentes de IA › Modelos e preços › Dados e privacidade."},
 		{"store": "system.query_log do ClickHouse", "retention": "3 dias",
 			"note": "consultas recentes que citam este servidor continuam registradas."},
 		{"store": "alert_events (Postgres)", "retention": "poda por tempo (REVOADA_RETENTION_DAYS)",

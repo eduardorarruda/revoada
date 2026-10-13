@@ -18,12 +18,12 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
-	"net"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/eduardorarruda/revoada/server/internal/auth"
+	"github.com/eduardorarruda/revoada/server/internal/ipcliente"
 	"github.com/eduardorarruda/revoada/server/internal/store"
 )
 
@@ -75,9 +75,14 @@ var redactedFields = map[string]bool{
 	"headers":          true, // webhook: pode carregar Authorization
 	"private_key":      true,
 	"jwt_secret":       true,
+	// Dado pessoal do cadastro de usuário (e do canal pessoal de WhatsApp): a trilha
+	// fica 365 dias e não sai com a exclusão do usuário, então guardar nome e celular
+	// aqui seria uma cópia que nenhum pedido de exclusão alcança.
+	"full_name": true,
+	"phone":     true,
 	// O trecho procurado num expurgo É o dado vazado (token, CPF, chave). Guardá-lo
-	// na trilha — que não tem poda — transformaria o procedimento de exclusão numa
-	// nova cópia permanente do segredo. O handler anota no lugar uma impressão
+	// na trilha — que fica 365 dias — transformaria o procedimento de exclusão numa
+	// nova cópia do segredo. O handler anota no lugar uma impressão
 	// digital (sha256 curto), que basta para comparar dois expurgos.
 	"body_like": true,
 }
@@ -189,7 +194,7 @@ func (r *Recorder) Middleware(next http.Handler) http.Handler {
 			Target:   target,
 			Status:   rec.status,
 			Payload:  mergeNotes(req.Context(), redactBody(auditado)),
-			IP:       clientIP(req),
+			IP:       ipcliente.De(req),
 		}
 		// O ator sai das claims que o RequireAuth já colocou no contexto. Sem claims
 		// (ex.: primeiro cadastro, login) registramos como anônimo — a ação em si
@@ -323,19 +328,4 @@ func redactValue(v any) any {
 	default:
 		return v
 	}
-}
-
-// clientIP devolve o IP de origem, respeitando X-Forwarded-For (estamos atrás do
-// Traefik) e caindo no RemoteAddr quando não há proxy.
-func clientIP(r *http.Request) string {
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		if first, _, ok := strings.Cut(xff, ","); ok {
-			return strings.TrimSpace(first)
-		}
-		return strings.TrimSpace(xff)
-	}
-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		return host
-	}
-	return r.RemoteAddr
 }

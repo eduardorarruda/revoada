@@ -179,7 +179,7 @@ type notReachedItem struct {
 
 // fingerprint identifica o trecho procurado SEM guardá-lo. A trilha precisa poder
 // dizer "estes dois expurgos usaram o mesmo padrão" sem virar mais uma cópia do
-// segredo (audit_log não tem poda).
+// segredo (a trilha fica 365 dias por padrão, REVOADA_AUDIT_RETENTION_DAYS).
 func fingerprint(s string) string {
 	sum := sha256.Sum256([]byte(s))
 	return hex.EncodeToString(sum[:6])
@@ -195,7 +195,7 @@ func notReached(bodyLike bool, queryLogPurged bool) []notReachedItem {
 			Note: "títulos e corpos de evento não são apagados por este expurgo."},
 		{Store: "notification_log (Postgres)", Retention: "120 dias (REVOADA_RETENTION_DAYS)",
 			Note: "o texto enviado ao WhatsApp/e-mail pode repetir o trecho vazado."},
-		{Store: "backup diário no MinIO (ClickHouse + pg_dump)", Retention: "sem expiração automática configurada",
+		{Store: "backup diário no MinIO (ClickHouse + pg_dump)", Retention: "14 cópias diárias + 3 mensais (deploy/backup/backup.sh), se o backup estiver ligado",
 			Note: "cópia SEM cifra; o expurgo não a alcança, precisa ser tratada fora do painel."},
 	}
 	if bodyLike {
