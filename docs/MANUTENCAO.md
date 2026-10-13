@@ -1,24 +1,16 @@
 # Guia de manutenção — Revoada
 
-## 1. Antes de tudo: uma conversa honesta sobre a stack
+## 1. Stack
 
-Este projeto **não é PHP**. A stack é:
-
-- **Go** (backend: agente, gateway, server) — três módulos num monorepo `go.work`.
+- **Go** (backend: agente, gateway, server) — módulos num monorepo `go.work`.
 - **React 19 + Vite + TypeScript** (frontend em `web/`).
 - **ClickHouse** (métricas, logs, spans), **PostgreSQL** (metadados) e
   **NATS JetStream** (fila de ingestão). Redis entra no stack de dev.
 
-Vale separar o que é **decisão de time** do que este documento cobre:
-
-| Isso é decisão de time (não some com um doc) | Isso o documento resolve |
-|---|---|
-| Aprender Go. Não dá para eliminar — é a linguagem do backend. | Orientação prática para as tarefas do dia a dia. |
-| A boa notícia: para quem **já programa**, a curva é curta. Go é pequeno, tem uma sintaxe só, tooling embutido (`go build`, `go test`, `go fmt`) e sem mágica de framework. | Onde rodar, onde depurar, **onde mexer** para cada tarefa comum, e um glossário para destravar o vocabulário. |
-
-Ou seja: a "barreira do não-PHP" é real, mas é uma barreira de **familiaridade**, não
-de complexidade. Quem entende requisição/resposta, banco e fila já tem tudo para
-manter este sistema.
+Para manter o backend é preciso ler Go. As ferramentas vêm com a linguagem
+(`go build`, `go test`, `go fmt`) e o projeto não usa framework web. Este documento
+cobre onde rodar, onde depurar, onde mexer em cada tarefa comum e um glossário dos
+termos usados no código.
 
 ## 2. Arquitetura em uma olhada
 
@@ -27,7 +19,7 @@ flowchart LR
     subgraph host["Host monitorado"]
       AG["agent/<br/>coletor (push)"]
     end
-    subgraph painel["Infra Revoada"]
+    subgraph painel["Servidor do painel"]
       GW["gateway/<br/>ingestão :8090"]
       SV["server/<br/>API :8091"]
       WB["web/<br/>UI React"]
@@ -81,8 +73,9 @@ cd web && npm run dev
 
 ```bash
 # Métricas no ClickHouse
-docker exec revoada-clickhouse clickhouse-client --user revoada --password ##### \
-  --query "SELECT metric, count() FROM revoada.metrics GROUP BY metric ORDER BY metric"
+# usuário e senha vêm das variáveis do próprio container (deploy/docker-compose.dev.yml)
+docker exec revoada-clickhouse sh -c 'clickhouse-client --user "$CLICKHOUSE_USER" --password "$CLICKHOUSE_PASSWORD" \
+  --query "SELECT metric, count() FROM revoada.metrics GROUP BY metric ORDER BY metric"'
 
 # Metadados no Postgres
 docker exec revoada-postgres psql -U revoada -d revoada -c "SELECT * FROM hosts;"
@@ -99,8 +92,8 @@ containers de dados logam pelo Docker (`docker logs revoada-clickhouse`, etc.).
 | Tarefa | Onde mexer |
 |---|---|
 | **Adicionar uma métrica de host nova** | `agent/internal/collect/host.go` — acrescente um ponto na função `Host(...)` (padrão `add("system.algo.utilization", valor)`); as métricas fluem sozinhas pelo OTLP. |
-| **Novo tipo de painel** | `web/src/panels/` (o componente) + registro em `web/src/.../DashboardView.tsx`. Os tipos válidos hoje estão em [`docs/dashboard-schema.md`](dashboard-schema.md) (`timeseries`, `stat`, `gauge`, `bargauge`, `table`, `state-timeline`, `heatmap`, `text`). |
-| **Novo canal de alerta** | `server/internal/notify/senders.go` — implemente a interface `Sender` e registre no mapa `senders`. Espelhe o `whatsappSender` (Evolution API): monta a URL a partir de `base_url`/`instance`, autentica no header `apikey`, envia `{number, text}` por destinatário e junta as falhas. Cada sender usa `http.Client{Timeout: defaultSendTimeout}` (15s). |
+| **Novo tipo de painel** | `web/src/panels/` (o componente, exportado em `panels/index.ts`) + o `case` em `web/src/pages/DashboardView.tsx` + a opção em `PANEL_TYPES` de `web/src/pages/DashboardEdit.tsx`. Os tipos de hoje estão em [`docs/dashboard-schema.md`](dashboard-schema.md) (`timeseries`, `stat`, `gauge`, `bargauge`, `table`). |
+| **Novo canal de alerta** | `server/internal/notify/senders.go` — implemente a interface `Sender` e registre no mapa `senders`. Espelhe o `whatsappSender` (wuzapi): lê `base_url` e `token` do canal, faz `POST {base_url}/chat/send/text` com o header `Token` e o corpo JSON `{"Phone", "Body"}` para cada destinatário e junta as falhas. Os senders HTTP usam o cliente de `safeNotifyClient()` (timeout `defaultSendTimeout`, 15s, e proteção contra SSRF). |
 | **Nova rota HTTP** | `server/internal/httpapi/httpapi.go` — registre no `mux` com o wrapper de permissão certo: `protected` (autenticado), `editor` (editor+) ou `admin`. Ex.: `mux.Handle("GET /api/minha-rota", protected(d.MeuHandler))`. |
 | **Mudar retenção de métricas/logs** | `deploy/migrations/clickhouse/*.up.sql` — cláusula `TTL`. Hoje: `metrics` 7 dias (001), `metrics_1m` 90 dias (002), `metrics_1h` 730 dias (003), `events` 90 dias (005), `logs` 30 dias (007), `spans` 15 dias (008). Crie uma migração nova; não edite as já aplicadas. |
 | **Novo coletor de log de servidor** | `agent/internal/logtail/` — há um arquivo por fonte (`journald.go`, `dockerlogs.go`, `syslog.go`, `kmsg.go`) sobre a base comum (`record.go`, `logtail.go`, `supervise.go`). O `record.go` já dá o padrão de lote: flush por tamanho (**200** registros) ou tempo (**2s**), NDJSON para `/ingest/logs`. Ligue o coletor por toggle na config e no `main.go`. |
@@ -115,7 +108,7 @@ containers de dados logam pelo Docker (`docker logs revoada-clickhouse`, etc.).
 | **NATS JetStream** | Sistema de mensageria com persistência. É a fila de ingestão: o gateway publica, o consumidor grava no ClickHouse. Absorve picos e desacopla ingestão de gravação. |
 | **WAL** | *Write-Ahead Log.* Buffer em disco no agente (`agent/internal/buffer/`); guarda os lotes quando o gateway está fora e reenvia depois. Teto default 5000 arquivos, descarta o mais antigo. |
 | **serverkey** | Chave de ingestão de um agente (tabela `agents`). Viaja no header `X-Revoada-Key`; é como o gateway sabe de quem é o dado. |
-| **push vs pull** | O agente **envia** (push); o painel **não busca** (não faz pull/scraping dos hosts). Detalhes em [`docs/comunicacao-push-vs-pull.md`](comunicacao-push-vs-pull.md). |
+| **push vs pull** | O agente **envia** (push); o painel não consulta os hosts monitorados. As exceções são alvos que você cadastra: sites, sondas e scrape de endpoints Prometheus. Detalhes em [`docs/comunicacao-push-vs-pull.md`](comunicacao-push-vs-pull.md). |
 | **gopsutil** | Biblioteca Go que lê CPU, memória, disco, rede e processos do sistema operacional. É a fonte das métricas de host. |
 | **span / trace** | Um *span* é uma operação com início e duração; um *trace* é a árvore de spans de uma requisição (reconstruída por `trace_id`). Guardados na tabela `spans`. |
 | **gateway vs server** | **Gateway** = porta de entrada dos dados (ingestão). **Server** = API que a UI consome (auth, dashboards, alertas, query). São processos separados. |
@@ -127,6 +120,7 @@ containers de dados logam pelo Docker (`docker logs revoada-clickhouse`, etc.).
 - [`docs/runbook-dev.md`](runbook-dev.md) — subir o ambiente de desenvolvimento do zero.
 - [`docs/runbook-dr.md`](runbook-dr.md) — recuperação de desastre.
 - [`docs/dashboard-schema.md`](dashboard-schema.md) — modelo de dashboard e API.
-- **Esteira de QA** — antes de commitar/subir, passe pela esteira (skill `revoada-qa`):
-  lint, testes unitários, integração e build. Princípio Revoada: *software sempre
-  explicativo, usabilidade acima de tudo.*
+- **Antes de abrir um PR** — rode `go test ./...` em cada módulo Go que você tocou
+  e, na interface, `cd web && npx tsc -b && npx vitest run`. `gofmt`/`go vet` e
+  `eslint` precisam estar limpos no que você tocou. Detalhes em
+  [`CONTRIBUTING.md`](../CONTRIBUTING.md).

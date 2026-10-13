@@ -8,8 +8,9 @@ O alvo inicial é departamental/single-host. Adotar Kubernetes cedo custaria com
 operacional sem retorno proporcional.
 
 ## Decisão
-Empacotar e operar tudo com **Docker Compose** (dev e prod) e deploy push-to-deploy via SSH.
-K8s/GitOps ficam para a Fase 7, **só quando o Compose limitar de fato**.
+Empacotar e operar tudo com **Docker Compose** (dev e prod). No exemplo de produção, o deploy
+sai de um push: um runner self-hosted do GitHub Actions no próprio host compila e sobe o stack
+(`deploy/prod/bootstrap.sh`). K8s/GitOps só entram **quando o Compose limitar de fato**.
 
 ## Alternativas consideradas
 - Kubernetes desde já — overkill para um servidor; exige cluster, ingress, operadores.
@@ -17,5 +18,5 @@ K8s/GitOps ficam para a Fase 7, **só quando o Compose limitar de fato**.
 
 ## Consequências
 - (+) `docker compose up` entrega o produto inteiro; barreira de entrada mínima.
-- (+) Caminho de migração para K8s preservado (imagens já prontas no GHCR).
-- (−) Escala horizontal e HA exigem trabalho manual até a Fase 7.
+- (+) Caminho de migração para K8s preservado: cada serviço já roda em contêiner próprio.
+- (−) Escala horizontal e HA exigem trabalho manual enquanto o deploy for Compose.

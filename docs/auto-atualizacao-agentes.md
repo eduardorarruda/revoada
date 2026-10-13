@@ -144,8 +144,9 @@ Com `RestartSec=5`, um binário quebrado é desfeito em ~15 segundos, sem SSH.
 - **Versão em uso**: já aparece no inventário do painel (`hosts.agent_version`),
   reportada pelo agente a cada ciclo. Funciona hoje, inclusive em macOS e Windows.
 - **Versão desejada e resultado da última tentativa**: viajam no mesmo POST da
-  consulta horária. Hoje vão para o log do painel; a persistência por agente
-  depende do recorte em *O que falta ligar*.
+  consulta horária e ficam guardados por chave (`SaveAgentUpdateReport` em
+  `server/internal/store/agentupdate.go`). Aparecem na coluna "Última atualização"
+  da tela Atualização dos agentes.
 - **No host**: `journalctl -u revoada-agent | grep auto-atualização` e o
   arquivo `/var/lib/revoada-agent/update/estado.json`.
 
@@ -223,66 +224,35 @@ Vale a proporção: antes desta função, atualizar a frota exigia SSH como root
 cada host — um caminho para root muito mais largo. O risco residual acima é menor
 do que o que ele substitui, mas é real e deve ser fechado.
 
-## O que falta ligar
+## O que já está ligado e o que falta
 
-Os arquivos a seguir estão **fora** do recorte desta frente e precisam do
-recorte de quem os possui. Sem eles a rota existe e funciona, mas **não está
-registrada** e o pin/desligamento global não persistem.
+Já existem no código:
 
-### 1. Rota (`server/internal/httpapi/httpapi.go`)
+- **Rota**: `POST /api/agent/update-check`, autenticada pela serverkey
+  (`X-Revoada-Key`) e com limite por IP, em `server/internal/httpapi/httpapi.go`.
+  As rotas de administração da política (`GET`/`PUT /api/agent/update-policy` e
+  `POST /api/agents/update-hold`) ficam no mesmo arquivo, atrás de `admin()`.
+- **Wiring**: `agents.NewUpdateHandler` é montado em `server/cmd/server/main.go`
+  com a fonte de política `agents.NewPoliticaStore(st)`.
+- **Persistência**: `server/internal/store/agentupdate.go` guarda a política
+  global (em `app_settings`), o freio por chave (`agent_update_policy`) e o último
+  relato de cada agente.
 
-A rota é autenticada por serverkey (`X-Revoada-Key`), não por sessão — logo não
-entra nos wrappers `admin()`/`protected()`. Deve ir com limite por IP, como a
-rota de inscrição:
+Quando a fonte de política falha ao responder, o painel segura a frota: um banco
+fora do ar não pode virar "atualiza todo mundo porque não consegui ler o pin".
 
-```go
-if d.AgentUpdate != nil {
-    mux.Handle("POST /api/agent/update-check", http.HandlerFunc(authRL.wrap(d.AgentUpdate.Check)))
-}
-```
+Falta:
 
-### 2. Wiring (`server/cmd/server/main.go`)
-
-```go
-artefatos := installer.NewArtefatos(os.DirFS(config.AgentDistDir()))
-// O 4º argumento é a FonteDePolitica; passe nil até o item 3 existir.
-agentUpdate := agents.NewUpdateHandler(st, artefatos, config.PublicURL(), nil, log)
-```
-
-### 3. Persistência (`server/internal/store/`)
-
-Implementar `agents.FonteDePolitica`:
-
-- **Global**: uma chave nova em `app_settings` (ex.: `agent_auto_update`) com
-  `{"desligado": bool, "pin": "x.y.z"}`, no mesmo molde de
-  `GetAgentResourceLimits`/`SetAgentResourceLimits`.
-- **Por agente**: colunas em `agents`. Como o servidor e o gateway aplicam schema
-  na ordem em que subirem, o `ALTER` precisa existir nos **dois**
-  (`server/internal/store/schema.sql` e `gateway/internal/pg/schema.sql`), com
-  `IF EXISTS`:
-
-```sql
-ALTER TABLE IF EXISTS agents ADD COLUMN IF NOT EXISTS auto_update_off  BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE IF EXISTS agents ADD COLUMN IF NOT EXISTS pinned_version   TEXT;
-ALTER TABLE IF EXISTS agents ADD COLUMN IF NOT EXISTS update_state     TEXT;
-ALTER TABLE IF EXISTS agents ADD COLUMN IF NOT EXISTS update_error     TEXT;
-ALTER TABLE IF EXISTS agents ADD COLUMN IF NOT EXISTS update_target    TEXT;
-ALTER TABLE IF EXISTS agents ADD COLUMN IF NOT EXISTS update_reported_at TIMESTAMPTZ;
-```
-
-Enquanto `FonteDePolitica` for `nil`, o comportamento é: atualizar sempre que
-houver versão mais nova, e o relato do agente vai só para o log. **Quando a fonte
-existe e falha ao responder, o painel segura a frota** — um banco fora do ar não
-pode virar "atualiza todo mundo porque não consegui ler o pin".
-
-### 4. `VERSION` no dist (`Makefile`)
+### `VERSION` no dist (`Makefile`)
 
 O painel prefere `<dist>/VERSION` para saber a versão publicada e cai numa
-constante compilada (`versaoAgentePadrao`) quando o arquivo não existe. Hoje o
-`make agent` não escreve o arquivo. Basta:
+constante compilada (`versaoAgentePadrao`, em `server/internal/installer/artefato.go`)
+quando o arquivo não existe. Hoje o `make agent` não escreve o arquivo, e o
+`Makefile` não tem variável com a versão do agente: ela está em `var version`, em
+`agent/cmd/revoada-agent/main.go`. Uma forma de gerar o arquivo no alvo `agent`:
 
 ```make
-	echo "$(AGENT_VERSION)" > dist/VERSION
+	sed -n 's/^var version = "\(.*\)"/\1/p' agent/cmd/revoada-agent/main.go > dist/VERSION
 ```
 
 Há um teste (`TestFallbackDeVersaoAcompanhaOAgente`) que falha se a constante do

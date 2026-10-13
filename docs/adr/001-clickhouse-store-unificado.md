@@ -19,5 +19,5 @@ por materialized views e TTL em camadas.
 ## Consequências
 - (+) Correlação métrica↔log↔trace por join no mesmo engine; um só backup.
 - (+) Compressão e custo de storage excelentes.
-- (−) Menos "plug-and-play" que Prometheus para alerting — exige camada própria (Fase 4).
-- Exige disciplina de schema e MVs (ADR referenciado pelas migrations do P1.1).
+- (−) Menos "plug-and-play" que Prometheus para alerting — exige camada própria (`server/internal/alerting`).
+- Exige disciplina de schema e MVs (migrations em `deploy/migrations/clickhouse/`).

@@ -40,7 +40,7 @@ tabelas estáveis (events/agents/hosts) batem exatamente.
 1. **Provisione o host** e instale Docker + Compose.
 2. **Clone o repositório** e suba a infraestrutura vazia:
    ```bash
-   git clone <repo> /opt/revoada && cd /opt/revoada
+   git clone https://github.com/eduardorarruda/revoada /opt/revoada && cd /opt/revoada
    docker compose -f deploy/docker-compose.dev.yml up -d clickhouse postgres redis nats minio
    ```
 3. **Recrie o schema** do ClickHouse:
@@ -51,8 +51,10 @@ tabelas estáveis (events/agents/hosts) batem exatamente.
 4. **Restaure o ClickHouse** (escolha o DIA do último backup bom):
    ```bash
    DAY=2026-07-13
-   docker exec revoada-clickhouse clickhouse-client --user revoada --password ##### --query \
-     "RESTORE DATABASE revoada FROM S3('http://minio:9000/backups/clickhouse/$DAY','#####','#####')"
+   CH_PASS='<senha_clickhouse>'   # a do usuário revoada no ClickHouse (no stack de dev: revoada)
+   S3_KEY='<access_key>'; S3_SECRET='<secret_key>'   # as do MinIO/S3 (veja deploy/backup/backup.sh)
+   docker exec revoada-clickhouse clickhouse-client --user revoada --password "$CH_PASS" --query \
+     "RESTORE DATABASE revoada FROM S3('http://minio:9000/backups/clickhouse/$DAY','$S3_KEY','$S3_SECRET')"
    ```
    > Se o database `revoada` já existir vazio, use `RESTORE ... AS revoada` num database limpo ou
    > `DROP DATABASE revoada` antes. Para validar sem sobrescrever, restaure como `revoada_restored`.

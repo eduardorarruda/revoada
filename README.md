@@ -12,12 +12,12 @@ linha a linha, que nada se perdeu no caminho.
 [![Licença: AGPL-3.0](https://img.shields.io/badge/licen%C3%A7a-AGPL--3.0-0d7a73)](LICENSE)
 [![Go 1.26](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](web)
-[![Self-hosted](https://img.shields.io/badge/self--hosted-docker%20compose-2496ED?logo=docker&logoColor=white)](#-início-rápido)
+[![Self-hosted](https://img.shields.io/badge/self--hosted-docker%20compose-2496ED?logo=docker&logoColor=white)](#início-rápido)
 
-[Início rápido](#-início-rápido) ·
-[Recursos](#-o-que-ele-faz) ·
-[Migração verificada](#-migração-que-se-prova-certa) ·
-[Arquitetura](#-arquitetura) ·
+[Início rápido](#início-rápido) ·
+[Recursos](#o-que-ele-faz) ·
+[Migração verificada](#migração-que-se-prova-certa) ·
+[Arquitetura](#arquitetura) ·
 [Contribuir](CONTRIBUTING.md)
 
 <img src="docs/imagens/inicio.webp" alt="Tela inicial do Revoada: veredito da frota, indicadores e o que precisa de atenção" width="100%">
@@ -26,10 +26,10 @@ linha a linha, que nada se perdeu no caminho.
 
 ---
 
-## ✨ Por que o Revoada
+## Por que o Revoada
 
-- **Tudo num lugar só.** CPU, RAM, disco, rede, containers, logs, traces, checagem de sites e
-  jornadas, alertas no WhatsApp/e-mail/Telegram e status page — sem montar cinco ferramentas.
+- **Uma instalação.** Métricas, logs, traces, sites, alertas e status page no mesmo painel e
+  no mesmo banco.
 - **A resposta antes do gráfico.** A tela inicial diz em uma frase se está tudo bem — e nunca
   afirma o que não mediu: servidor mudo, métrica velha ou fonte que falhou aparecem como tal.
 - **Migração de banco com prova.** Simulação obrigatória, execução em lotes com checkpoint,
@@ -42,7 +42,7 @@ linha a linha, que nada se perdeu no caminho.
 - **Seguro por padrão.** MFA obrigatório para quem administra, cofre de credenciais em
   envelope, tarefas assinadas, auditoria encadeada e redação de segredos nos logs.
 
-## 🚀 Início rápido
+## Início rápido
 
 Você precisa de **Docker** com o plugin **Compose v2**.
 
@@ -82,7 +82,7 @@ Para as tarefas de migração e deploy, inscreva o agente no canal: **Agentes �
 servidor** mostra o comando `revoada-agent inscrever` com um token de uso único. Hospedagem
 sem systemd (cPanel)? Veja [docs/agente-cpanel.md](docs/agente-cpanel.md).
 
-## 🧭 O que ele faz
+## O que ele faz
 
 <table>
 <tr>
@@ -126,7 +126,7 @@ sem systemd (cPanel)? Veja [docs/agente-cpanel.md](docs/agente-cpanel.md).
   <img src="docs/imagens/sites.webp" alt="Checagem de sites e jornadas" width="49%">
 </p>
 
-## 🤖 Agentes de IA
+## Agentes de IA
 
 Se a sua aplicação chama LLM — chatbot, agente com ferramentas, RAG —, mande os traces
 OpenTelemetry dela para o gateway. O Revoada entende a convenção GenAI do OpenTelemetry, o
@@ -157,7 +157,7 @@ Guia por biblioteca (Python, Node.js, Go): [docs/instrumentacao-ia.md](docs/inst
 API: [docs/api-ia.md](docs/api-ia.md) · para ver a tela sem chave de API:
 [exemplos/agente-demo](exemplos/agente-demo).
 
-## 🛡️ Migração que se prova certa
+## Migração que se prova certa
 
 Migrar o banco de um cliente só é seguro se der para **provar** que o destino ficou igual à
 origem. O Revoada não pede que você confie — ele mostra:
@@ -179,7 +179,7 @@ fecharam em **192.005 linhas × 20 colunas idênticas**. Reverter desfaz tudo em
   <img src="docs/imagens/migracao-verificacao.webp" alt="Tela de verificação da migração: 192.005 linhas idênticas, tabela a tabela" width="100%">
 </p>
 
-## 🏗️ Arquitetura
+## Arquitetura
 
 ```mermaid
 flowchart LR
@@ -215,7 +215,7 @@ flowchart LR
 Mais detalhes em [docs/ARQUITETURA.md](docs/ARQUITETURA.md) e
 [docs/SEGURANCA.md](docs/SEGURANCA.md).
 
-## ✅ Como sabemos que funciona
+## Como sabemos que funciona
 
 Além dos testes de unidade e de integração (Firebird 2.5, Firebird 5 e PostgreSQL de verdade,
 em UTC e no fuso de São Paulo), a [bateria de validação](tests/validacao) compara o que a tela
@@ -224,10 +224,12 @@ conhecida, disco contra `statvfs`, cada linha de log marcada, e cada checagem de
 log de um servidor de teste que registra exatamente o que recebeu. Para os agentes de IA, ela
 envia spans com tokens, erros e ferramentas conhecidos e confere cada número da tela: custo
 exato (inclusive com troca de preço no meio do período), permissões com usuários reais, MCP
-por HTTP, isenção de amostragem e o apagamento de dados. Resultado atual: **152 de 152**
-verificações de servidor, logs e sites, e **60 de 60** de agentes de IA.
+por HTTP, isenção de amostragem e o apagamento de dados. Última rodada registrada aqui
+(8 de outubro de 2026, com a bateria na versão do commit `1d5399d`): **152 de 152**
+verificações de servidor, logs e sites, e **60 de 60** de agentes de IA. Para rodar de novo
+contra o seu stack, veja o [README da bateria](tests/validacao/README.md).
 
-## 🧑‍💻 Desenvolvimento
+## Desenvolvimento
 
 ```bash
 make dev-up      # PostgreSQL, ClickHouse, NATS e Redis
@@ -238,12 +240,12 @@ cd web && npm install && npm run dev   # interface em :5173
 
 O passo a passo completo está em [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## 🤝 Contribuindo
+## Contribuindo
 
 Issues e pull requests são bem-vindos — leia o [guia de contribuição](CONTRIBUTING.md) e o
 [código de conduta](CODE_OF_CONDUCT.md). Vulnerabilidades: [SECURITY.md](SECURITY.md).
 
-## 📄 Licença
+## Licença
 
 [AGPL-3.0](LICENSE). Use, estude, modifique e distribua à vontade; se oferecer uma versão
 modificada como serviço, compartilhe as modificações com quem usa.

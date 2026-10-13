@@ -22,7 +22,7 @@ conferir a mensagem de sucesso:
       "name": "enviar formulário",
       "method": "POST",
       "url": "https://lp.exemplo.com.br/contato/enviar",
-      "form": { "nome": "Teste", "email": "#####", "mensagem": "ping" },
+      "form": { "nome": "Teste", "email": "teste@exemplo.com.br", "mensagem": "ping" },
       "assert_status": 200,
       "assert_contains": "Recebemos sua mensagem"
     }
@@ -44,9 +44,8 @@ Estado e alertas seguem o padrão dos checks: 1ª falha = SUSPEITO (reteste em 3
 2ª consecutiva = DOWN e notifica; recuperação resolve. Métricas gravadas:
 `synthetic.journey.up` e `synthetic.journey.total_ms` (label `journey`).
 
-## Limitação honesta
+## Limitação
 
-Esta versão executa passos **HTTP** (com cookies), cobrindo formulários
-server-side. Jornadas que dependem de JavaScript pesado no browser (SPAs, widgets)
-precisam de um runner headless (Playwright) — fica registrado como follow-up; a
-estrutura de passos/estado/alerta já está pronta para recebê-lo.
+Cada passo é uma requisição **HTTP** (com cookies), feita a partir do servidor do
+painel. Isso cobre formulários processados no servidor. Jornadas com JavaScript no
+navegador (SPAs) não são suportadas.

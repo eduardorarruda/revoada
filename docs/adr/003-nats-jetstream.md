@@ -17,6 +17,7 @@ o receiver publica, o writer consome, agrega em lotes e só dá ack após inser�
 - Fila em memória — perda de dados em queda; inaceitável.
 
 ## Consequências
-- (+) Backpressure e replay: derrubar o ClickHouse não perde dados (P1.4).
+- (+) Backpressure e replay: derrubar o ClickHouse não perde dados enquanto as mensagens
+  estiverem no stream.
 - (+) Leve; JetStream habilita persistência com um flag.
 - (−) Mais um serviço no compose para operar e monitorar.

@@ -18,7 +18,7 @@ Sobe ClickHouse (8123/9000), PostgreSQL (5433→5432), Redis (6379), NATS (4222/
 ```bash
 make migrate
 ```
-Cria `metrics`, `metrics_1m`/`metrics_1h` (downsampling via materialized view), `events`.
+Aplica as migrações de `deploy/migrations/clickhouse/`.
 Idempotente — rodar de novo não faz nada.
 
 ## 3. Subir o gateway
@@ -31,7 +31,7 @@ Config por env `REVOADA_*` (ver gateway/README.md). O gateway cria as tabelas do
 
 ## 4. Subir o painel e inscrever um agente
 Com o gateway de pé, suba o painel (`server/`, ver [server/README.md](../server/README.md)),
-crie o primeiro usuário e gere uma chave de ingestão em **Servidores › Adicionar servidor**.
+crie o primeiro usuário e gere uma chave de ingestão em **Infraestrutura › Adicionar servidor**.
 O agente (`agent/`, binário `revoada-agent`) é apontado para o gateway com essa chave:
 ```bash
 cd agent && go run ./cmd/revoada-agent -config ./agent.yaml   # agent.yaml: gateway + chave
@@ -39,8 +39,9 @@ cd agent && go run ./cmd/revoada-agent -config ./agent.yaml   # agent.yaml: gate
 
 Ver os dados:
 ```bash
-docker exec revoada-clickhouse clickhouse-client --user revoada --password ##### \
-  --query "SELECT metric, count() FROM revoada.metrics GROUP BY metric ORDER BY metric"
+# usuário e senha vêm das variáveis do próprio container (deploy/docker-compose.dev.yml)
+docker exec revoada-clickhouse sh -c 'clickhouse-client --user "$CLICKHOUSE_USER" --password "$CLICKHOUSE_PASSWORD" \
+  --query "SELECT metric, count() FROM revoada.metrics GROUP BY metric ORDER BY metric"'
 docker exec revoada-postgres psql -U revoada -d revoada -c "SELECT * FROM hosts;"
 ```
 

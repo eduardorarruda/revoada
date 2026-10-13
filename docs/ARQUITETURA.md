@@ -593,8 +593,8 @@ Servidor MCP em `server/internal/mcpsrv`, com o SDK oficial `github.com/modelcon
 
 ## 16. UI/UX
 
-- **Design próprio, sem cara de template**; software **sempre explicativo**: cada tela diz o que está
-  acontecendo e por quê, em pt-BR.
+- **Design próprio** (componentes em `web/src/components/`, sem biblioteca de UI); cada tela diz o
+  que está acontecendo e por quê, em pt-BR.
 - **Animações com propósito** (`motion`), em transform/opacity, respeitando
   `prefers-reduced-motion`. O **Bando** — cinco pássaros em V, o símbolo em movimento — é o
   indicador de trabalho (tela carregando, tarefa rodando no agente).
@@ -608,7 +608,7 @@ Servidor MCP em `server/internal/mcpsrv`, com o SDK oficial `github.com/modelcon
 
 ## 17. Qualidade do back-end
 
-- Arquitetura de pastas limpa (§6): `cmd/` + `internal/`, Go idiomático, reutilizar antes de criar;
+- Pastas no padrão `cmd/` + `internal/` (§6); reutilizar antes de criar;
   recursão onde faz sentido (ordenação topológica das tabelas por FK, comparação de esquemas).
 - **Erros explícitos**, embrulhados com contexto, sem falha silenciosa e sem `panic` em runtime.
 - **Cache** nas consultas quentes (ex.: autenticação de chave no gateway).
@@ -656,7 +656,7 @@ modificações.
 
 ## 21. Decisões assumidas por padrão
 
-Decisões tomadas sem pedido explícito, revisáveis. As decisões estruturais **D1–D5** estão em §5.
+Padrões adotados que podem mudar sem quebrar compatibilidade. As decisões estruturais **D1–D5** estão em §5.
 
 ### 21.1 MFA obrigatório para administrador e operador
 
@@ -675,8 +675,9 @@ O binário do agente se chama `revoada-agent`; o do painel, `revoada-painel`.
 
 ## 22. Requisitos de segurança e operação
 
-O projeto atende, sempre, aos 20 itens abaixo. O detalhe de cada um (como, onde no código e como
-configurar) fica em [`docs/SEGURANCA.md`](SEGURANCA.md). Toda funcionalidade nova entra respeitando
+Os 20 itens abaixo são requisito; exceções abertas ou aceitas estão em
+[`docs/SEGURANCA.md` › Revisões e achados](SEGURANCA.md#revisões-e-achados). O detalhe de cada item
+(como, onde no código e como configurar) fica no mesmo documento. Toda funcionalidade nova entra respeitando
 esta lista (ex.: o módulo de migração usa `core/validacao`, `core/ident` e o cofre; o deploy usa só
 receitas declaradas no servidor).
 

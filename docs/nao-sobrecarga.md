@@ -1,7 +1,6 @@
 # Garantia de não-sobrecarga do agente
 
-Este documento responde à pergunta do gestor: **“como garantir que o agente não vai
-pesar nos servidores monitorados?”** com (1) medição real do footprint, (2) as
+Este documento mostra como garantir que o agente não pesa nos servidores monitorados, com (1) medição real do footprint, (2) as
 salvaguardas configuráveis que impõem um teto, e (3) como provar tudo ao vivo.
 
 Resumo em uma linha: **na configuração padrão o agente custa ~0,1% de um núcleo e
@@ -25,7 +24,7 @@ núcleos) e capturando o tamanho real do lote OTLP no WAL.
 | **Goroutines** | ~10 | ~10 |
 | **Disco** | WAL só quando o gateway cai (0 em operação normal no modo serviço; no modo cron, 1 gravação de ~60 bytes por coleta para lembrar a leitura de CPU) | idem |
 
-Interpretação para o gestor: o agente base é **desprezível** — menos de um décimo
+Na prática, o agente base é **desprezível**: menos de um décimo
 de 1% de um núcleo e ~20 MB, comparável a um daemon de sistema qualquer. O custo
 cresce só com o que você **liga explicitamente** (containers, logs).
 

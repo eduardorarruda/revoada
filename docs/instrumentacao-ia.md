@@ -68,7 +68,7 @@ conteúdo e spans que aparecem em Traces mas não em Agentes de IA.
   waterfall em **Investigar → Traces** não muda.
 - **Sem amostragem:** custo é soma, e somar sobre 20% das chamadas daria um gasto cinco
   vezes menor que a fatura. Por isso todo span de IA é mantido, qualquer que seja
-  `REVOADA_TRACE_SAMPLE`. Limite honesto: se spans **sem** IA do mesmo trace chegaram
+  `REVOADA_TRACE_SAMPLE`. Limite: se spans **sem** IA do mesmo trace chegaram
   num lote anterior e foram descartados pela amostragem, o trace aparece marcado como
   parcial.
 - **Prazo:** chamadas por 90 dias (`genai_spans`), agregado por minuto por 400 dias
@@ -211,7 +211,7 @@ O mesmo vale para `openinference-instrumentation-langchain` e
 `openinference-instrumentation-llama-index`: o tipo do span
 (`openinference.span.kind` = `LLM`, `AGENT`, `TOOL`, `CHAIN`, `RETRIEVER`, `RERANKER`,
 `EMBEDDING`, `GUARDRAIL`) vira a operação do Revoada, e os spans de agente e de
-ferramenta já vêm prontos. Honestidade: gravamos fixtures só da instrumentação de
+ferramenta já vêm prontos. Ressalva: gravamos fixtures só da instrumentação de
 OpenAI; LangChain e LlamaIndex usam o mesmo padrão de atributos, mas não foram
 medidos aqui.
 

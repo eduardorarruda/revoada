@@ -4,13 +4,15 @@
 - **Referência:** decisão de produto (ver [ARQUITETURA.md §5](../ARQUITETURA.md))
 
 ## Contexto
-Uma versão anterior da análise propunha IA (detecção de anomalias, root-cause, assistente) como
-"grande diferencial". Numa avaliação honesta para o porte departamental da Revoada, o custo de
-construir e manter isso não se justifica frente ao valor entregue.
+Uma versão anterior da análise propunha IA (detecção de anomalias, causa raiz, assistente) como
+diferencial. Para o porte departamental a que o Revoada se destina (uma instalação self-hosted
+por equipe), o custo de construir e manter isso não se justifica frente ao valor entregue.
 
 ## Decisão
-**Remover IA do escopo.** Nenhum prompt do plano constrói recursos de IA. Thresholds e regras
-determinísticas (Fase 4) cobrem as necessidades reais de alerta.
+**Remover IA do escopo.** O Revoada não embute IA: não tem detecção de anomalia, análise de
+causa raiz nem assistente. Thresholds e regras determinísticas (`server/internal/alerting`)
+cobrem as necessidades reais de alerta. Observar aplicações de IA dos usuários é outra coisa e
+está no [ADR 008](008-observar-agentes-de-ia.md).
 
 ## Alternativas consideradas
 - Anomaly detection estatística — valor marginal sobre thresholds bem calibrados no porte atual.

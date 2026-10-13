@@ -37,8 +37,8 @@ antigo como uma nova versão (o histórico nunca é perdido).
 | Campo | Descrição |
 |---|---|
 | `id` | único no dashboard |
-| `type` | `timeseries` \| `stat` \| `gauge` \| `bargauge` \| `table` \| `state-timeline` \| `heatmap` \| `text` |
-| `title` / `description` | título e texto explicativo (princípio Revoada) |
+| `type` | `timeseries` \| `stat` \| `gauge` \| `bargauge` \| `table` |
+| `title` / `description` | título e texto explicativo |
 | `gridPos` | posição na grade de **24 colunas** (`x`,`y`,`w`,`h`) |
 | `query` | `{metric, filters, agg, group_by?}` — enviado à Query API; a tabela (bruto/1m/1h) é escolhida pela janela/step |
 | `query.group_by` | opcional: lista de labels para agrupar (ex.: `["host"]` → uma série por servidor). Sem `group_by`, o painel agrega tudo numa série. Painéis `stat`/`gauge` com mais de uma série caem para `bargauge` (não escondem hosts). |
