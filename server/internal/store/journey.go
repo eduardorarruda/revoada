@@ -9,7 +9,7 @@ import (
 // JourneyStep é um passo do roteiro (navegar/preencher/asserir).
 type JourneyStep struct {
 	Name           string            `json:"name"`
-	Method         string            `json:"method"` // GET|POST
+	Method         string            `json:"method"` // GET (default), POST, PUT, PATCH, DELETE, HEAD…
 	URL            string            `json:"url"`
 	Form           map[string]string `json:"form,omitempty"`
 	AssertStatus   int               `json:"assert_status,omitempty"`

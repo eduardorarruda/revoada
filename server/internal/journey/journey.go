@@ -137,12 +137,12 @@ func (r *Runner) execute(ctx context.Context, j store.Journey) (bool, string, fl
 		if method == "" {
 			method = http.MethodGet
 		}
-		if method == http.MethodPost {
+		if sendsBody(method) {
 			form := url.Values{}
 			for k, v := range step.Form {
 				form.Set(k, v)
 			}
-			req, err = http.NewRequestWithContext(ctx, http.MethodPost, step.URL, strings.NewReader(form.Encode()))
+			req, err = http.NewRequestWithContext(ctx, method, step.URL, strings.NewReader(form.Encode()))
 			if req != nil {
 				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			}
@@ -184,6 +184,13 @@ func (r *Runner) notify(j store.Journey, state, diag string) {
 		Labels: map[string]string{"journey": j.Name, "diagnóstico": diag},
 		Value:  0, State: state, Since: time.Now(),
 	})
+}
+
+// sendsBody diz se o passo leva o `form` no corpo. Precisa cobrir os métodos que o
+// editor de jornadas (web/src/pages/Websites.tsx, STEP_ACTIONS) marca com corpo
+// (POST, PUT); PATCH entra para quem monta a jornada direto pela API.
+func sendsBody(method string) bool {
+	return method == http.MethodPost || method == http.MethodPut || method == http.MethodPatch
 }
 
 func msSince(t time.Time) float64 { return float64(time.Since(t).Microseconds()) / 1000 }

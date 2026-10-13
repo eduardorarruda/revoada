@@ -31,9 +31,12 @@ conferir a mensagem de sucesso:
 ```
 
 Campos de cada passo:
-- `method`: `GET` (default) ou `POST`.
+- `method`: verbo HTTP do passo — `GET` (default), `POST`, `PUT`, `PATCH`, `DELETE`
+  ou `HEAD` (o servidor repassa o verbo como veio, em maiúsculas).
 - `url`: alvo do passo.
-- `form`: campos enviados como `application/x-www-form-urlencoded` (POST).
+- `form`: campos enviados no corpo como `application/x-www-form-urlencoded`. Só vale
+  em `POST`, `PUT` e `PATCH`; nos demais métodos o passo sai sem corpo e o `form`
+  é ignorado.
 - `assert_status`: status HTTP esperado (opcional; sem ele, ≥400 falha).
 - `assert_contains`: texto que deve aparecer no corpo (opcional).
 

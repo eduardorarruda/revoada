@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/eduardorarruda/revoada/server/internal/store"
@@ -51,6 +52,41 @@ func TestExecutePassaEQuebra(t *testing.T) {
 	}
 	if diag == "" || diag[:6] != "passo " {
 		t.Errorf("diagnóstico deveria apontar o passo, veio: %q", diag)
+	}
+}
+
+// O editor oferece corpo para PUT; o executor só enviava o form em POST, e um passo
+// PUT/PATCH com `form` saía sem corpo, sem nenhum aviso.
+func TestFormEnviadoEmMetodosComCorpo(t *testing.T) {
+	for _, method := range []string{"POST", "PUT", "PATCH", "put"} {
+		t.Run(method, func(t *testing.T) {
+			var gotMethod, gotType, gotEmail string
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				gotMethod = req.Method
+				gotType = req.Header.Get("Content-Type")
+				if err := req.ParseForm(); err != nil {
+					t.Errorf("ParseForm: %v", err)
+				}
+				gotEmail = req.PostForm.Get("email")
+			}))
+			defer srv.Close()
+
+			j := store.Journey{Name: "t", Steps: []store.JourneyStep{
+				{Name: "enviar", Method: method, URL: srv.URL, Form: map[string]string{"email": "x@y.z"}},
+			}}
+			if ok, diag, _ := (&Runner{}).execute(context.Background(), j); !ok {
+				t.Fatalf("jornada deveria passar, falhou: %s", diag)
+			}
+			if gotMethod != strings.ToUpper(method) {
+				t.Errorf("método = %q, esperado %q", gotMethod, strings.ToUpper(method))
+			}
+			if gotType != "application/x-www-form-urlencoded" {
+				t.Errorf("Content-Type = %q, esperado form-urlencoded", gotType)
+			}
+			if gotEmail != "x@y.z" {
+				t.Errorf("campo email = %q, esperado %q (corpo não foi enviado)", gotEmail, "x@y.z")
+			}
+		})
 	}
 }
 
