@@ -1,5 +1,5 @@
 // Fase F — "Escopo do painel": camada amigável sobre `query.filters`/`query.metric`.
-// Módulo puro (sem React/echarts/uplot) para ser testável isoladamente e reusado
+// Módulo puro (sem React/uplot) para ser testável isoladamente e reusado
 // pelo PanelModal em DashboardEdit.tsx.
 //
 // "Servidor inteiro" (padrão) = sem recorte de serviço; opcionalmente um `filters.host`.

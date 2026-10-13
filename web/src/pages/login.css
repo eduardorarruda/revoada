@@ -59,27 +59,6 @@
   gap: var(--sp-4);
   animation: surgir var(--dur-4) var(--ease-out) 120ms backwards;
 }
-.login__selo {
-  align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-2);
-  padding: 4px 12px 4px 10px;
-  border: 1px solid var(--accent-line);
-  border-radius: var(--radius-pill);
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: var(--fs-12);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-.login__selo-ponto {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-  animation: live-ring 2.4s var(--ease-out) infinite;
-}
 .login__manchete {
   margin: 0;
   font-size: clamp(2rem, 1.2rem + 2.2vw, 3.25rem);
@@ -154,6 +133,11 @@
   margin: var(--sp-5) 0 0;
   color: var(--text-3);
   font-size: var(--fs-12);
+}
+.login__legal {
+  margin-top: var(--sp-6);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--border);
 }
 
 /* Celular e tablet: só o formulário; a vitrine sai de cena. */

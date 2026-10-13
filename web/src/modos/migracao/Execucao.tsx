@@ -83,7 +83,7 @@ export function Execucao({ projetoId, versao, sujo }: { projetoId: string; versa
       setAgentes(aptos);
       setAgente((x) => x || aptos.find((a) => a.estado === "online")?.id || aptos[0]?.id || "");
     } catch (e) {
-      toast.error(mensagemErro(e));
+      toast.error(mensagemErro(e, "Não foi possível carregar as execuções do projeto."));
     }
   }, [projetoId, toast]);
 
@@ -106,7 +106,7 @@ export function Execucao({ projetoId, versao, sujo }: { projetoId: string; versa
       setAoVivo(e.tarefa);
       await carregar();
     } catch (e) {
-      toast.error(mensagemErro(e));
+      toast.error(mensagemErro(e, "Não foi possível iniciar a execução."));
     } finally {
       setBusy(false);
     }

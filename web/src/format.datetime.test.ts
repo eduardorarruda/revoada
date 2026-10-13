@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   APP_TIME_ZONE,
   fmtRelAbs,
-  formatDate,
   formatDateTime,
   formatTime,
   formatUptimePercent,
@@ -35,11 +34,6 @@ describe("fuso horário fixo da operação", () => {
     expect(formatTime(MEIO_DIA_UTC, { seconds: false })).toBe("09:00");
   });
 
-  it("data isolada usa o dia de Brasília", () => {
-    expect(formatDate(CRUZA_MEIA_NOITE)).toBe("06/08/2026");
-    expect(formatDate(MEIO_DIA_UTC)).toBe("07/08/2026");
-  });
-
   it("sem segundos quando pedido", () => {
     const s = formatDateTime(CRUZA_MEIA_NOITE, { seconds: false });
     expect(s).toContain("06/08/2026");
@@ -55,7 +49,7 @@ describe("fuso horário fixo da operação", () => {
   });
 
   it("valor ausente ou inválido vira travessão, nunca 'Invalid Date'", () => {
-    for (const f of [formatDateTime, formatTime, formatDate]) {
+    for (const f of [formatDateTime, formatTime]) {
       expect(f(null)).toBe("—");
       expect(f(undefined)).toBe("—");
       expect(f("")).toBe("—");

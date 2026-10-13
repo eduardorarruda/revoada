@@ -1,7 +1,8 @@
 // Painel lateral de correlação (P5.4): de qualquer ponto/série → traces, logs e
 // deploys daquele instante/serviço, sem trocar de tela. Ouve o evento revoada:correlate.
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Badge, Button } from "./index";
+import { useFocoPreso } from "./useFocoPreso";
 import { correlate, getTrace, searchLogs, type CorrelationData, type CorrelationRequest, type LogRow, type TraceSpan } from "../api";
 import { formatTime } from "../format";
 
@@ -17,6 +18,11 @@ export function CorrelationDrawer() {
   const [data, setData] = useState<CorrelationData | null>(null);
   const [traceLogs, setTraceLogs] = useState<LogRow[] | null>(null);
   const [spans, setSpans] = useState<TraceSpan[] | null>(null);
+  const painelRef = useRef<HTMLDivElement>(null);
+  const tituloId = useId();
+  // Diálogo modal: foco entra ao abrir, Tab preso, Esc fecha e devolve o foco.
+  // Trocar de correlação (clicar num trace) não reabre: `aberto` segue true.
+  useFocoPreso(painelRef, req != null, () => setReq(null));
 
   useEffect(() => {
     const onOpen = (e: Event) => {
@@ -46,9 +52,19 @@ export function CorrelationDrawer() {
   if (!req) return null;
 
   return (
-    <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: 460, maxWidth: "92vw", background: "var(--bg-1)", borderLeft: "1px solid var(--border)", boxShadow: "-8px 0 24px rgba(0,0,0,.35)", zIndex: 60, overflow: "auto", padding: "var(--sp-4)" }}>
+    // zIndex acima dos modais (100): o drawer pode ser aberto de dentro de um
+    // (ex.: "Correlacionar trace" no drill-down dos Logs) e, como recebe o foco,
+    // tem de estar visível por cima dele.
+    <div
+      ref={painelRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={tituloId}
+      tabIndex={-1}
+      style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: 460, maxWidth: "92vw", background: "var(--bg-1)", borderLeft: "1px solid var(--border)", boxShadow: "-8px 0 24px rgba(0,0,0,.35)", zIndex: 110, overflow: "auto", padding: "var(--sp-4)" }}
+    >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-2)" }}>
-        <strong style={{ fontSize: "var(--fs-16)" }}>
+        <strong id={tituloId} style={{ fontSize: "var(--fs-16)" }}>
           Correlação {req.service ? `· ${req.service}` : req.host ? `· ${req.host}` : req.traceId ? "· trace" : ""}
         </strong>
         <Button variant="ghost" onClick={() => setReq(null)}>fechar ✕</Button>
@@ -134,13 +150,27 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </div>
   );
 }
+// Linha clicável vira <button> de verdade: foco por Tab, Enter/Espaço nativos e
+// anúncio como botão no leitor de tela. Sem ação, segue um <div> comum.
 function Line({ left, body, hint, onClick }: { left: React.ReactNode; body: string; hint?: string; onClick?: () => void }) {
-  return (
-    <div onClick={onClick} style={{ display: "flex", gap: "var(--sp-2)", alignItems: "baseline", padding: "3px 0", borderBottom: "1px solid var(--border)", cursor: onClick ? "pointer" : "default", fontSize: "var(--fs-12)" }}>
+  const estilo: React.CSSProperties = { display: "flex", gap: "var(--sp-2)", alignItems: "baseline", padding: "3px 0", borderBottom: "1px solid var(--border)", fontSize: "var(--fs-12)" };
+  const conteudo = (
+    <>
       <span style={{ flexShrink: 0 }}>{left}</span>
       <span style={{ flex: 1, fontFamily: "var(--font-mono)", wordBreak: "break-all" }}>{body}</span>
       {hint && <span style={{ color: "var(--accent)" }}>{hint}</span>}
-    </div>
+    </>
+  );
+  if (!onClick) return <div style={estilo}>{conteudo}</div>;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      // Reset do visual de botão: a linha tem de parecer igual às não clicáveis.
+      style={{ ...estilo, width: "100%", margin: 0, borderTop: 0, borderLeft: 0, borderRight: 0, background: "none", color: "inherit", fontFamily: "inherit", fontWeight: "inherit", lineHeight: "inherit", textAlign: "left", cursor: "pointer" }}
+    >
+      {conteudo}
+    </button>
   );
 }
 function Empty() {

@@ -1,0 +1,3 @@
+# Painel com login, instalado pelo próprio usuário: nada aqui é para indexar.
+User-agent: *
+Disallow: /

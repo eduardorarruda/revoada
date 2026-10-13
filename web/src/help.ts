@@ -162,7 +162,7 @@ export const help: {
         },
         {
           q: "O expurgo é reversível? E o que ele NÃO alcança?",
-          a: "Não é reversível: o banco reescreve os arquivos e o dado some, sem lixeira. E ele alcança só a tabela de LOGS, por isso, ao terminar, a tela mostra a lista \"não alcançado\" (not_purged): o mesmo texto pode continuar existindo nas métricas por minuto (90 dias), no rollup de métricas por hora (730 dias, a cópia mais longeva do produto), nos eventos (90 dias), no registro de notificações enviadas (120 dias) e no backup diário, que não tem expiração automática e precisa ser tratado fora do painel. Quando você busca por um trecho, o próprio comando do expurgo fica registrado no banco por um tempo, citando o trecho. Ler essa lista é parte do procedimento: fechar um pedido de LGPD sem ela é declarar apagado um dado que continua vivo por até dois anos.",
+          a: "Não é reversível: o banco reescreve os arquivos e o dado some, sem lixeira. E ele alcança só a tabela de LOGS, por isso, ao terminar, a tela mostra a lista \"não alcançado\" (not_purged): o mesmo texto pode continuar existindo nas métricas por minuto (90 dias), no rollup de métricas por hora (730 dias, a cópia mais longeva do produto), nos eventos (90 dias), no registro de notificações enviadas (120 dias) e no backup diário, se estiver ligado (14 cópias diárias e 3 mensais, apagadas pela rotina de backup), que precisa ser tratado fora do painel. Quando você busca por um trecho, o próprio comando do expurgo fica registrado no banco por um tempo, citando o trecho. Ler essa lista é parte do procedimento: fechar um pedido de LGPD sem ela é declarar apagado um dado que continua vivo por até dois anos.",
         },
         {
           q: "Por que a lista de chaves não mostra mais a chave inteira?",
@@ -412,10 +412,10 @@ export const help: {
     },
     notify: {
       title: "Canais de alerta",
-      what: "Configura os canais para onde os alertas são enviados: e-mail (SMTP), webhook, Telegram e WhatsApp (via Evolution API). Cada canal é um destino que você cadastra e testa antes de usar.",
+      what: "Configura os canais para onde os alertas são enviados: e-mail (SMTP), webhook, Telegram e WhatsApp (via wuzapi). Cada canal é um destino que você cadastra e testa antes de usar.",
       how: [
         "Cadastre um destino (e-mail, webhook, Telegram ou WhatsApp) e clique em \"enviar teste\" para confirmar que a entrega funciona.",
-        "Para WhatsApp, preencha primeiro o card de integração (Evolution API): URL base, instância e apikey; os canais de WhatsApp reusam essa configuração.",
+        "Para WhatsApp, configure primeiro a \"Integração WhatsApp\": a URL do wuzapi e o token da sessão. Os canais de WhatsApp reusam essa configuração e só pedem os destinatários.",
         "Edite ou remova um canal a qualquer momento; o teste continua disponível para revalidar a entrega.",
       ],
       faq: [
@@ -425,7 +425,7 @@ export const help: {
         },
         {
           q: "Como recebo alertas no WhatsApp?",
-          a: "Preencha o card de integração WhatsApp (Evolution API) com a URL base, a instância pareada e a apikey; depois crie um canal do tipo WhatsApp informando o número de destino. Todos os canais de WhatsApp compartilham a mesma integração.",
+          a: "Configure a \"Integração WhatsApp\" com a URL do seu wuzapi e o token da sessão criada nele; depois crie um canal do tipo WhatsApp informando os destinatários (número com DDI e DDD ou ID de grupo) e, de preferência, o LID de cada um. Todos os canais de WhatsApp compartilham a mesma integração.",
         },
         {
           q: "Como faço um usuário receber no WhatsApp só os alertas dos servidores dele?",
@@ -436,22 +436,22 @@ export const help: {
           a: "No botão \"Histórico de envios\", no topo da tela: abre um modal com o registro de cada notificação disparada, quando, por qual canal, o assunto e se deu certo.",
         },
         {
-          q: "O que significam \"enviado\", \"aguardando confirmação\" e \"falhou\" no histórico?",
-          a: "\"Enviado\" quer dizer que o provedor confirmou ter recebido a mensagem para entregar (no WhatsApp, que ela passou pelos servidores dele, não que já apareceu no aparelho). \"Aguardando confirmação\" é o estado de quem ainda não respondeu: o painel volta a perguntar sozinho e atualiza a linha em poucos minutos. \"Falhou\" traz o motivo ao lado. Todo envio de WhatsApp passa por \"aguardando confirmação\", porque a Evolution API só aceita a mensagem na hora e entrega depois.",
+          q: "O que significam \"enviado\", \"sem confirmação\" e \"falhou\" no histórico?",
+          a: "\"Enviado\" quer dizer que o provedor aceitou a mensagem por um endereço que sabidamente chega (no WhatsApp, pelo LID do destinatário). \"Sem confirmação\" quer dizer que o provedor aceitou, mas ninguém confirma a entrega: no WhatsApp, é o envio só pelo número, para quem não tem LID cadastrado, e a mensagem pode nunca aparecer no aparelho. \"Falhou\" é recusa e traz o motivo ao lado. Esses estados não mudam depois: o painel não volta a consultar o provedor.",
         },
         {
-          q: "O teste de WhatsApp deu \"aceito, mas a entrega não foi confirmada\". E agora?",
-          a: "A Evolution API recebeu a mensagem, mas o WhatsApp não confirmou a entrega no tempo em que o botão esperou. Abra o \"Histórico de envios\" em um minuto: a linha vira \"entregue\" ou \"falhou\" com o motivo. A recusa mais comum acontece quando o destinatário nunca conversou com o número do painel, peça que ele mande qualquer mensagem para esse número e teste de novo.",
+          q: "O teste de WhatsApp deu \"sem confirmação\". E agora?",
+          a: "O wuzapi aceitou a mensagem, mas o envio foi só pelo número, e o WhatsApp descarta em silêncio mensagem para quem nunca conversou com o número do painel. Peça ao destinatário que mande qualquer mensagem para o número do painel, preencha o LID dele no canal e teste de novo. Se o teste der \"falhou\", o motivo ao lado diz o que fazer.",
         },
       ],
     },
     websites: {
       title: "Websites & Jornadas",
-      what: "Monitora se seus sites estão no ar, medindo tempo de resposta e validade do certificado a partir de várias sondas. Jornadas testam fluxos de várias etapas (ex.: login e compra).",
+      what: "Monitora se seus sites estão no ar, medindo tempo de resposta e validade do certificado. Por padrão, o teste sai do próprio servidor do painel; sondas extras são opcionais. Jornadas testam fluxos de várias etapas feitos de requisições HTTP (ex.: abrir um formulário e enviá-lo), sem executar JavaScript.",
       how: [
         "Cadastre um check com a URL e o intervalo de teste.",
         "Escolha as sondas (locais de onde o site é testado) e o grupo para a status page.",
-        "Para fluxos com passos, monte uma jornada escolhendo ações (abrir URL, preencher, clicar, esperar texto).",
+        "Para fluxos com passos, monte uma jornada: cada passo é uma requisição HTTP (abrir URL, enviar formulário) com o status e o texto esperados na resposta.",
         "Acompanhe o estado (UP, DEGRADADO, SUSPEITO, DOWN), o uptime% e o certificado.",
       ],
       faq: [
@@ -633,7 +633,7 @@ export const help: {
     "alert.preview":
       "Simula a regra contra o histórico e mostra quantas vezes ela teria disparado nos últimos dias. Use antes de salvar para saber se vai alertar de menos ou de mais. Ex.: \"teria disparado 42 vezes em 7 dias\" indica limite baixo demais.",
 
-    // --- Adicionar servidor por SSH (Fase G) ---
+    // --- Adicionar servidor por SSH ---
     "provision.name":
       "Um nome para você reconhecer o servidor no Revoada (ex.: \"Banco de Produção\"). Não precisa ser o hostname técnico; serve para identificar o servidor nesta e nas próximas telas.",
     "provision.host":
@@ -669,7 +669,7 @@ export const help: {
     "channel.whatsapp.lid":
       "O identificador interno que o WhatsApp usa para a pessoa (ex.: 123456789012345), com 14 a 16 dígitos. Preencha um por destinatário, na mesma ordem dos números. É o que faz o alerta chegar de verdade: o WhatsApp entrega a quem já conversou com o número do painel e descarta em silêncio o resto. Sem LID o painel ainda tenta pelo número, mas registra o envio como \"sem confirmação\", porque não tem como saber se chegou. Para obter o LID, peça à pessoa que envie uma mensagem para o número do painel.",
     "channel.test":
-      "Envia uma mensagem de teste agora e mostra o resultado na hora. São três respostas possíveis: \"enviado\" (chegou ao destino), \"sem confirmação\" em amarelo (o provedor aceitou, mas ninguém garante a entrega, no WhatsApp, falta o LID) e a falha em vermelho, com o motivo e o que fazer. Use sempre após cadastrar.",
+      "Envia uma mensagem de teste agora e mostra o resultado na hora. São três respostas possíveis: \"enviado\" (o provedor aceitou a mensagem), \"sem confirmação\" em amarelo (o provedor aceitou, mas ninguém garante a entrega, no WhatsApp, falta o LID) e a falha em vermelho, com o motivo e o que fazer. Use sempre após cadastrar.",
     // --- Websites / jornadas ---
     "check.url":
       "O endereço completo do site a ser testado, começando com http:// ou https://. Ex.: https://loja.empresa.com. É essa página que as sondas vão acessar.",
@@ -845,7 +845,7 @@ export const help: {
     },
     "expurgo-cirurgico": {
       title: "Expurgo cirúrgico de logs",
-      body: "Exclusão dirigida de linhas de log, na aba \"Armazenamento de logs\" de um servidor (só admin). Recorta por três eixos combináveis: CONTEÚDO (um trecho literal da linha), JANELA (de quando até quando) e ALVO (o servidor aberto ou as \"linhas sem servidor\", que chegaram sem rótulo de host, tipicamente por OTLP de uma aplicação). Serve para cumprir um pedido de exclusão de dado pessoal sem apagar o histórico inteiro do servidor. É irreversível, o banco reescreve os arquivos e não há lixeira, e o painel mostra o número de linhas atingidas antes de você confirmar. Alcance limitado, de propósito: ele toca apenas a tabela de logs, e a lista \"não alcançado\" exibida ao final diz onde o mesmo dado ainda pode viver (métricas por minuto, 90 dias; rollup por hora, 730 dias; eventos; registro de notificações enviadas; backup diário sem expiração). Exclusão que não chega a essas cópias é adiamento, não exclusão.",
+      body: "Exclusão dirigida de linhas de log, na aba \"Armazenamento de logs\" de um servidor (só admin). Recorta por três eixos combináveis: CONTEÚDO (um trecho literal da linha), JANELA (de quando até quando) e ALVO (o servidor aberto ou as \"linhas sem servidor\", que chegaram sem rótulo de host, tipicamente por OTLP de uma aplicação). Serve para cumprir um pedido de exclusão de dado pessoal sem apagar o histórico inteiro do servidor. É irreversível, o banco reescreve os arquivos e não há lixeira, e o painel mostra o número de linhas atingidas antes de você confirmar. Alcance limitado, de propósito: ele toca apenas a tabela de logs, e a lista \"não alcançado\" exibida ao final diz onde o mesmo dado ainda pode viver (métricas por minuto, 90 dias; rollup por hora, 730 dias; eventos; registro de notificações enviadas; backup diário, se ligado, com 14 cópias diárias e 3 mensais). Exclusão que não chega a essas cópias é adiamento, não exclusão.",
     },
     "severidade-nao-classificada": {
       title: "Severidade \"não classificado\" (UNKNOWN)",

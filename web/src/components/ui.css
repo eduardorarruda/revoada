@@ -365,7 +365,12 @@
   display: inline-flex;
   vertical-align: middle;
 }
+/* O círculo visível fica em 18px (cabe ao lado do rótulo sem desalinhar), mas o
+   alvo de clique/toque tem 24x24 (WCAG 2.5.8): o ::after estende a área a partir
+   da caixa interna (16px, dentro da borda) 4px para cada lado, sem ocupar espaço
+   no layout. */
 .infotip__btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -379,6 +384,11 @@
   font-size: var(--fs-12);
   line-height: 1;
   cursor: help;
+}
+.infotip__btn::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
 }
 .infotip__btn:hover {
   color: var(--info);
@@ -570,8 +580,19 @@
 .toast__msg {
   flex: 1;
 }
+/* Alvo mínimo de 24x24 (WCAG 2.5.8) com o ✕ centrado; a margem negativa no topo
+   mantém o ✕ alinhado à primeira linha da mensagem. */
 .toast__close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: -2px -4px -2px 0;
+  padding: 0;
   border: none;
+  border-radius: var(--radius-xs);
   background: transparent;
   color: var(--text-2);
   cursor: pointer;
@@ -719,12 +740,15 @@
   flex-direction: column;
   gap: var(--sp-4);
 }
+/* É um <h3> (estrutura para leitor de tela); zera margem e peso padrão do
+   navegador para o visual seguir o de antes. */
 .drawer__section-title {
   font-size: var(--fs-12);
+  font-weight: inherit;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-3);
-  margin-bottom: var(--sp-1);
+  margin: 0 0 var(--sp-1);
 }
 .drawer__section-body {
   color: var(--text-2);
@@ -1613,14 +1637,20 @@ th.dt-sortable[aria-sort] .dt-sort-ind {
   padding-left: var(--sp-2);
   padding-right: 0;
 }
+/* Alvo mínimo de 24x24 (WCAG 2.5.8); o caractere fica centrado no quadrado. */
 .dt-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
   background: none;
   border: none;
   color: var(--text-2);
   cursor: pointer;
   font-size: 0.9rem;
   line-height: 1;
-  padding: 2px 4px;
+  padding: 0;
 }
 .dt-expand-btn:hover {
   color: var(--accent);

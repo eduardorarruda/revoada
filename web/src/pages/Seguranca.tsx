@@ -15,6 +15,7 @@ import {
   type InicioMFA,
   type MeResponse,
 } from "../api";
+import { mensagemDeErro } from "../format";
 import "./seguranca.css";
 
 type Passo = "parado" | "ler-qr" | "codigos";
@@ -64,7 +65,7 @@ export function Seguranca() {
       setCodigo("");
       setPasso("ler-qr");
     } catch (e) {
-      setErro(mensagem(e));
+      setErro(mensagemDeErro(e, "Não foi possível iniciar a verificação em duas etapas."));
     } finally {
       setBusy(false);
     }
@@ -80,7 +81,7 @@ export function Seguranca() {
       setPasso("codigos");
       setMe(await loadMe());
     } catch (e) {
-      setErro(mensagem(e));
+      setErro(mensagemDeErro(e, "Não foi possível confirmar o código de verificação."));
     } finally {
       setBusy(false);
     }
@@ -94,7 +95,7 @@ export function Seguranca() {
       setMe(await loadMe());
       toast.success("Verificação em duas etapas desativada.");
     } catch (e) {
-      setErro(mensagem(e));
+      setErro(mensagemDeErro(e, "Não foi possível desativar a verificação em duas etapas."));
     } finally {
       setBusy(false);
     }
@@ -293,7 +294,7 @@ function TrocarSenha() {
       setNova2("");
       toast.success("Senha trocada.");
     } catch (e) {
-      setErro(mensagem(e));
+      setErro(mensagemDeErro(e, "Não foi possível trocar a senha."));
     } finally {
       setBusy(false);
     }
@@ -322,12 +323,6 @@ function TrocarSenha() {
       </form>
     </Card>
   );
-}
-
-// mensagem tira o prefixo "403: " que o cliente da API põe nos erros.
-function mensagem(e: unknown): string {
-  const m = e instanceof Error ? e.message : String(e);
-  return m.replace(/^\d{3}:\s*/, "").trim() || "Algo deu errado. Tente de novo.";
 }
 
 function agrupar(s: string): string {

@@ -1067,7 +1067,7 @@ function CheckForm({ edit, onSaved, onCancelEdit }: { edit: Check | null; onSave
         <FormField
           label={isSitemap ? "URL do sitemap" : "URL"}
           required
-          help={isSitemap ? "Endereço do sitemap.xml. O Revoada busca e monitora automaticamente todas as páginas listadas (e re-sincroniza quando o sitemap muda)." : help.fields["check.url"]}
+          help={isSitemap ? "Endereço do sitemap.xml. O Revoada busca e monitora automaticamente as páginas listadas, até 500 por sitemap (e re-sincroniza quando o sitemap muda)." : help.fields["check.url"]}
         >
           <input
             className="field"

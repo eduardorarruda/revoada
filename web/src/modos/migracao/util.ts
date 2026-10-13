@@ -1,9 +1,15 @@
 // Utilitários do modo migração.
 
-// mensagemErro tira o prefixo "403: " que o cliente da API põe nos erros.
-export function mensagemErro(e: unknown): string {
-  const m = e instanceof Error ? e.message : String(e);
-  return m.replace(/^\d{3}:\s*/, "").trim() || "Algo deu errado. Tente de novo.";
+import { mensagemDeErro } from "../../format";
+
+// mensagemErro devolve a explicação que o servidor escreveu (sem o prefixo "403: ").
+// `alternativa` só aparece quando o servidor não explicou nada (ex.: falha de rede);
+// cada tela passa a sua, dizendo o que não foi feito.
+export function mensagemErro(
+  e: unknown,
+  alternativa = "A operação de migração falhou sem explicação do servidor. Tente de novo.",
+): string {
+  return mensagemDeErro(e, alternativa);
 }
 
 export const NOME_TRANSFORMACAO: Record<string, string> = {

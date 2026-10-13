@@ -914,24 +914,23 @@ export function Logs({ initialHost = "" }: { initialHost?: string } = {}) {
 
       <HelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} title={help.pages.logs.title} sections={logsHelpSections()} />
 
-      {context && (
-        <div
-          onClick={() => setContext(null)}
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 150 }}
-        >
-          <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: 8, padding: "var(--sp-4)", maxWidth: 900, width: "90%", maxHeight: "80vh", overflow: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "var(--sp-2)" }}>
-              <strong>Contexto, {context.service}</strong>
-              <Button variant="ghost" onClick={() => setContext(null)}>fechar</Button>
-            </div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: "var(--fs-12)" }}>
-              {context.rows.map((r, i) => (
-                <LogLine key={i} r={r} hostDisplay={hostDisplay} />
-              ))}
-            </div>
+      {/* Contexto de uma linha: as vizinhas no tempo do mesmo serviço. Usa o Modal
+          (role=dialog, foco preso, Esc fecha e devolve o foco a "Ver contexto"). Pode
+          abrir por cima do drill-down do histograma; o Esc fecha só o de cima. */}
+      <Modal
+        open={context != null}
+        onClose={() => setContext(null)}
+        wide
+        title={context ? `Contexto, ${context.service}` : "Contexto"}
+      >
+        {context && (
+          <div style={{ fontFamily: "var(--font-mono)", fontSize: "var(--fs-12)" }}>
+            {context.rows.map((r, i) => (
+              <LogLine key={i} r={r} hostDisplay={hostDisplay} />
+            ))}
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }

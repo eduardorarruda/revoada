@@ -156,23 +156,7 @@
 }
 .ptable td.num { text-align: right; }
 
-/* state timeline */
-.timeline {
-  display: flex;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-.timeline__seg { height: 100%; }
-.timeline__legend {
-  display: flex;
-  gap: var(--sp-4);
-  margin-top: var(--sp-2);
-  font-size: var(--fs-12);
-  color: var(--text-2);
-}
-
-.uplot-wrap, .echart-wrap { width: 100%; }
+.uplot-wrap { width: 100%; }
 
 /* Primeira aparição do gráfico: a série se desenha da esquerda para a direita.
    Só a primeira — o gráfico é recriado a cada atualização (ver TimeSeries.tsx). */

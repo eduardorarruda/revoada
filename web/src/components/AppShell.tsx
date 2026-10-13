@@ -36,6 +36,7 @@ import {
   Search,
   ShieldAlert,
   ShieldCheck,
+  FileText,
   Network,
   ArrowRightLeft,
   Bot,
@@ -298,7 +299,7 @@ export function AppShell({
   }, []);
   const idadeSucesso = idadeUltimoSucesso();
 
-  // Filtra os grupos/itens do menu pela busca (padrão do painel exemplo.com.br) e
+  // Filtra os grupos/itens do menu pelo texto digitado na busca e
   // esconde itens admin-only de quem não é admin (o backend também barra, isto é só
   // para não mostrar um menu que levaria a 403).
   const isAdmin = getRole() === "admin";
@@ -538,8 +539,8 @@ export function AppShell({
               className="usermenu__trigger"
               // No celular o nome some (só o avatar cabe); o rótulo acessível fica.
               aria-label={`Conta: ${currentUserLabel()}`}
-              aria-haspopup="menu"
               aria-expanded={menuOpen}
+              aria-controls={menuOpen ? "usermenu-painel" : undefined}
               onClick={() => setMenuOpen((o) => !o)}
             >
               <span className="usermenu__avatar">
@@ -548,23 +549,36 @@ export function AppShell({
               <span className="usermenu__label">{currentUserLabel()}</span>
             </button>
             {menuOpen && (
-              <div className="usermenu__panel" role="menu">
+              // Grupo de link + botão comuns, não role="menu": menu ARIA promete
+              // navegação por setas, e Tab entre dois itens é o que o usuário espera.
+              <div
+                className="usermenu__panel"
+                id="usermenu-painel"
+                role="group"
+                aria-label="Conta"
+              >
                 <div className="usermenu__info">
                   Papel: {NOME_PAPEL[getRole() ?? ""] ?? "—"}
                 </div>
                 <a
                   className="usermenu__action"
-                  role="menuitem"
                   href="#/seguranca"
                   onClick={() => setMenuOpen(false)}
                 >
                   <ShieldCheck size={16} aria-hidden={true} />
                   Segurança da conta
                 </a>
+                <a
+                  className="usermenu__action"
+                  href="#/privacidade"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <FileText size={16} aria-hidden={true} />
+                  Política de privacidade
+                </a>
                 <button
                   type="button"
                   className="usermenu__action"
-                  role="menuitem"
                   onClick={() =>
                     logout().then(() => (window.location.hash = "/"))
                   }

@@ -69,7 +69,7 @@
   color: var(--text-1);
 }
 
-/* busca do menu (padrão do painel exemplo.com.br) */
+/* busca no menu: filtra grupos e itens pelo texto digitado */
 .sidebar__search {
   margin: var(--sp-3) var(--sp-3) 6px;
   min-height: 34px;
@@ -314,7 +314,7 @@
   background: var(--bg-3);
   border-color: var(--accent-line);
 }
-/* anel da marca no avatar do usuário (padrão do painel exemplo.com.br) */
+/* anel na cor de destaque (--accent) em volta do avatar do usuário */
 .usermenu__avatar {
   display: inline-flex;
   align-items: center;
@@ -432,8 +432,6 @@
   font: inherit;
   font-size: var(--fs-16);
 }
-/* A paleta inteira é o contexto de foco (tem borda e halo próprios); o contorno
-   global em volta do campo desenhava uma caixa dentro da caixa. */
 .paleta__fechar {
   display: inline-grid;
   place-items: center;
@@ -460,9 +458,16 @@
     display: none;
   }
 }
+/* A paleta inteira é o contexto de foco: o contorno global em volta do campo
+   desenhava uma caixa dentro da caixa. Em troca, o halo da paleta engrossa e
+   ganha o acento opaco enquanto o campo tem o foco (WCAG 2.4.7) — sem isso não
+   havia indicador nenhum. */
 .paleta__campo:focus,
 .paleta__campo:focus-visible {
   outline: none;
+}
+.paleta:has(.paleta__campo:focus-visible) {
+  box-shadow: var(--shadow-lg), var(--highlight), 0 0 0 2px var(--accent), 0 30px 80px -30px var(--accent-glow);
 }
 .paleta__campo::placeholder {
   color: var(--text-3);

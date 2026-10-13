@@ -3,6 +3,7 @@ import { Button, FormField } from "../components";
 import { Telemetria } from "../components/Telemetria";
 import "./login.css";
 import { BrandLogo } from "../components/BrandLogo";
+import { RodapeLegal } from "../components/RodapeLegal";
 import { login, loadMe, changePassword, verificarMFA, estadoInicial, register } from "../api";
 
 type Etapa = "entrar" | "mfa" | "nova-senha" | "configurar";
@@ -124,9 +125,6 @@ export function Login({ onDone }: { onDone: () => void }) {
       <aside className="login__vitrine" aria-label="Sobre o painel">
         <Telemetria />
         <div className="login__vitrine-texto">
-          <span className="login__selo">
-            <span className="login__selo-ponto" /> monitorando agora
-          </span>
           <p className="login__manchete">Cada servidor, cada site, cada alerta, num lugar só.</p>
           <p className="login__apoio">
             Métricas em tempo real, avisos no WhatsApp e no e-mail, e a resposta para “está tudo bem?” antes de
@@ -290,6 +288,7 @@ export function Login({ onDone }: { onDone: () => void }) {
               <p className="login__rodape">Esqueceu a senha? Peça a um administrador para redefini-la.</p>
             </>
           )}
+          <RodapeLegal className="login__legal" />
         </div>
       </main>
     </div>

@@ -1,0 +1,26 @@
+/* Rodapé legal (RodapeLegal.tsx): discreto, mas legível e com alvo de toque ≥ 24px. */
+.rodape-legal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-2);
+  color: var(--text-3);
+  font-size: var(--fs-12);
+}
+.rodape-legal a {
+  color: var(--text-2);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+}
+.rodape-legal a:hover {
+  color: var(--text-1);
+}
+/* Na status page (que usa estilo inline, sem folha própria): separa do conteúdo. */
+.status-legal {
+  margin-top: var(--sp-6);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--border);
+}

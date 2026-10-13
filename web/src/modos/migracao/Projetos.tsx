@@ -22,7 +22,7 @@ export function Projetos() {
       setProjetos(ps);
       setConexoes(cs);
     } catch (e) {
-      toast.error(mensagemErro(e));
+      toast.error(mensagemErro(e, "Não foi possível carregar os projetos de migração."));
     }
   }, [toast]);
 
@@ -107,7 +107,7 @@ function ModalProjeto({ conexoes, onClose, onCriado }: { conexoes: ConexaoBanco[
       const p = await criarProjeto({ nome, tipo, origem_id: origem, destino_id: destino || undefined });
       onCriado(p.id);
     } catch (e) {
-      toast.error(mensagemErro(e));
+      toast.error(mensagemErro(e, "Não foi possível criar o projeto de migração."));
     } finally {
       setBusy(false);
     }

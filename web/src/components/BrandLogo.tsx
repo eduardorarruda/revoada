@@ -12,7 +12,8 @@ type Props = {
  * Logotipo do Revoada. O símbolo é o mesmo pássaro do favicon; o nome é texto
  * (não imagem), então herda a cor do tema pelos tokens e fica nítido em qualquer tela.
  * O pássaro tem traço fino (asas em rede): abaixo de ~36px ele vira um borrão, por
- * isso o menor tamanho usado é 40px.
+ * isso o menor tamanho usado é 40px. O arquivo tem 264px (WebP, ~22 KB): nítido em
+ * tela retina no maior tamanho exibido; o CSS (brand.css) define o tamanho na tela.
  */
 export function BrandLogo({ variant = "full", size = "md", className }: Props) {
   const cls = ["brand-logo", `brand-logo--${variant}`, `brand-logo--${size}`, className]
@@ -20,12 +21,12 @@ export function BrandLogo({ variant = "full", size = "md", className }: Props) {
     .join(" ");
 
   if (variant === "mark") {
-    return <img src="/logo-mark.webp" alt="Revoada" className={cls} />;
+    return <img src="/logo-mark.webp" alt="Revoada" className={cls} width={264} height={264} decoding="async" />;
   }
 
   return (
     <span className={cls} aria-label="Revoada" role="img">
-      <img src="/logo-mark.webp" alt="" className="brand-logo__mark" />
+      <img src="/logo-mark.webp" alt="" className="brand-logo__mark" width={264} height={264} decoding="async" />
       <span className="brand-logo__name" aria-hidden="true">
         Revoada
       </span>

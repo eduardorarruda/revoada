@@ -5,28 +5,11 @@ import { marcarFalha, marcarSucesso } from "./conexao";
 let accessToken: string | null = null;
 let currentRole: string | null = null;
 
-// Escopo de servidores do usuário (de /api/me). Para admin, `all` é true e as listas
-// ficam vazias (vê e edita tudo). Para usuário comum, as listas trazem os hostnames
-// liberados. Usado só para ESCONDER botões no front — a segurança real é no backend.
-interface MyScope {
-  all: boolean;
-  viewHosts: Set<string>;
-  editHosts: Set<string>;
-}
-let myScope: MyScope = { all: false, viewHosts: new Set(), editHosts: new Set() };
-
 export function getRole(): string | null {
   return currentRole;
 }
 export function isAdmin(): boolean {
   return currentRole === "admin";
-}
-// canEditHost/canViewHost: admin sempre pode; usuário comum só nos hosts do escopo.
-export function canEditHost(hostname: string): boolean {
-  return myScope.all || myScope.editHosts.has(hostname);
-}
-export function canViewHost(hostname: string): boolean {
-  return myScope.all || myScope.viewHosts.has(hostname);
 }
 
 // MeResponse reflete /api/me. loadMe() atualiza o papel e o escopo em memória; o boot da
@@ -66,11 +49,6 @@ export async function loadMe(): Promise<MeResponse> {
   currentMe = body;
   window.dispatchEvent(new Event("revoada:me"));
   currentRole = body.role ?? currentRole;
-  myScope = {
-    all: body.all === true,
-    viewHosts: new Set(body.view_hosts ?? []),
-    editHosts: new Set(body.edit_hosts ?? []),
-  };
   return body;
 }
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
@@ -559,7 +537,7 @@ export function filenameFromDisposition(header: string | null): string {
   return m?.[1] ?? "instalar-revoada";
 }
 
-// --- provisionamento por SSH (Fase G) — admin ---
+// --- provisionamento por SSH — admin ---
 // Onboarding automático: em vez de colar o comando de instalação por SSH na mão,
 // a central conecta no servidor, gera a chave de ingestão, instala o agente e
 // sobe o serviço — reportando cada passo por SSE. A credencial (senha/chave) é
@@ -597,7 +575,7 @@ export interface ProvisionTarget {
   host: string;
   // hostname REAL da máquina (ex.: "srv-03"), coletado no provisionamento e
   // que casa 1:1 com host.hostname do inventário. Pode vir "" em alvos antigos
-  // ainda não reprovisionados (Fase G).
+  // ainda não reprovisionados.
   hostname: string;
   user: string;
   status: string;
@@ -967,7 +945,7 @@ export interface HostNet {
   rx_bps?: number; // bytes/s recebidos (download)
   tx_bps?: number; // bytes/s enviados (upload)
 }
-// Estado de um container do host (Fase C). O backend resolve `status` (semáforo)
+// Estado de um container do host. O backend resolve `status` (semáforo)
 // e ordena a lista com as falhas primeiro; o frontend só apresenta.
 export interface ContainerStatus {
   name: string;
@@ -1078,7 +1056,7 @@ export function labelValues(metric: string, label: string): Promise<{ values: st
   return api(`/api/label-values?metric=${encodeURIComponent(metric)}&label=${encodeURIComponent(label)}`);
 }
 
-// --- Alerting (P4.1) ---
+// --- Alerting ---
 export interface AlertRule {
   id: number;
   name: string;
@@ -1179,7 +1157,7 @@ export function unignoreContainer(host: string, container: string): Promise<void
   });
 }
 
-// --- Notificações (P4.2) ---
+// --- Notificações ---
 export interface NotificationChannel {
   id: number;
   name: string;
@@ -1210,7 +1188,7 @@ export function testChannel(id: number): Promise<{ ok: boolean; status?: string;
   return api(`/api/notify/channels/${id}/test`, { method: "POST" });
 }
 
-// Integração WhatsApp (Evolution API): config única reusada por todos os canais WhatsApp.
+// Integração WhatsApp (wuzapi): config única reusada por todos os canais WhatsApp.
 export interface WhatsAppIntegration {
   base_url: string;
   token: string; // vem mascarado ("••••••") quando já configurado
@@ -1245,7 +1223,7 @@ export function notificationLog(): Promise<{ log: NotificationLogEntry[] }> {
   return api("/api/notify/log");
 }
 
-// --- Checks de website/LP (P4.4) ---
+// --- Checks de website/LP ---
 export interface SiteCheck {
   id: number;
   name: string;
@@ -1329,7 +1307,7 @@ export interface ProbeResult {
   reported_at: string;
 }
 
-// --- Jornadas de browser (P6.4) ---
+// --- Jornadas de browser ---
 export interface JourneyStep {
   name: string;
   method: string;
@@ -1361,7 +1339,7 @@ export function siteProbes(url: string): Promise<{ probes: ProbeResult[] }> {
   return api(`/api/site-checks/probes?url=${encodeURIComponent(url)}`);
 }
 
-// --- Logs (P5.2) ---
+// --- Logs ---
 export interface LogRow {
   t: number; // epoch ms
   service: string;
@@ -1497,7 +1475,7 @@ export function openLogTail(f: LogQuery, onRows: (rows: LogRow[]) => void): () =
   return () => ws.close();
 }
 
-// --- Status page pública (P6.4, sem auth) ---
+// --- Status page pública (sem auth) ---
 //
 // CONTRATO REAL (server/internal/statuspage/statuspage.go): o uptime NÃO é um
 // número solto. O backend publica um objeto com o percentual, a cobertura da
@@ -1540,28 +1518,13 @@ export async function publicStatus(): Promise<PublicStatus> {
   return res.json();
 }
 
-// --- Auto-discovery (P6.2) ---
-export interface DiscoverySuggestion {
-  host: string;
-  kind: string;
-  uid: string;
-  title: string;
-  exists: boolean;
-}
-export function discoverySuggestions(): Promise<{ suggestions: DiscoverySuggestion[] }> {
-  return api("/api/discovery/suggestions");
-}
-export function applyDiscovery(host: string, kind: string): Promise<{ uid: string }> {
-  return api("/api/discovery/apply", { method: "POST", body: JSON.stringify({ host, kind }) });
-}
-
 // ---- Discovery raw list ----
 export interface HostService { hostname: string; kind: string; detail: string; source: string; discovered_at: string }
 export function listDiscovery(): Promise<{ services: HostService[] }> {
   return api("/api/discovery");
 }
 
-// --- Traces (P5.3) ---
+// --- Traces ---
 
 // TRACE_PARTIAL_LABEL é o rótulo que o gateway coloca nos spans de um trace que
 // PERDEU spans antes de a decisão de amostragem virar "manter"
@@ -1720,37 +1683,11 @@ export async function serviceMap(from?: string): Promise<ServiceEdge[]> {
 export const PURGE_TRACES_CONFIRM = "APAGAR TODOS OS TRACES";
 
 // purgeTraces apaga TODOS os traces (tabela spans). Admin-only. Devolve quantas linhas
-// foram removidas. Para apagar só um recorte, use purgeTracesScoped.
+// foram removidas.
 export function purgeTraces(): Promise<{ done: boolean; deleted_rows: number }> {
   return api(`/api/traces/purge`, {
     method: "POST",
     body: JSON.stringify({ confirm: PURGE_TRACES_CONFIRM }),
-  });
-}
-
-// purgeTracesScoped apaga um RECORTE de traces em vez da tabela inteira — que era o
-// único caminho existente e, por isso, o procedimento real de resposta a um segredo
-// vazado num span: destruir o rastreamento de todos os clientes. `body_like` casa
-// nome, serviço, status e as chaves e valores dos labels, que é onde a instrumentação
-// automática guarda header, URL e query string. Com `dry_run`, só conta.
-export function purgeTracesScoped(opts: {
-  host?: string;
-  noHost?: boolean;
-  from?: string;
-  to?: string;
-  bodyLike?: string;
-  dryRun?: boolean;
-}): Promise<{ done: boolean; deleted_rows: number; mutation_id?: string }> {
-  return api(`/api/traces/purge`, {
-    method: "POST",
-    body: JSON.stringify({
-      host: opts.host,
-      no_host: opts.noHost,
-      from: opts.from,
-      to: opts.to,
-      body_like: opts.bodyLike,
-      dry_run: opts.dryRun,
-    }),
   });
 }
 
@@ -2067,8 +2004,6 @@ export const listarAgentes = () => api<Agente[]>("/api/agentes");
 export const criarTokenAgente = (rotulo: string, validadeHoras = 24) =>
   api<TokenAgente>("/api/agentes/tokens", { method: "POST", body: JSON.stringify({ rotulo, validade_horas: validadeHoras }) });
 export const revogarAgente = (id: string) => api<void>(`/api/agentes/${encodeURIComponent(id)}/revogar`, { method: "POST" });
-export const listarTarefas = (agenteId = "") =>
-  api<Tarefa[]>(`/api/tarefas${agenteId ? `?agente_id=${encodeURIComponent(agenteId)}` : ""}`);
 export const criarDiagnostico = (agenteId: string, especificacao: Record<string, unknown>) =>
   api<Tarefa>("/api/tarefas/diagnostico", {
     method: "POST",

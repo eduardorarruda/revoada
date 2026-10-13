@@ -33,7 +33,7 @@ export function Conexoes() {
       setConexoes(cs);
       setAgentes(ags.filter((a) => !a.revogado && a.capacidades.includes("migracao.esquema")));
     } catch (e) {
-      toast.error(mensagemErro(e));
+      toast.error(mensagemErro(e, "Não foi possível carregar as conexões e os agentes."));
     }
   }, [toast]);
 
@@ -48,7 +48,7 @@ export function Conexoes() {
       toast.success(`Estrutura lida: ${r.tabelas} tabelas, ${c.motor} ${r.versao}, charset ${r.charset}.`);
       void carregar();
     } catch (e) {
-      toast.error(mensagemErro(e));
+      toast.error(mensagemErro(e, "Não foi possível ler a estrutura do banco."));
     } finally {
       setLendo(null);
     }
@@ -60,7 +60,7 @@ export function Conexoes() {
       await apagarConexao(c.id);
       void carregar();
     } catch (e) {
-      toast.error(mensagemErro(e));
+      toast.error(mensagemErro(e, "Não foi possível apagar a conexão."));
     }
   };
 
@@ -198,7 +198,7 @@ function ModalConexao({ agentes, onClose, onCriada }: { agentes: Agente[]; onClo
       toast.success("Conexão criada. A senha foi para o cofre.");
       onCriada();
     } catch (e) {
-      const m = mensagemErro(e);
+      const m = mensagemErro(e, "Não foi possível criar a conexão.");
       try {
         setErroCampo(JSON.parse(m));
       } catch {

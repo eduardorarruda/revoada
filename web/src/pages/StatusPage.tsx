@@ -5,6 +5,7 @@ import { useCallback, useState, type CSSProperties } from "react";
 import { usePolling } from "../hooks/usePolling";
 import { Badge, Card, EmptyState, InfoTip, Skeleton, type State } from "../components";
 import { BrandLogo } from "../components/BrandLogo";
+import { RodapeLegal } from "../components/RodapeLegal";
 import { help } from "../help";
 import { publicStatus, type PublicStatus, type PublicUptime } from "../api";
 import { APP_TIME_ZONE_LABEL, formatDateTime, formatUptimePercent } from "../format";
@@ -295,6 +296,7 @@ export function StatusPage() {
             )}
           </>
         )}
+        <RodapeLegal className="status-legal" />
       </div>
     </div>
   );

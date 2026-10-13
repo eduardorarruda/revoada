@@ -1,6 +1,6 @@
 // Aba Canais: destinos de notificação com formulário que se adapta ao tipo
 // (E-mail/Webhook/Telegram/WhatsApp) — sem JSON cru no fluxo padrão — teste inline e apagar.
-// A conexão do WhatsApp (Evolution API) é configurada UMA vez no card de integração;
+// A conexão do WhatsApp (wuzapi: URL e token) é configurada UMA vez no card de integração;
 // os canais de WhatsApp guardam só os destinatários.
 import { useCallback, useEffect, useState } from "react";
 import { Megaphone, MessageCircle } from "lucide-react";

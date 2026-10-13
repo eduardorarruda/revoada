@@ -24,7 +24,7 @@ export function initTheme(): void {
   } catch {
     /* ignore */
   }
-  // Mesma decisão do script inline em index.html (UX-19): valor salvo, senão a
+  // Mesma decisão do script inline em index.html: valor salvo, senão a
   // preferência do sistema. Idempotente — reflete o que o boot já aplicou.
   if (stored === "light" || stored === "dark") {
     setTheme(stored);

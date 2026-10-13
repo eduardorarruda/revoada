@@ -77,13 +77,6 @@ export function formatTime(
   }).format(d);
 }
 
-/** Só a data, no fuso de Brasília. Ex.: "07/08/2026". */
-export function formatDate(ts: string | number | Date | null | undefined): string {
-  const d = toDate(ts);
-  if (!d) return "—";
-  return dtf({ day: "2-digit", month: "2-digit", year: "numeric" }).format(d);
-}
-
 /**
  * Formata um instante em duas representações complementares:
  *  - `rel`: texto relativo curto em PT-BR ("agora", "há 5 min", "há 2 h", "há 3 d")

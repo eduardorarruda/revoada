@@ -1,5 +1,5 @@
-// /dev/panels — vitrine dos 8 painéis essenciais (P2.3) com dados representativos.
-// Dados reais do ClickHouse chegam via Query API na tela de dashboard (P2.4+).
+// /dev/panels — vitrine dos painéis essenciais com dados representativos (só em dev).
+// Dados reais do ClickHouse chegam via Query API na tela de dashboard.
 import { useState } from "react";
 import { Button } from "../components";
 import { getTheme, setTheme, type Theme } from "../theme";
@@ -7,11 +7,8 @@ import { DEFAULT_THRESHOLDS } from "../metrics/thresholds";
 import {
   BarGaugePanel,
   GaugePanel,
-  HeatmapPanel,
   StatPanel,
-  StateTimelinePanel,
   TablePanel,
-  TextPanel,
   TimeSeriesPanel,
   type TimeSeriesData,
 } from "../panels";
@@ -93,32 +90,6 @@ export function DevPanels() {
             { pid: 1200, cmd: "postgres", cpu: 18, mem: 12 },
             { pid: 880, cmd: "nginx", cpu: 4, mem: 1.2 },
           ]}
-        />
-        <StateTimelinePanel
-          title="Estado do serviço (24h)"
-          description="Linha do tempo de disponibilidade."
-          segments={[
-            { state: "ok", durationSeconds: 60000 },
-            { state: "warn", durationSeconds: 5000 },
-            { state: "crit", durationSeconds: 2000 },
-            { state: "ok", durationSeconds: 19400 },
-          ]}
-        />
-        <HeatmapPanel
-          title="Latência por hora"
-          description="Distribuição de latência (ms) por hora do dia."
-          xLabels={["00", "04", "08", "12", "16", "20"]}
-          yLabels={["p50", "p95", "p99"]}
-          data={[
-            [10, 12, 15, 40, 22, 11],
-            [30, 28, 55, 120, 60, 25],
-            [80, 70, 130, 320, 140, 60],
-          ]}
-        />
-        <TextPanel
-          title="Notas"
-          description="Anotações do painel."
-          markdown={"# Runbook rápido\n- **CPU > 90%** por 5min: verificar processos\n- **Disco > 85%**: limpar logs em /var/log\n- Contato: **plantão-infra**"}
         />
       </div>
     </div>

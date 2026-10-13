@@ -140,13 +140,3 @@ export function thresholdColorVar(state: ThresholdState | null): string {
       return "--text-3";
   }
 }
-
-/**
- * thresholdHint é a explicação em PT-BR do limiar em vigor, para o tooltip do
- * painel. O operador precisa saber POR QUE aquilo está âmbar e a partir de quanto
- * vira vermelho.
- */
-export function thresholdHint(t: Threshold, hostname?: string | null): string {
-  const escopo = hostname ? ` (limiar deste servidor)` : "";
-  return `Atenção a partir de ${t.warn}% e crítico a partir de ${t.crit}%${escopo}. É o mesmo limiar que dispara o alerta.`;
-}

@@ -3,7 +3,7 @@
 // transformações. Toda edição vira uma VERSÃO nova validada pelo back-end.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { AlertTriangle, CheckCircle2, Sparkles, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ListChecks, XCircle } from "lucide-react";
 import { Badge, Button } from "../../components";
 import { useToast } from "../../components/Toast";
 import {
@@ -120,7 +120,7 @@ export function Editor({ projetoId }: { projetoId: string }) {
           {podeOperar() && (
             <div className="mm-editor__botoes">
               <Button onClick={() => executar(() => sugerirMapeamento(projetoId), "Sugestão gerada como versão nova.")} disabled={busy || !origem}>
-                <Sparkles size={16} aria-hidden={true} /> Sugerir automaticamente
+                <ListChecks size={16} aria-hidden={true} /> Sugerir automaticamente
               </Button>
               <Button onClick={() => mapa && executar(() => salvarMapeamento(projetoId, mapa), "Versão salva e validada.")} disabled={busy || !sujo || !mapa}>
                 Salvar versão

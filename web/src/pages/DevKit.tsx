@@ -1,5 +1,5 @@
-// Página /dev/kit — vitrine COMPLETA do design system nos dois temas (P2.1 / UX-27).
-// Referência confiável de todos os componentes com seus estados. Rota pública.
+// Página /dev/kit — vitrine COMPLETA do design system nos dois temas.
+// Referência confiável de todos os componentes com seus estados. Só existe em dev.
 import { useState } from "react";
 import {
   AdvancedSection,

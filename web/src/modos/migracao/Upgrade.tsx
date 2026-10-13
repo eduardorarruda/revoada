@@ -89,7 +89,7 @@ export function Upgrade({ projeto }: { projeto: ProjetoMigracao }) {
       setAgentes(aptos);
       setAgente((x) => x || aptos.find((a) => a.estado === "online")?.id || aptos[0]?.id || "");
     } catch (e) {
-      toast.error(mensagemErro(e));
+      toast.error(mensagemErro(e, "Não foi possível carregar a situação do upgrade."));
     }
   }, [projeto.id, toast]);
 
@@ -111,7 +111,7 @@ export function Upgrade({ projeto }: { projeto: ProjetoMigracao }) {
       setAoVivo(e.tarefa);
       await carregar();
     } catch (e) {
-      toast.error(mensagemErro(e));
+      toast.error(mensagemErro(e, "Não foi possível iniciar a etapa do upgrade."));
     } finally {
       setBusy(false);
     }

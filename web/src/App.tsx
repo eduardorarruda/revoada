@@ -1,32 +1,38 @@
 // Roteamento por hash + porta de autenticação. Rotas autenticadas ficam dentro
-// do AppShell (sidebar/topbar); rotas públicas (dev/status/tv) ficam fora dele.
+// do AppShell (sidebar/topbar); rotas públicas (status/tv, e /dev/* só em dev) ficam fora dele.
 import { Bando } from "./motion";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { PageTransition } from "./motion";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { chaveDaTela } from "./chaveTela";
-// Rotas leves e a tela de Login permanecem estáticas (entram no bundle inicial).
-import { DevKit } from "./pages/DevKit";
-import { Dashboards } from "./pages/Dashboards";
-import { Hosts } from "./pages/Hosts";
-import { Alerts } from "./pages/Alerts";
-import { Notify } from "./pages/Notify";
-import { HealthWall } from "./pages/HealthWall";
+// Só a tela de Login (primeira tela sem sessão) e a Home ("/" após o login) ficam
+// estáticas no bundle inicial; todo o resto é carregado sob demanda abaixo.
 import { Login } from "./pages/Login";
 import { Home } from "./pages/Home";
-import { Help } from "./pages/Help";
 import { AppShell } from "./components/AppShell";
 import { ToastProvider } from "./components";
 import { ReauthModal } from "./components/ReauthModal";
 import { CorrelationDrawer } from "./components/CorrelationDrawer";
-import { StatusPage } from "./pages/StatusPage";
 import { isAuthenticated, restoreSession, loadMe } from "./api";
 
-// Páginas pesadas carregadas sob demanda (React.lazy) — tiram do bundle inicial
-// as libs de gráfico: echarts (Heatmap, via DevPanels) e uplot (via panels), além
-// das telas grandes de Traces/Logs/Dashboards/Websites/TV. Os módulos usam export
+// Páginas carregadas sob demanda (React.lazy) — tiram do bundle inicial a lib de
+// gráfico uplot (via panels) e as telas que o login não usa. Os módulos usam export
 // nomeado, então adaptamos para `default` que o lazy exige.
-const DevPanels = lazy(() => import("./pages/DevPanels").then((m) => ({ default: m.DevPanels })));
+//
+// Vitrines de desenvolvimento (#/dev/kit e #/dev/panels): só existem em `vite dev`.
+// No build de produção import.meta.env.DEV vira `false` e o import() some do bundle.
+const DevKit = import.meta.env.DEV ? lazy(() => import("./pages/DevKit").then((m) => ({ default: m.DevKit }))) : null;
+const DevPanels = import.meta.env.DEV
+  ? lazy(() => import("./pages/DevPanels").then((m) => ({ default: m.DevPanels })))
+  : null;
+const Dashboards = lazy(() => import("./pages/Dashboards").then((m) => ({ default: m.Dashboards })));
+const Hosts = lazy(() => import("./pages/Hosts").then((m) => ({ default: m.Hosts })));
+const Alerts = lazy(() => import("./pages/Alerts").then((m) => ({ default: m.Alerts })));
+const Notify = lazy(() => import("./pages/Notify").then((m) => ({ default: m.Notify })));
+const HealthWall = lazy(() => import("./pages/HealthWall").then((m) => ({ default: m.HealthWall })));
+const Help = lazy(() => import("./pages/Help").then((m) => ({ default: m.Help })));
+const StatusPage = lazy(() => import("./pages/StatusPage").then((m) => ({ default: m.StatusPage })));
+const Privacidade = lazy(() => import("./pages/Privacidade").then((m) => ({ default: m.Privacidade })));
 const DashboardView = lazy(() => import("./pages/DashboardView").then((m) => ({ default: m.DashboardView })));
 const DashboardEdit = lazy(() => import("./pages/DashboardEdit").then((m) => ({ default: m.DashboardEdit })));
 const DashboardVersions = lazy(() => import("./pages/DashboardVersions").then((m) => ({ default: m.DashboardVersions })));
@@ -172,7 +178,8 @@ function renderPage(route: string, query = "") {
 }
 
 function isPublicRoute(route: string): boolean {
-  return route === "/dev/kit" || route === "/dev/panels" || route === "/status" || route.startsWith("/tv/");
+  if (import.meta.env.DEV && (route === "/dev/kit" || route === "/dev/panels")) return true;
+  return route === "/status" || route === "/privacidade" || route.startsWith("/tv/");
 }
 
 export function App() {
@@ -210,15 +217,32 @@ export function App() {
     return () => window.removeEventListener("revoada:auth-lost", onAuthLost);
   }, []);
 
-  // Rotas públicas (sem login e sem AppShell).
-  if (route === "/dev/kit") return <DevKit />;
-  if (route === "/dev/panels")
+  // Rotas públicas (sem login e sem AppShell). As vitrines /dev/* só existem em dev.
+  if (DevKit && route === "/dev/kit")
+    return (
+      <Suspense fallback={<PageLoading />}>
+        <DevKit />
+      </Suspense>
+    );
+  if (DevPanels && route === "/dev/panels")
     return (
       <Suspense fallback={<PageLoading />}>
         <DevPanels />
       </Suspense>
     );
-  if (route === "/status") return <StatusPage />;
+  if (route === "/status")
+    return (
+      <Suspense fallback={<PageLoading />}>
+        <StatusPage />
+      </Suspense>
+    );
+  // Política de privacidade (LGPD): pública — quem ainda não entrou também pode ler.
+  if (route === "/privacidade")
+    return (
+      <Suspense fallback={<PageLoading />}>
+        <Privacidade />
+      </Suspense>
+    );
   if (route.startsWith("/tv/"))
     return (
       <Suspense fallback={<PageLoading />}>

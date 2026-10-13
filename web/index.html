@@ -29,11 +29,23 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#070d18" />
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f2f5f9" />
-    <meta name="description" content="Revoada — monitoramento e observabilidade" />
-    <link rel="stylesheet" href="/fonts/fonts.css" />
+    <meta
+      name="description"
+      content="Painel do Revoada: métricas, logs, traces, alertas, sites e agentes de IA dos seus servidores, e migração de bancos de dados verificada."
+    />
+    <!-- Painel com login, instalado pelo próprio usuário: o endereço de uma instalação
+         não deve aparecer em buscador nenhum (ver também public/robots.txt). -->
+    <meta name="robots" content="noindex, nofollow" />
+    <!-- Prévia do link quando alguém compartilha o endereço do painel (status, TV). -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Revoada" />
+    <meta property="og:title" content="Revoada" />
+    <meta property="og:description" content="Monitoramento de servidores e migração de bancos de dados verificada." />
+    <meta property="og:locale" content="pt_BR" />
     <title>Revoada</title>
   </head>
   <body>
+    <noscript>O painel do Revoada precisa de JavaScript ligado no navegador.</noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
