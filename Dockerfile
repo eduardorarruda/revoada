@@ -12,7 +12,7 @@ COPY web/ ./
 RUN npm run build
 
 # 2) painel Go com a interface embutida (server/internal/webui, go:embed)
-FROM golang:1.26-bookworm AS build
+FROM golang:1.27-bookworm AS build
 WORKDIR /src
 COPY core/go.mod core/go.sum ./core/
 COPY proto/go.mod proto/go.sum ./proto/
