@@ -555,7 +555,7 @@ Servidor MCP em `server/internal/mcpsrv`, com o SDK oficial `github.com/modelcon
   embutida sem `unsafe-inline` (scripts inline liberados pelo hash), CORS por lista permitida com
   recusa de escrita de origem estranha, `X-Request-ID`, limite de corpo e JSON estrito.
 - **Auditoria completa** (§15) com encadeamento por hash e redação de segredos.
-- **Cadeia de suprimentos:** `govulncheck`, `npm audit` e gitleaks no CI; Dependabot; releases com
+- **Cadeia de suprimentos:** `govulncheck`, `npm audit` e gitleaks no CI; releases com
   `SHA256SUMS`; o auto-update do agente só instala artefato com SHA-256 válido.
 
 ## 14. Papéis
@@ -699,7 +699,7 @@ receitas declaradas no servidor).
 | 14 | Logs | JSON, `X-Request-ID`, `correlacao_id`, auditoria encadeada |
 | 15 | Backups | banco + séries com retenção e ensaio de restauração; chave mestra em backup separado e cifrado |
 | 16 | Criptografia | AES-256-GCM, X25519/XChaCha20-Poly1305, Ed25519, TLS |
-| 17 | Dependências | govulncheck, npm audit, Dependabot |
+| 17 | Dependências | govulncheck, npm audit |
 | 18 | Menor privilégio | distroless sem root, agente com usuário próprio, leitor por padrão |
 | 19 | Monitoramento | `/metrics`, saúde, presença dos agentes com alerta |
 | 20 | Plano de recuperação | `docs/runbook-dr.md` (inclui chave mestra, CA e migrations) |
